@@ -1,0 +1,144 @@
+"""Tests for the voyage engine — departure, travel, events, arrival."""
+
+import random
+
+from portlight.content.world import new_game
+from portlight.engine.models import VoyageStatus
+from portlight.engine.voyage import advance_day, arrive, depart, find_route
+
+
+class TestRouteNetwork:
+    def test_find_route_exists(self):
+        world = new_game()
+        route = find_route(world, "porto_novo", "al_manar")
+        assert route is not None
+        assert route.distance == 24
+
+    def test_find_route_bidirectional(self):
+        world = new_game()
+        r1 = find_route(world, "porto_novo", "al_manar")
+        r2 = find_route(world, "al_manar", "porto_novo")
+        assert r1 is r2  # same route object
+
+    def test_find_route_nonexistent(self):
+        world = new_game()
+        route = find_route(world, "porto_novo", "jade_port")
+        assert route is None  # no direct route
+
+
+class TestDeparture:
+    def test_depart_success(self):
+        world = new_game()
+        result = depart(world, "al_manar")
+        assert not isinstance(result, str)
+        assert result.status == VoyageStatus.AT_SEA
+        assert result.destination_id == "al_manar"
+
+    def test_depart_no_route(self):
+        world = new_game()
+        result = depart(world, "jade_port")
+        assert isinstance(result, str)
+        assert "No route" in result
+
+    def test_depart_same_port(self):
+        world = new_game()
+        result = depart(world, "porto_novo")
+        assert isinstance(result, str)
+
+    def test_depart_deducts_port_fee(self):
+        world = new_game()
+        silver_before = world.captain.silver
+        port_fee = world.ports["porto_novo"].port_fee
+        depart(world, "al_manar")
+        assert world.captain.silver == silver_before - port_fee
+
+    def test_depart_insufficient_port_fee(self):
+        world = new_game()
+        world.captain.silver = 0
+        result = depart(world, "al_manar")
+        assert isinstance(result, str)
+        assert "port fee" in result.lower()
+
+
+class TestVoyageProgress:
+    def test_advance_day_makes_progress(self):
+        world = new_game()
+        depart(world, "al_manar")
+        rng = random.Random(42)
+        events = advance_day(world, rng)
+        assert len(events) > 0
+        assert world.voyage.progress > 0
+        assert world.voyage.days_elapsed == 1
+
+    def test_provisions_consumed_daily(self):
+        world = new_game()
+        depart(world, "al_manar")
+        provisions_before = world.captain.provisions
+        advance_day(world, random.Random(42))
+        assert world.captain.provisions < provisions_before
+
+    def test_voyage_completes(self):
+        world = new_game()
+        depart(world, "silva_bay")  # short route, distance=16, speed=8
+        rng = random.Random(1)
+        # Should arrive in ~2 days (16/8) unless slowed
+        for _ in range(10):
+            advance_day(world, rng)
+            if world.voyage.status == VoyageStatus.ARRIVED:
+                break
+        assert world.voyage.status == VoyageStatus.ARRIVED
+
+    def test_arrival_sets_in_port(self):
+        world = new_game()
+        depart(world, "silva_bay")
+        rng = random.Random(1)
+        for _ in range(10):
+            advance_day(world, rng)
+            if world.voyage.status == VoyageStatus.ARRIVED:
+                break
+        result = arrive(world)
+        assert result is None
+        assert world.voyage.status == VoyageStatus.IN_PORT
+
+    def test_day_counter_advances(self):
+        world = new_game()
+        depart(world, "al_manar")
+        advance_day(world, random.Random(42))
+        assert world.day == 2
+        assert world.captain.day == 2
+
+
+class TestVoyageEvents:
+    def test_events_have_messages(self):
+        world = new_game()
+        depart(world, "al_manar")
+        events = advance_day(world, random.Random(42))
+        for e in events:
+            assert len(e.message) > 0
+
+    def test_storm_damages_hull(self):
+        """Run enough voyages that we eventually get a storm."""
+        world = new_game()
+        depart(world, "al_manar")
+        got_storm = False
+        for seed in range(100):
+            world_copy = new_game()
+            depart(world_copy, "al_manar")
+            events = advance_day(world_copy, random.Random(seed))
+            for e in events:
+                if e.event_type.value == "storm":
+                    assert e.hull_delta < 0
+                    got_storm = True
+                    break
+            if got_storm:
+                break
+        assert got_storm, "No storm event in 100 seeds"
+
+    def test_starvation_when_no_provisions(self):
+        world = new_game()
+        world.captain.provisions = 0
+        depart(world, "al_manar")
+        events = advance_day(world, random.Random(42))
+        # Should have a starvation event
+        starvation = [e for e in events if "provisions" in e.message.lower() or "crew" in e.message.lower()]
+        assert len(starvation) > 0
