@@ -545,7 +545,7 @@ class TestContractSaveLoad:
         board.completed.append(outcome)
 
         d = world_to_dict(world, board=board)
-        _, _, loaded_board = world_from_dict(d)
+        _, _, loaded_board, _infra = world_from_dict(d)
 
         assert len(loaded_board.offers) == 1
         assert loaded_board.offers[0].id == "save-test"
@@ -561,7 +561,7 @@ class TestContractSaveLoad:
     def test_empty_board_roundtrip(self, world):
         from portlight.engine.save import world_to_dict, world_from_dict
         d = world_to_dict(world)
-        _, _, loaded_board = world_from_dict(d)
+        _, _, loaded_board, _infra = world_from_dict(d)
         assert len(loaded_board.offers) == 0
         assert len(loaded_board.active) == 0
 
@@ -574,7 +574,7 @@ class TestContractSaveLoad:
         save_game(world, board=board, base_path=tmp_path)
         result = load_game(base_path=tmp_path)
         assert result is not None
-        _, _, loaded_board = result
+        _, _, loaded_board, _infra = result
         assert loaded_board.last_refresh_day == 5
 
 
@@ -735,7 +735,7 @@ class TestCargoProvenance:
         execute_buy(world.captain, port, "grain", 5, GOODS)
 
         d = world_to_dict(world)
-        loaded, _, _ = world_from_dict(d)
+        loaded, _, _, _infra = world_from_dict(d)
         cargo = loaded.captain.cargo[-1]
         assert cargo.acquired_port == "porto_novo"
         assert cargo.acquired_region == "Mediterranean"

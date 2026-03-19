@@ -388,6 +388,85 @@ def abandon(offer_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Warehouses
+# ---------------------------------------------------------------------------
+
+@app.command()
+def warehouse(
+    action: str = typer.Argument(None, help="lease, deposit, withdraw, or omit to view"),
+    arg1: str = typer.Argument(None, help="tier (for lease) or good_id (for deposit/withdraw)"),
+    arg2: int = typer.Argument(None, help="quantity (for deposit/withdraw)"),
+    source: str = typer.Option(None, "--source", "-s", help="Source port filter for withdraw"),
+) -> None:
+    """Manage warehouses: view, lease, deposit, or withdraw cargo."""
+    s = _session()
+
+    if action is None:
+        # Show warehouse status
+        port = s.current_port
+        port_id = port.id if port else None
+        port_name = port.name if port else None
+        console.print(views.warehouse_view(s.infra, port_id, port_name))
+        return
+
+    if action == "lease":
+        if not s.current_port:
+            console.print("[yellow]Must be docked to lease a warehouse.[/yellow]")
+            return
+        if arg1 is None:
+            # Show available tiers
+            console.print(views.warehouse_lease_options(s.current_port.id))
+            return
+        from portlight.engine.infrastructure import WarehouseTier
+        from portlight.content.infrastructure import available_tiers
+        try:
+            tier = WarehouseTier(arg1)
+        except ValueError:
+            console.print(f"[red]Unknown tier: {arg1}[/red]. Options: depot, regional, commercial")
+            return
+        tiers = available_tiers(s.current_port.id)
+        spec = next((t for t in tiers if t.tier == tier), None)
+        if not spec:
+            console.print(f"[red]{s.current_port.name} does not support {arg1} warehouses.[/red]")
+            return
+        err = s.lease_warehouse_cmd(spec)
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+        console.print(f"\n[bold green]Leased {spec.name} at {s.current_port.name}![/bold green]")
+        console.print(f"Capacity: {spec.capacity} | Upkeep: {spec.upkeep_per_day}/day")
+        console.print(f"Silver: {s.captain.silver}")
+        return
+
+    if action == "deposit":
+        if arg1 is None or arg2 is None:
+            console.print("[red]Usage: portlight warehouse deposit <good> <qty>[/red]")
+            return
+        result = s.deposit_cmd(arg1, arg2)
+        if isinstance(result, str):
+            console.print(f"[red]{result}[/red]")
+            return
+        console.print(f"[green]Deposited {result}x {arg1} into warehouse.[/green]")
+        port = s.current_port
+        console.print(views.warehouse_view(s.infra, port.id if port else None, port.name if port else None))
+        return
+
+    if action == "withdraw":
+        if arg1 is None or arg2 is None:
+            console.print("[red]Usage: portlight warehouse withdraw <good> <qty> [--source <port>][/red]")
+            return
+        result = s.withdraw_cmd(arg1, arg2, source)
+        if isinstance(result, str):
+            console.print(f"[red]{result}[/red]")
+            return
+        console.print(f"[green]Withdrew {result}x {arg1} from warehouse.[/green]")
+        console.print(views.cargo_view(s.captain))
+        return
+
+    console.print(f"[red]Unknown warehouse action: {action}[/red]. Use: lease, deposit, withdraw")
+
+
+# ---------------------------------------------------------------------------
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------
 

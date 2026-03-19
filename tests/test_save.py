@@ -16,7 +16,7 @@ class TestSaveLoad:
         save_game(world, base_path=tmp_path)
         result = load_game(base_path=tmp_path)
         assert result is not None
-        loaded, ledger, _board = result
+        loaded, ledger, _board, _infra = result
         assert loaded.captain.name == "Hawk"
         assert loaded.captain.silver == 550  # Merchant starting silver
         assert loaded.day == 1
@@ -28,7 +28,7 @@ class TestSaveLoad:
         recalculate_prices(port, GOODS)
         execute_buy(world.captain, port, "grain", 5, GOODS)
         save_game(world, base_path=tmp_path)
-        loaded, _, _board = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra = load_game(base_path=tmp_path)
         assert len(loaded.captain.cargo) == 1
         assert loaded.captain.cargo[0].good_id == "grain"
         assert loaded.captain.cargo[0].quantity == 5
@@ -48,7 +48,7 @@ class TestSaveLoad:
             day=1,
         ))
         save_game(world, ledger, base_path=tmp_path)
-        _, loaded_ledger, _board = load_game(base_path=tmp_path)
+        _, loaded_ledger, _board, _infra = load_game(base_path=tmp_path)
         assert loaded_ledger.run_id == "test-run"
         assert len(loaded_ledger.receipts) == 1
         assert loaded_ledger.total_buys == 120
@@ -68,7 +68,7 @@ class TestSaveLoad:
         grain = next(s for s in porto.market if s.good_id == "grain")
         original_buy = grain.buy_price
         save_game(world, base_path=tmp_path)
-        loaded, _, _board = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra = load_game(base_path=tmp_path)
         loaded_grain = next(s for s in loaded.ports["porto_novo"].market if s.good_id == "grain")
         assert loaded_grain.buy_price == original_buy
 
@@ -77,7 +77,7 @@ class TestSaveLoad:
         world = new_game()
         depart(world, "al_manar")
         save_game(world, base_path=tmp_path)
-        loaded, _, _board = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra = load_game(base_path=tmp_path)
         assert loaded.voyage.destination_id == "al_manar"
         assert loaded.voyage.status.value == "at_sea"
 
@@ -86,6 +86,6 @@ class TestSaveLoad:
         world.captain.ship.hull = 42
         world.captain.ship.crew = 5
         save_game(world, base_path=tmp_path)
-        loaded, _, _board = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra = load_game(base_path=tmp_path)
         assert loaded.captain.ship.hull == 42
         assert loaded.captain.ship.crew == 5

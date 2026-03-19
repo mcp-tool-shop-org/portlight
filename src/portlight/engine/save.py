@@ -34,6 +34,14 @@ from portlight.engine.contracts import (
     ContractOutcome,
     ContractStatus,
 )
+from portlight.engine.infrastructure import (
+    BrokerOffice,
+    BrokerTier,
+    InfrastructureState,
+    StoredLot,
+    WarehouseLease,
+    WarehouseTier,
+)
 from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
@@ -375,6 +383,81 @@ def _board_from_dict(d: dict) -> ContractBoard:
     )
 
 
+def _stored_lot_to_dict(lot: StoredLot) -> dict:
+    return {
+        "good_id": lot.good_id,
+        "quantity": lot.quantity,
+        "acquired_port": lot.acquired_port,
+        "acquired_region": lot.acquired_region,
+        "acquired_day": lot.acquired_day,
+        "deposited_day": lot.deposited_day,
+    }
+
+
+def _stored_lot_from_dict(d: dict) -> StoredLot:
+    return StoredLot(**d)
+
+
+def _warehouse_to_dict(w: WarehouseLease) -> dict:
+    return {
+        "id": w.id,
+        "port_id": w.port_id,
+        "tier": w.tier.value,
+        "capacity": w.capacity,
+        "lease_cost": w.lease_cost,
+        "upkeep_per_day": w.upkeep_per_day,
+        "inventory": [_stored_lot_to_dict(lot) for lot in w.inventory],
+        "opened_day": w.opened_day,
+        "upkeep_paid_through": w.upkeep_paid_through,
+        "active": w.active,
+    }
+
+
+def _warehouse_from_dict(d: dict) -> WarehouseLease:
+    return WarehouseLease(
+        id=d["id"],
+        port_id=d["port_id"],
+        tier=WarehouseTier(d["tier"]),
+        capacity=d["capacity"],
+        lease_cost=d.get("lease_cost", 0),
+        upkeep_per_day=d.get("upkeep_per_day", 1),
+        inventory=[_stored_lot_from_dict(lot) for lot in d.get("inventory", [])],
+        opened_day=d.get("opened_day", 0),
+        upkeep_paid_through=d.get("upkeep_paid_through", 0),
+        active=d.get("active", True),
+    )
+
+
+def _broker_to_dict(b: BrokerOffice) -> dict:
+    return {
+        "region": b.region,
+        "tier": b.tier.value,
+        "opened_day": b.opened_day,
+    }
+
+
+def _broker_from_dict(d: dict) -> BrokerOffice:
+    return BrokerOffice(
+        region=d["region"],
+        tier=BrokerTier(d.get("tier", "none")),
+        opened_day=d.get("opened_day", 0),
+    )
+
+
+def _infra_to_dict(state: InfrastructureState) -> dict:
+    return {
+        "warehouses": [_warehouse_to_dict(w) for w in state.warehouses],
+        "brokers": [_broker_to_dict(b) for b in state.brokers],
+    }
+
+
+def _infra_from_dict(d: dict) -> InfrastructureState:
+    return InfrastructureState(
+        warehouses=[_warehouse_from_dict(w) for w in d.get("warehouses", [])],
+        brokers=[_broker_from_dict(b) for b in d.get("brokers", [])],
+    )
+
+
 def _ledger_to_dict(ledger: ReceiptLedger) -> dict:
     return {
         "run_id": ledger.run_id,
@@ -400,6 +483,7 @@ def world_to_dict(
     world: WorldState,
     ledger: ReceiptLedger | None = None,
     board: ContractBoard | None = None,
+    infra: InfrastructureState | None = None,
 ) -> dict:
     """Serialize full game state to a JSON-safe dict."""
     return {
@@ -412,11 +496,12 @@ def world_to_dict(
         "seed": world.seed,
         "ledger": _ledger_to_dict(ledger) if ledger else None,
         "contract_board": _board_to_dict(board) if board else None,
+        "infrastructure": _infra_to_dict(infra) if infra else None,
     }
 
 
-def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard]:
-    """Deserialize game state from dict. Returns (world, ledger, board)."""
+def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState]:
+    """Deserialize game state from dict. Returns (world, ledger, board, infra)."""
     world = WorldState(
         captain=_captain_from_dict(d["captain"]),
         ports={pid: _port_from_dict(p) for pid, p in d["ports"].items()},
@@ -427,13 +512,15 @@ def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard]:
     )
     ledger = _ledger_from_dict(d["ledger"]) if d.get("ledger") else ReceiptLedger()
     board = _board_from_dict(d["contract_board"]) if d.get("contract_board") else ContractBoard()
-    return world, ledger, board
+    infra = _infra_from_dict(d["infrastructure"]) if d.get("infrastructure") else InfrastructureState()
+    return world, ledger, board, infra
 
 
 def save_game(
     world: WorldState,
     ledger: ReceiptLedger | None = None,
     board: ContractBoard | None = None,
+    infra: InfrastructureState | None = None,
     base_path: Path | None = None,
 ) -> Path:
     """Save game state to JSON file. Returns path written."""
@@ -441,12 +528,12 @@ def save_game(
     save_dir = base / SAVE_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / SAVE_FILE
-    data = world_to_dict(world, ledger, board)
+    data = world_to_dict(world, ledger, board, infra)
     save_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return save_path
 
 
-def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard] | None:
+def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState] | None:
     """Load game state from JSON file. Returns None if no save exists or data is corrupt."""
     base = base_path or Path(".")
     save_path = base / SAVE_DIR / SAVE_FILE

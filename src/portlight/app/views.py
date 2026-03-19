@@ -29,6 +29,7 @@ from portlight.content.ships import SHIPS
 if TYPE_CHECKING:
     from portlight.engine.captain_identity import CaptainTemplate
     from portlight.engine.contracts import ActiveContract, ContractBoard, ContractOffer
+    from portlight.engine.infrastructure import InfrastructureState, WarehouseLease
     from portlight.engine.models import Captain, Port, ReputationState, Route, Ship, WorldState
     from portlight.receipts.models import ReceiptLedger
 
@@ -682,3 +683,118 @@ def obligations_view(board: "ContractBoard", day: int) -> Panel:
 
     return Panel(Group(table, Text.from_markup(footer) if footer else Text("")),
                  title="[bold]Obligations[/bold]", border_style="magenta")
+
+
+# ---------------------------------------------------------------------------
+# Warehouse view - storage and staging
+# ---------------------------------------------------------------------------
+
+def warehouse_view(
+    infra: "InfrastructureState",
+    port_id: str | None,
+    port_name: str | None = None,
+) -> Panel:
+    """Warehouse status: current port warehouse + all active warehouses summary."""
+    from portlight.engine.infrastructure import warehouse_summary
+
+    active_warehouses = warehouse_summary(infra)
+
+    if not active_warehouses:
+        return Panel(
+            "[dim]No warehouses leased. Use [bold]portlight warehouse lease <tier>[/bold] to open one.[/dim]",
+            title="[bold]Warehouses[/bold]", border_style="yellow",
+        )
+
+    lines: list[str] = []
+
+    # Current port warehouse detail
+    current = None
+    if port_id:
+        current = next((w for w in active_warehouses if w.port_id == port_id), None)
+
+    if current:
+        label = port_name or current.port_id
+        lines.append(f"[bold]{label}[/bold] — {current.tier.value.title()} ({current.used_capacity}/{current.capacity})")
+        if current.inventory:
+            table = Table(show_header=True, header_style="bold", padding=(0, 1))
+            table.add_column("Good", style="bold")
+            table.add_column("Qty", justify="right")
+            table.add_column("Source Port")
+            table.add_column("Source Region")
+
+            for lot in current.inventory:
+                good = GOODS.get(lot.good_id)
+                good_name = good.name if good else lot.good_id
+                table.add_row(good_name, str(lot.quantity), lot.acquired_port, lot.acquired_region)
+
+            # We'll return a compound view with the table
+            capacity_bar = _warehouse_bar(current.used_capacity, current.capacity)
+            lines.append(f"Capacity: {capacity_bar}")
+            lines.append(f"Upkeep: {current.upkeep_per_day}/day")
+            lines.append("")
+
+            # Summary of other warehouses
+            others = [w for w in active_warehouses if w.port_id != port_id]
+            if others:
+                lines.append("[bold]Other warehouses:[/bold]")
+                for w in others:
+                    lines.append(f"  {w.port_id}: {w.tier.value.title()} ({w.used_capacity}/{w.capacity})")
+
+            return Panel(
+                Group(Text.from_markup("\n".join(lines)), table),
+                title="[bold]Warehouses[/bold]", border_style="yellow",
+            )
+        else:
+            lines.append("[dim]  Empty[/dim]")
+            lines.append(f"  Capacity: {current.capacity} | Upkeep: {current.upkeep_per_day}/day")
+
+    # All warehouses summary
+    if not current or len(active_warehouses) > 1:
+        if current:
+            lines.append("")
+            lines.append("[bold]Other warehouses:[/bold]")
+        for w in active_warehouses:
+            if w.port_id == port_id and current:
+                continue
+            goods_str = ", ".join(
+                f"{lot.quantity}x {lot.good_id}" for lot in w.inventory
+            ) if w.inventory else "empty"
+            lines.append(f"  {w.port_id}: {w.tier.value.title()} ({w.used_capacity}/{w.capacity}) — {goods_str}")
+
+    return Panel("\n".join(lines), title="[bold]Warehouses[/bold]", border_style="yellow")
+
+
+def warehouse_lease_options(port_id: str) -> Panel:
+    """Show available warehouse tiers at a port."""
+    from portlight.content.infrastructure import available_tiers
+
+    tiers = available_tiers(port_id)
+    if not tiers:
+        return Panel("[dim]No warehouse facilities at this port.[/dim]",
+                     title="[bold]Warehouse Leasing[/bold]", border_style="yellow")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Tier", style="bold")
+    table.add_column("Name")
+    table.add_column("Capacity", justify="right")
+    table.add_column("Lease Cost", justify="right")
+    table.add_column("Upkeep/day", justify="right")
+    table.add_column("Description")
+
+    for spec in tiers:
+        table.add_row(
+            spec.tier.value,
+            spec.name,
+            str(spec.capacity),
+            fmt.silver(spec.lease_cost),
+            fmt.silver(spec.upkeep_per_day),
+            spec.description,
+        )
+
+    return Panel(table, title="[bold]Warehouse Leasing[/bold]", border_style="yellow")
+
+
+def _warehouse_bar(used: int, capacity: int) -> str:
+    pct = int(used / max(capacity, 1) * 10)
+    filled = min(10, pct)
+    return f"[cyan]{'#' * filled}{'-' * (10 - filled)}[/cyan] {used}/{capacity}"

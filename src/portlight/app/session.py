@@ -34,6 +34,14 @@ from portlight.engine.contracts import (
     resolve_completed,
     tick_contracts,
 )
+from portlight.engine.infrastructure import (
+    InfrastructureState,
+    deposit_cargo,
+    get_warehouse,
+    lease_warehouse,
+    tick_infrastructure,
+    withdraw_cargo,
+)
 from portlight.engine.save import load_game, save_game
 from portlight.engine.voyage import EventType, advance_day, arrive, depart
 from portlight.receipts.models import ReceiptLedger, TradeReceipt
@@ -47,6 +55,7 @@ class GameSession:
         self.world: WorldState | None = None
         self.ledger: ReceiptLedger = ReceiptLedger()
         self.board: ContractBoard = ContractBoard()
+        self.infra: InfrastructureState = InfrastructureState()
         self._trade_seq: int = 0
         self._rng: random.Random = random.Random()
 
@@ -102,6 +111,7 @@ class GameSession:
         self._rng = random.Random(self.world.seed)
         self.ledger = ReceiptLedger(run_id=f"run-{self.world.seed}")
         self.board = ContractBoard()
+        self.infra = InfrastructureState()
         self._trade_seq = 0
         self._save()
 
@@ -110,7 +120,7 @@ class GameSession:
         result = load_game(self.base_path)
         if result is None:
             return False
-        self.world, self.ledger, self.board = result
+        self.world, self.ledger, self.board, self.infra = result
         self._rng = random.Random(self.world.seed + self.world.day)
         self._trade_seq = len(self.ledger.receipts)
         return True
@@ -124,7 +134,7 @@ class GameSession:
     def _save(self) -> None:
         """Auto-save after every mutation."""
         if self.world:
-            save_game(self.world, self.ledger, self.board, self.base_path)
+            save_game(self.world, self.ledger, self.board, self.infra, self.base_path)
 
     def _recalc(self, port) -> None:
         """Recalculate prices at a port with captain modifiers."""
@@ -240,6 +250,9 @@ class GameSession:
         contract_outcomes = tick_contracts(self.board, self.world.day)
         for outcome in contract_outcomes:
             self.world.captain.silver += outcome.silver_delta
+
+        # Daily infrastructure upkeep
+        tick_infrastructure(self.infra, self.world.captain, self.world.day)
 
         if not self.at_sea:
             # In port: tick markets forward
@@ -455,3 +468,50 @@ class GameSession:
             return result
         self._save()
         return None
+
+    # --- Warehouses ---
+
+    def lease_warehouse_cmd(self, tier_spec) -> str | None:
+        """Lease a warehouse at current port. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked to lease a warehouse"
+        result = lease_warehouse(
+            self.infra, self.world.captain, port.id, tier_spec, self.world.day,
+        )
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None
+
+    def deposit_cmd(self, good_id: str, qty: int) -> int | str:
+        """Deposit cargo into warehouse. Returns qty deposited or error."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked to deposit"
+        result = deposit_cargo(
+            self.infra, port.id, self.world.captain, good_id, qty, self.world.day,
+        )
+        if isinstance(result, str):
+            return result
+        self._save()
+        return result
+
+    def withdraw_cmd(self, good_id: str, qty: int, source_port: str | None = None) -> int | str:
+        """Withdraw cargo from warehouse. Returns qty withdrawn or error."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked to withdraw"
+        result = withdraw_cargo(
+            self.infra, port.id, self.world.captain, good_id, qty, source_port,
+        )
+        if isinstance(result, str):
+            return result
+        self._save()
+        return result
