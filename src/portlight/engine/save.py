@@ -26,6 +26,14 @@ from portlight.engine.models import (
     VoyageStatus,
     WorldState,
 )
+from portlight.engine.contracts import (
+    ActiveContract,
+    ContractBoard,
+    ContractFamily,
+    ContractOffer,
+    ContractOutcome,
+    ContractStatus,
+)
 from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
@@ -94,11 +102,25 @@ def _captain_to_dict(captain: Captain) -> dict:
         "silver": captain.silver,
         "reputation": captain.reputation,
         "ship": _ship_to_dict(captain.ship) if captain.ship else None,
-        "cargo": [{"good_id": c.good_id, "quantity": c.quantity, "cost_basis": c.cost_basis} for c in captain.cargo],
+        "cargo": [{
+            "good_id": c.good_id, "quantity": c.quantity, "cost_basis": c.cost_basis,
+            "acquired_port": c.acquired_port, "acquired_region": c.acquired_region,
+            "acquired_day": c.acquired_day,
+        } for c in captain.cargo],
         "provisions": captain.provisions,
         "day": captain.day,
         "standing": _reputation_to_dict(captain.standing),
     }
+
+
+def _cargo_from_dict(c: dict) -> CargoItem:
+    return CargoItem(
+        good_id=c["good_id"], quantity=c["quantity"],
+        cost_basis=c.get("cost_basis", 0),
+        acquired_port=c.get("acquired_port", ""),
+        acquired_region=c.get("acquired_region", ""),
+        acquired_day=c.get("acquired_day", 0),
+    )
 
 
 def _captain_from_dict(d: dict) -> Captain:
@@ -109,7 +131,7 @@ def _captain_from_dict(d: dict) -> Captain:
         silver=d["silver"],
         reputation=d.get("reputation", 0),
         ship=_ship_from_dict(d["ship"]) if d.get("ship") else None,
-        cargo=[CargoItem(**c) for c in d.get("cargo", [])],
+        cargo=[_cargo_from_dict(c) for c in d.get("cargo", [])],
         provisions=d["provisions"],
         day=d["day"],
         standing=standing,
@@ -220,6 +242,139 @@ def _receipt_from_dict(d: dict) -> TradeReceipt:
     )
 
 
+def _offer_to_dict(o: ContractOffer) -> dict:
+    return {
+        "id": o.id,
+        "template_id": o.template_id,
+        "family": o.family.value,
+        "title": o.title,
+        "description": o.description,
+        "issuer_port_id": o.issuer_port_id,
+        "destination_port_id": o.destination_port_id,
+        "good_id": o.good_id,
+        "quantity": o.quantity,
+        "created_day": o.created_day,
+        "deadline_day": o.deadline_day,
+        "reward_silver": o.reward_silver,
+        "bonus_reward": o.bonus_reward,
+        "required_trust_tier": o.required_trust_tier,
+        "required_standing": o.required_standing,
+        "heat_ceiling": o.heat_ceiling,
+        "inspection_modifier": o.inspection_modifier,
+        "source_region": o.source_region,
+        "source_port": o.source_port,
+        "offer_reason": o.offer_reason,
+        "tags": o.tags,
+        "acceptance_window": o.acceptance_window,
+    }
+
+
+def _offer_from_dict(d: dict) -> ContractOffer:
+    return ContractOffer(
+        id=d["id"],
+        template_id=d["template_id"],
+        family=ContractFamily(d["family"]),
+        title=d["title"],
+        description=d["description"],
+        issuer_port_id=d["issuer_port_id"],
+        destination_port_id=d["destination_port_id"],
+        good_id=d["good_id"],
+        quantity=d["quantity"],
+        created_day=d["created_day"],
+        deadline_day=d["deadline_day"],
+        reward_silver=d["reward_silver"],
+        bonus_reward=d.get("bonus_reward", 0),
+        required_trust_tier=d.get("required_trust_tier", "unproven"),
+        required_standing=d.get("required_standing", 0),
+        heat_ceiling=d.get("heat_ceiling"),
+        inspection_modifier=d.get("inspection_modifier", 0.0),
+        source_region=d.get("source_region"),
+        source_port=d.get("source_port"),
+        offer_reason=d.get("offer_reason", ""),
+        tags=d.get("tags", []),
+        acceptance_window=d.get("acceptance_window", 10),
+    )
+
+
+def _active_contract_to_dict(c: ActiveContract) -> dict:
+    return {
+        "offer_id": c.offer_id,
+        "template_id": c.template_id,
+        "family": c.family.value,
+        "title": c.title,
+        "accepted_day": c.accepted_day,
+        "deadline_day": c.deadline_day,
+        "destination_port_id": c.destination_port_id,
+        "good_id": c.good_id,
+        "required_quantity": c.required_quantity,
+        "delivered_quantity": c.delivered_quantity,
+        "reward_silver": c.reward_silver,
+        "bonus_reward": c.bonus_reward,
+        "source_region": c.source_region,
+        "source_port": c.source_port,
+        "inspection_modifier": c.inspection_modifier,
+        "status": c.status.value,
+    }
+
+
+def _active_contract_from_dict(d: dict) -> ActiveContract:
+    return ActiveContract(
+        offer_id=d["offer_id"],
+        template_id=d["template_id"],
+        family=ContractFamily(d["family"]),
+        title=d["title"],
+        accepted_day=d["accepted_day"],
+        deadline_day=d["deadline_day"],
+        destination_port_id=d["destination_port_id"],
+        good_id=d["good_id"],
+        required_quantity=d["required_quantity"],
+        delivered_quantity=d.get("delivered_quantity", 0),
+        reward_silver=d.get("reward_silver", 0),
+        bonus_reward=d.get("bonus_reward", 0),
+        source_region=d.get("source_region"),
+        source_port=d.get("source_port"),
+        inspection_modifier=d.get("inspection_modifier", 0.0),
+        status=ContractStatus(d.get("status", "accepted")),
+    )
+
+
+def _outcome_to_dict(o: ContractOutcome) -> dict:
+    return {
+        "contract_id": o.contract_id,
+        "outcome_type": o.outcome_type,
+        "silver_delta": o.silver_delta,
+        "trust_delta": o.trust_delta,
+        "standing_delta": o.standing_delta,
+        "heat_delta": o.heat_delta,
+        "completion_day": o.completion_day,
+        "summary": o.summary,
+    }
+
+
+def _outcome_from_dict(d: dict) -> ContractOutcome:
+    return ContractOutcome(**d)
+
+
+def _board_to_dict(board: ContractBoard) -> dict:
+    return {
+        "offers": [_offer_to_dict(o) for o in board.offers],
+        "active": [_active_contract_to_dict(c) for c in board.active],
+        "completed": [_outcome_to_dict(o) for o in board.completed],
+        "last_refresh_day": board.last_refresh_day,
+        "max_offers": board.max_offers,
+    }
+
+
+def _board_from_dict(d: dict) -> ContractBoard:
+    return ContractBoard(
+        offers=[_offer_from_dict(o) for o in d.get("offers", [])],
+        active=[_active_contract_from_dict(c) for c in d.get("active", [])],
+        completed=[_outcome_from_dict(o) for o in d.get("completed", [])],
+        last_refresh_day=d.get("last_refresh_day", 0),
+        max_offers=d.get("max_offers", 5),
+    )
+
+
 def _ledger_to_dict(ledger: ReceiptLedger) -> dict:
     return {
         "run_id": ledger.run_id,
@@ -241,7 +396,11 @@ def _ledger_from_dict(d: dict) -> ReceiptLedger:
     return ledger
 
 
-def world_to_dict(world: WorldState, ledger: ReceiptLedger | None = None) -> dict:
+def world_to_dict(
+    world: WorldState,
+    ledger: ReceiptLedger | None = None,
+    board: ContractBoard | None = None,
+) -> dict:
     """Serialize full game state to a JSON-safe dict."""
     return {
         "version": 1,
@@ -252,11 +411,12 @@ def world_to_dict(world: WorldState, ledger: ReceiptLedger | None = None) -> dic
         "day": world.day,
         "seed": world.seed,
         "ledger": _ledger_to_dict(ledger) if ledger else None,
+        "contract_board": _board_to_dict(board) if board else None,
     }
 
 
-def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger]:
-    """Deserialize game state from dict. Returns (world, ledger)."""
+def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard]:
+    """Deserialize game state from dict. Returns (world, ledger, board)."""
     world = WorldState(
         captain=_captain_from_dict(d["captain"]),
         ports={pid: _port_from_dict(p) for pid, p in d["ports"].items()},
@@ -266,21 +426,27 @@ def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger]:
         seed=d.get("seed", 0),
     )
     ledger = _ledger_from_dict(d["ledger"]) if d.get("ledger") else ReceiptLedger()
-    return world, ledger
+    board = _board_from_dict(d["contract_board"]) if d.get("contract_board") else ContractBoard()
+    return world, ledger, board
 
 
-def save_game(world: WorldState, ledger: ReceiptLedger | None = None, base_path: Path | None = None) -> Path:
+def save_game(
+    world: WorldState,
+    ledger: ReceiptLedger | None = None,
+    board: ContractBoard | None = None,
+    base_path: Path | None = None,
+) -> Path:
     """Save game state to JSON file. Returns path written."""
     base = base_path or Path(".")
     save_dir = base / SAVE_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / SAVE_FILE
-    data = world_to_dict(world, ledger)
+    data = world_to_dict(world, ledger, board)
     save_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return save_path
 
 
-def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger] | None:
+def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard] | None:
     """Load game state from JSON file. Returns None if no save exists or data is corrupt."""
     base = base_path or Path(".")
     save_path = base / SAVE_DIR / SAVE_FILE

@@ -307,7 +307,7 @@ class TestSaveLoadCaptainState:
         world = new_game(captain_type=CaptainType.NAVIGATOR)
         world.captain.standing.commercial_trust = 42
         d = world_to_dict(world)
-        world2, _ = world_from_dict(d)
+        world2, _, _board = world_from_dict(d)
         assert world2.captain.captain_type == "navigator"
         assert world2.captain.standing.commercial_trust == 42
 
@@ -316,7 +316,7 @@ class TestSaveLoadCaptainState:
         d = world_to_dict(new_game())
         del d["captain"]["captain_type"]  # simulate old save
         del d["captain"]["standing"]      # simulate old save
-        world, _ = world_from_dict(d)
+        world, _, _board = world_from_dict(d)
         assert world.captain.captain_type == "merchant"
         assert world.captain.standing.commercial_trust == 0
 

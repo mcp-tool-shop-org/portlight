@@ -10,6 +10,7 @@ from __future__ import annotations
 import random
 from pathlib import Path
 
+from portlight.content.contracts import TEMPLATES as CONTRACT_TEMPLATES
 from portlight.content.goods import GOODS
 from portlight.content.ships import SHIPS, create_ship_from_template
 from portlight.content.world import new_game
@@ -23,6 +24,16 @@ from portlight.engine.reputation import (
     record_trade_outcome,
     tick_reputation,
 )
+from portlight.engine.contracts import (
+    ContractBoard,
+    ContractOutcome,
+    abandon_contract,
+    accept_offer,
+    check_delivery,
+    generate_offers,
+    resolve_completed,
+    tick_contracts,
+)
 from portlight.engine.save import load_game, save_game
 from portlight.engine.voyage import EventType, advance_day, arrive, depart
 from portlight.receipts.models import ReceiptLedger, TradeReceipt
@@ -35,6 +46,7 @@ class GameSession:
         self.base_path = base_path or Path(".")
         self.world: WorldState | None = None
         self.ledger: ReceiptLedger = ReceiptLedger()
+        self.board: ContractBoard = ContractBoard()
         self._trade_seq: int = 0
         self._rng: random.Random = random.Random()
 
@@ -89,6 +101,7 @@ class GameSession:
         self.world = new_game(captain_name, starting_port, ct)
         self._rng = random.Random(self.world.seed)
         self.ledger = ReceiptLedger(run_id=f"run-{self.world.seed}")
+        self.board = ContractBoard()
         self._trade_seq = 0
         self._save()
 
@@ -97,7 +110,7 @@ class GameSession:
         result = load_game(self.base_path)
         if result is None:
             return False
-        self.world, self.ledger = result
+        self.world, self.ledger, self.board = result
         self._rng = random.Random(self.world.seed + self.world.day)
         self._trade_seq = len(self.ledger.receipts)
         return True
@@ -111,7 +124,7 @@ class GameSession:
     def _save(self) -> None:
         """Auto-save after every mutation."""
         if self.world:
-            save_game(self.world, self.ledger, self.base_path)
+            save_game(self.world, self.ledger, self.board, self.base_path)
 
     def _recalc(self, port) -> None:
         """Recalculate prices at a port with captain modifiers."""
@@ -143,6 +156,11 @@ class GameSession:
         flood_before = slot.flood_penalty if slot else 0.0
         stock_target = slot.stock_target if slot else 50
 
+        # Snapshot cargo provenance before sell (sell may remove the item)
+        cargo_item = next((c for c in self.world.captain.cargo if c.good_id == good_id), None)
+        cargo_source_port = cargo_item.acquired_port if cargo_item else port.id
+        cargo_source_region = cargo_item.acquired_region if cargo_item else port.region
+
         result = execute_sell(self.world.captain, port, good_id, qty, self._trade_seq)
         if isinstance(result, TradeReceipt):
             self.ledger.append(result)
@@ -172,6 +190,17 @@ class GameSession:
                 flood_before,
                 is_sell=True,
             )
+
+            # Check contract delivery (uses pre-sell provenance snapshot)
+            credited = check_delivery(
+                self.board, port.id, good_id, result.quantity,
+                cargo_source_port, cargo_source_region,
+            )
+            # Resolve any completed contracts
+            if credited:
+                outcomes = resolve_completed(self.board, self.world.day)
+                for outcome in outcomes:
+                    self.world.captain.silver += outcome.silver_delta
 
             self._recalc(port)
             self._save()
@@ -206,6 +235,11 @@ class GameSession:
 
         # Daily reputation tick (heat decay)
         tick_reputation(self.world.captain.standing)
+
+        # Daily contract tick (expiry, stale offers)
+        contract_outcomes = tick_contracts(self.board, self.world.day)
+        for outcome in contract_outcomes:
+            self.world.captain.silver += outcome.silver_delta
 
         if not self.at_sea:
             # In port: tick markets forward
@@ -244,6 +278,8 @@ class GameSession:
                     self.world.day, port.id, port.region,
                 )
                 self._recalc(port)
+                # Refresh contract board at new port
+                self._refresh_board(port)
 
         # Recalculate all markets (time passes)
         for port in self.world.ports.values():
@@ -376,5 +412,46 @@ class GameSession:
             return f"Need {cost} silver for {count} crew ({cost_per}/each here), have {self.world.captain.silver}"
         self.world.captain.silver -= cost
         ship.crew += count
+        self._save()
+        return None
+
+    # --- Contracts ---
+
+    def _refresh_board(self, port) -> None:
+        """Generate fresh contract offers at the current port."""
+        if not self.world:
+            return
+        if self.board.last_refresh_day == self.world.day:
+            return  # already refreshed today
+        offers = generate_offers(
+            CONTRACT_TEMPLATES,
+            self.world,
+            port,
+            self.world.captain.standing,
+            self.world.captain.captain_type,
+            self._rng,
+            max_offers=self.board.max_offers,
+        )
+        self.board.offers = offers
+        self.board.last_refresh_day = self.world.day
+        self._save()
+
+    def accept_contract(self, offer_id: str) -> str | None:
+        """Accept a contract offer. Returns error string or None on success."""
+        if not self.world:
+            return "No active game"
+        result = accept_offer(self.board, offer_id, self.world.day)
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None
+
+    def abandon_contract_cmd(self, offer_id: str) -> str | None:
+        """Abandon an active contract. Returns error string or None on success."""
+        if not self.world:
+            return "No active game"
+        result = abandon_contract(self.board, offer_id, self.world.day)
+        if isinstance(result, str):
+            return result
         self._save()
         return None

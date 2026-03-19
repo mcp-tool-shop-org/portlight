@@ -165,10 +165,13 @@ class ReputationState:
 
 @dataclass
 class CargoItem:
-    """One stack of goods in the hold."""
+    """One stack of goods in the hold with provenance tracking."""
     good_id: str
     quantity: int
     cost_basis: int = 0              # total purchase cost (for P&L tracking)
+    acquired_port: str = ""          # port where this cargo was bought
+    acquired_region: str = ""        # region where acquired
+    acquired_day: int = 0            # game day of acquisition
 
 
 @dataclass

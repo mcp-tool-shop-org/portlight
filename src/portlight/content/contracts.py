@@ -1,0 +1,256 @@
+"""Contract templates — 14 templates across 6 families.
+
+Template design rules:
+  - Every template creates a real trade decision (route, timing, cargo allocation)
+  - Trust/standing/heat gates shape what each captain archetype sees
+  - Captain bias weights make certain offers more likely for certain playstyles
+  - Source constraints force multi-leg planning, not just dump-and-collect
+  - Reward scaling rewards volume but deadline pressure rewards timing
+"""
+
+from portlight.engine.contracts import ContractFamily, ContractTemplate
+
+TEMPLATES: list[ContractTemplate] = [
+    # =========================================================================
+    # PROCUREMENT — bread-and-butter delivery contracts
+    # =========================================================================
+    ContractTemplate(
+        id="proc_grain_feed",
+        family=ContractFamily.PROCUREMENT,
+        title_pattern="Grain for {destination}",
+        description="A port needs grain shipments to feed its population.",
+        goods_pool=["grain"],
+        quantity_min=8,
+        quantity_max=20,
+        reward_per_unit=16,
+        bonus_reward=30,
+        deadline_days=25,
+        trust_requirement="unproven",
+        destination_regions=["East Indies", "West Africa"],
+        captain_bias=["merchant"],
+        tags=["staple", "feed"],
+    ),
+    ContractTemplate(
+        id="proc_timber_shipyard",
+        family=ContractFamily.PROCUREMENT,
+        title_pattern="Timber for {destination} shipyard",
+        description="A shipyard needs timber to fill construction orders.",
+        goods_pool=["timber"],
+        quantity_min=10,
+        quantity_max=25,
+        reward_per_unit=22,
+        bonus_reward=40,
+        deadline_days=30,
+        trust_requirement="unproven",
+        destination_regions=["East Indies"],
+        captain_bias=["merchant", "navigator"],
+        tags=["construction", "shipyard"],
+    ),
+    ContractTemplate(
+        id="proc_iron_forge",
+        family=ContractFamily.PROCUREMENT,
+        title_pattern="Iron for {destination}",
+        description="Forges and workshops need iron ore delivered.",
+        goods_pool=["iron"],
+        quantity_min=6,
+        quantity_max=15,
+        reward_per_unit=30,
+        bonus_reward=35,
+        deadline_days=28,
+        trust_requirement="new",
+        standing_requirement=2,
+        destination_regions=["Mediterranean", "East Indies"],
+        captain_bias=["merchant"],
+        tags=["industrial"],
+    ),
+
+    # =========================================================================
+    # SHORTAGE — urgent, world-derived, higher pay
+    # =========================================================================
+    ContractTemplate(
+        id="short_grain_famine",
+        family=ContractFamily.SHORTAGE,
+        title_pattern="Famine relief: grain to {destination}",
+        description="Stocks are critically low. Urgent grain delivery needed.",
+        goods_pool=["grain"],
+        quantity_min=12,
+        quantity_max=30,
+        reward_per_unit=24,
+        bonus_reward=60,
+        deadline_days=18,
+        trust_requirement="unproven",
+        captain_bias=["merchant"],
+        tags=["urgent", "famine"],
+    ),
+    ContractTemplate(
+        id="short_rum_drought",
+        family=ContractFamily.SHORTAGE,
+        title_pattern="Rum drought at {destination}",
+        description="The port's rum stocks are dangerously low. Sailors are restless.",
+        goods_pool=["rum"],
+        quantity_min=8,
+        quantity_max=18,
+        reward_per_unit=28,
+        bonus_reward=45,
+        deadline_days=20,
+        trust_requirement="unproven",
+        captain_bias=["smuggler"],
+        tags=["urgent", "morale"],
+    ),
+
+    # =========================================================================
+    # LUXURY DISCREET — high value, trust-gated, scrutiny-attracting
+    # =========================================================================
+    ContractTemplate(
+        id="lux_silk_collector",
+        family=ContractFamily.LUXURY_DISCREET,
+        title_pattern="Silk for a private buyer at {destination}",
+        description="A wealthy collector wants silk delivered quietly.",
+        goods_pool=["silk"],
+        quantity_min=4,
+        quantity_max=10,
+        reward_per_unit=90,
+        bonus_reward=80,
+        deadline_days=22,
+        trust_requirement="credible",
+        heat_ceiling=15,
+        inspection_modifier=0.15,
+        captain_bias=["smuggler"],
+        tags=["discreet", "luxury", "high_value"],
+    ),
+    ContractTemplate(
+        id="lux_porcelain_estate",
+        family=ContractFamily.LUXURY_DISCREET,
+        title_pattern="Porcelain for {destination} estate",
+        description="A noble estate requires fine porcelain. Discretion expected.",
+        goods_pool=["porcelain"],
+        quantity_min=3,
+        quantity_max=8,
+        reward_per_unit=80,
+        bonus_reward=70,
+        deadline_days=25,
+        trust_requirement="credible",
+        standing_requirement=3,
+        heat_ceiling=20,
+        inspection_modifier=0.10,
+        captain_bias=["smuggler", "merchant"],
+        tags=["discreet", "luxury"],
+    ),
+    ContractTemplate(
+        id="lux_spice_monopolist",
+        family=ContractFamily.LUXURY_DISCREET,
+        title_pattern="Spice consignment for {destination}",
+        description="A spice monopolist needs off-the-books supply. High scrutiny.",
+        goods_pool=["spice"],
+        quantity_min=5,
+        quantity_max=12,
+        reward_per_unit=75,
+        bonus_reward=90,
+        deadline_days=20,
+        trust_requirement="reliable",
+        heat_ceiling=10,
+        inspection_modifier=0.20,
+        source_region="East Indies",
+        captain_bias=["smuggler"],
+        tags=["discreet", "luxury", "high_scrutiny"],
+    ),
+
+    # =========================================================================
+    # RETURN FREIGHT — origin-anchored, move surplus back
+    # =========================================================================
+    ContractTemplate(
+        id="ret_cotton_return",
+        family=ContractFamily.RETURN_FREIGHT,
+        title_pattern="Return freight: cotton to {destination}",
+        description="Cotton surplus needs to move. Pays for the backhaul.",
+        goods_pool=["cotton"],
+        quantity_min=10,
+        quantity_max=22,
+        reward_per_unit=18,
+        deadline_days=20,
+        trust_requirement="unproven",
+        source_region="West Africa",
+        destination_regions=["Mediterranean", "East Indies"],
+        captain_bias=["navigator"],
+        tags=["backhaul", "bulk"],
+    ),
+    ContractTemplate(
+        id="ret_spice_restock",
+        family=ContractFamily.RETURN_FREIGHT,
+        title_pattern="Spice restock run to {destination}",
+        description="A merchant house needs spice moved from origin stockpile.",
+        goods_pool=["spice"],
+        quantity_min=5,
+        quantity_max=12,
+        reward_per_unit=60,
+        bonus_reward=50,
+        deadline_days=25,
+        trust_requirement="new",
+        standing_requirement=3,
+        source_region="East Indies",
+        destination_regions=["Mediterranean", "West Africa"],
+        captain_bias=["merchant", "navigator"],
+        tags=["restock", "cross_region"],
+    ),
+
+    # =========================================================================
+    # CIRCUIT — multi-leg, navigator-biased, region-spanning
+    # =========================================================================
+    ContractTemplate(
+        id="circ_med_africa",
+        family=ContractFamily.CIRCUIT,
+        title_pattern="Trade circuit: {good} to {destination}",
+        description="Complete a Mediterranean–West Africa trade loop. Deliver goods to prove the route.",
+        goods_pool=["grain", "timber", "iron"],
+        quantity_min=10,
+        quantity_max=20,
+        reward_per_unit=25,
+        bonus_reward=80,
+        deadline_days=35,
+        trust_requirement="new",
+        standing_requirement=2,
+        source_region="Mediterranean",
+        destination_regions=["West Africa"],
+        captain_bias=["navigator"],
+        tags=["circuit", "cross_region"],
+    ),
+    ContractTemplate(
+        id="circ_indies_loop",
+        family=ContractFamily.CIRCUIT,
+        title_pattern="Eastern circuit: {good} to {destination}",
+        description="Prove the East Indies trade route with a delivery run.",
+        goods_pool=["silk", "porcelain", "spice"],
+        quantity_min=5,
+        quantity_max=12,
+        reward_per_unit=70,
+        bonus_reward=100,
+        deadline_days=40,
+        trust_requirement="credible",
+        standing_requirement=4,
+        source_region="East Indies",
+        destination_regions=["Mediterranean", "West Africa"],
+        captain_bias=["navigator"],
+        tags=["circuit", "cross_region", "high_value"],
+    ),
+
+    # =========================================================================
+    # REPUTATION CHARTER — premium, trust-gated, standing-heavy
+    # =========================================================================
+    ContractTemplate(
+        id="rep_charter_luxury",
+        family=ContractFamily.REPUTATION_CHARTER,
+        title_pattern="Charter: {good} to {destination}",
+        description="A premium charter for an established captain. Trust and standing required.",
+        goods_pool=["silk", "porcelain", "spice"],
+        quantity_min=8,
+        quantity_max=15,
+        reward_per_unit=85,
+        bonus_reward=120,
+        deadline_days=30,
+        trust_requirement="trusted",
+        standing_requirement=8,
+        heat_ceiling=8,
+        captain_bias=["merchant"],
+        tags=["charter", "premium", "trust_gated"],
+    ),
+]

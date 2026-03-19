@@ -332,6 +332,65 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Contracts
+# ---------------------------------------------------------------------------
+
+@app.command()
+def contracts() -> None:
+    """Show the contract board at the current port."""
+    s = _session()
+    if not s.current_port:
+        console.print("[yellow]Must be docked to view the contract board.[/yellow]")
+        return
+    console.print(views.contracts_view(s.board, s.world.day))
+
+
+@app.command()
+def obligations() -> None:
+    """Show active contract obligations."""
+    s = _session()
+    console.print(views.obligations_view(s.board, s.world.day))
+
+
+@app.command()
+def accept(offer_id: str) -> None:
+    """Accept a contract offer from the board."""
+    s = _session()
+    # Allow short IDs (first 8 chars)
+    matched = next((o for o in s.board.offers if o.id.startswith(offer_id)), None)
+    if not matched:
+        console.print(f"[red]No offer matching '{offer_id}'. Check the board with: portlight contracts[/red]")
+        return
+    err = s.accept_contract(matched.id)
+    if err:
+        console.print(f"[red]{err}[/red]")
+        return
+    console.print(f"\n[bold green]Contract accepted: {matched.title}[/bold green]\n")
+    console.print(views.obligations_view(s.board, s.world.day))
+
+
+@app.command()
+def abandon(offer_id: str) -> None:
+    """Abandon an active contract (reputation cost)."""
+    s = _session()
+    # Allow short IDs
+    matched = next((c for c in s.board.active if c.offer_id.startswith(offer_id)), None)
+    if not matched:
+        console.print(f"[red]No active contract matching '{offer_id}'. Check obligations with: portlight obligations[/red]")
+        return
+    err = s.abandon_contract_cmd(matched.offer_id)
+    if err:
+        console.print(f"[red]{err}[/red]")
+        return
+    console.print(f"\n[yellow]Contract abandoned: {matched.title}[/yellow]")
+    console.print("[dim]Reputation penalty applied.[/dim]")
+
+
+# ---------------------------------------------------------------------------
+# Save / Load (explicit)
+# ---------------------------------------------------------------------------
+
 @app.command()
 def save() -> None:
     """Explicitly save the game."""

@@ -28,6 +28,7 @@ from portlight.content.ships import SHIPS
 
 if TYPE_CHECKING:
     from portlight.engine.captain_identity import CaptainTemplate
+    from portlight.engine.contracts import ActiveContract, ContractBoard, ContractOffer
     from portlight.engine.models import Captain, Port, ReputationState, Route, Ship, WorldState
     from portlight.receipts.models import ReceiptLedger
 
@@ -562,3 +563,122 @@ def _event_icon(event_type: str) -> str:
         "nothing": "[dim].[/dim]",
     }
     return icons.get(event_type, "·")
+
+
+# ---------------------------------------------------------------------------
+# Contract board view - available offers
+# ---------------------------------------------------------------------------
+
+def contracts_view(board: "ContractBoard", day: int) -> Panel:
+    """Contract board: available offers with requirements and rewards."""
+    if not board.offers:
+        return Panel("[dim]No contract offers available. Arrive at a port to see the board.[/dim]",
+                     title="[bold]Contract Board[/bold]", border_style="yellow")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("ID", style="dim")
+    table.add_column("Title", style="bold")
+    table.add_column("Good")
+    table.add_column("Qty", justify="right")
+    table.add_column("Reward", justify="right")
+    table.add_column("Deadline", justify="right")
+    table.add_column("Trust")
+    table.add_column("Reason")
+
+    for offer in board.offers:
+        good = GOODS.get(offer.good_id)
+        good_name = good.name if good else offer.good_id
+        days_left = offer.deadline_day - day
+        deadline_style = "red" if days_left < 10 else "yellow" if days_left < 20 else "green"
+        reward_str = f"{offer.reward_silver}"
+        if offer.bonus_reward > 0:
+            reward_str += f" [green](+{offer.bonus_reward})[/green]"
+
+        # Trust requirement
+        trust_str = offer.required_trust_tier
+        if offer.required_standing > 0:
+            trust_str += f" / standing {offer.required_standing}+"
+
+        table.add_row(
+            offer.id[:8],
+            offer.title,
+            good_name,
+            str(offer.quantity),
+            reward_str,
+            f"[{deadline_style}]{days_left}d[/{deadline_style}]",
+            trust_str,
+            offer.offer_reason,
+        )
+
+    active_count = len(board.active)
+    footer = f"\nActive contracts: {active_count}/3"
+    if active_count >= 3:
+        footer += " [red](max reached)[/red]"
+
+    return Panel(Group(table, Text.from_markup(footer)),
+                 title="[bold]Contract Board[/bold]", border_style="yellow")
+
+
+# ---------------------------------------------------------------------------
+# Obligations view - active contracts
+# ---------------------------------------------------------------------------
+
+def obligations_view(board: "ContractBoard", day: int) -> Panel:
+    """Active contract obligations: progress, deadlines, rewards."""
+    if not board.active:
+        return Panel("[dim]No active contracts. Accept offers from the contract board.[/dim]",
+                     title="[bold]Obligations[/bold]", border_style="magenta")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("ID", style="dim")
+    table.add_column("Title", style="bold")
+    table.add_column("Good")
+    table.add_column("Progress", justify="center")
+    table.add_column("Reward", justify="right")
+    table.add_column("Deadline", justify="right")
+    table.add_column("Source")
+
+    for contract in board.active:
+        good = GOODS.get(contract.good_id)
+        good_name = good.name if good else contract.good_id
+        days_left = contract.deadline_day - day
+        deadline_style = "red" if days_left < 5 else "yellow" if days_left < 10 else "green"
+
+        # Progress bar
+        pct = contract.delivered_quantity / max(contract.required_quantity, 1)
+        filled = int(pct * 10)
+        bar = f"[cyan]{'#' * filled}{'-' * (10 - filled)}[/cyan] {contract.delivered_quantity}/{contract.required_quantity}"
+
+        reward_str = f"{contract.reward_silver}"
+        if contract.bonus_reward > 0:
+            reward_str += f" [green](+{contract.bonus_reward})[/green]"
+
+        source = ""
+        if contract.source_region:
+            source = f"from {contract.source_region}"
+        if contract.source_port:
+            source = f"from {contract.source_port}"
+
+        table.add_row(
+            contract.offer_id[:8],
+            contract.title,
+            good_name,
+            bar,
+            reward_str,
+            f"[{deadline_style}]{days_left}d[/{deadline_style}]",
+            source if source else "[dim]-[/dim]",
+        )
+
+    # Completed summary
+    if board.completed:
+        recent = board.completed[-3:]
+        footer_lines = ["\n[bold]Recent outcomes:[/bold]"]
+        for outcome in recent:
+            icon = "[green]+[/green]" if outcome.silver_delta > 0 else "[red]-[/red]"
+            footer_lines.append(f"  {icon} {outcome.summary}")
+        footer = "\n".join(footer_lines)
+    else:
+        footer = ""
+
+    return Panel(Group(table, Text.from_markup(footer) if footer else Text("")),
+                 title="[bold]Obligations[/bold]", border_style="magenta")

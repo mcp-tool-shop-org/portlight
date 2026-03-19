@@ -1,0 +1,553 @@
+"""Contract engine — multi-voyage business arcs on top of the living economy.
+
+Contracts never replace the economy. They send the player back into market
+reading, cargo allocation, route choice, timing, and risk management.
+
+Lifecycle:
+  - generate_offers: creates offers from world state at port arrival
+  - accept_offer: commits player to an obligation
+  - check_delivery: observes real cargo sales and credits progress
+  - abandon_contract: player gives up (reputation cost)
+  - tick_contracts: daily deadline checks, expiry resolution
+  - complete_contract: pays out, mutates reputation
+
+All reputation mutations flow through engine/reputation.py canonical seam.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import random
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from portlight.engine.models import Captain, Port, ReputationState, WorldState
+
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+class ContractFamily(str, Enum):
+    PROCUREMENT = "procurement"
+    SHORTAGE = "shortage"
+    LUXURY_DISCREET = "luxury_discreet"
+    RETURN_FREIGHT = "return_freight"
+    CIRCUIT = "circuit"
+    REPUTATION_CHARTER = "reputation_charter"
+
+
+class ContractStatus(str, Enum):
+    AVAILABLE = "available"
+    ACCEPTED = "accepted"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    EXPIRED = "expired"
+    ABANDONED = "abandoned"
+
+
+# ---------------------------------------------------------------------------
+# Contract template (reusable pattern)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ContractTemplate:
+    """Reusable contract pattern. Content data, not runtime state."""
+    id: str
+    family: ContractFamily
+    title_pattern: str                     # e.g. "Grain for {destination}"
+    description: str
+    goods_pool: list[str]                  # eligible good_ids
+    quantity_min: int
+    quantity_max: int
+    reward_per_unit: int                   # silver per unit delivered
+    bonus_reward: int = 0                  # extra for early/full delivery
+    deadline_days: int = 30                # base deadline
+    trust_requirement: str = "unproven"    # min trust tier
+    standing_requirement: int = 0          # min regional standing
+    heat_ceiling: int | None = None        # max heat to see this offer
+    inspection_modifier: float = 0.0       # added inspection risk during this contract
+    source_region: str | None = None       # cargo must come from this region
+    source_port: str | None = None         # cargo must come from this port
+    destination_regions: list[str] = field(default_factory=list)  # valid dest regions
+    captain_bias: list[str] = field(default_factory=list)  # captain types that see this more
+    tags: list[str] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Contract offer (generated, live in the world)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ContractOffer:
+    """A live offer on the board at a port."""
+    id: str
+    template_id: str
+    family: ContractFamily
+    title: str
+    description: str
+    issuer_port_id: str
+    destination_port_id: str
+    good_id: str
+    quantity: int
+    created_day: int
+    deadline_day: int
+    reward_silver: int
+    bonus_reward: int
+    required_trust_tier: str
+    required_standing: int
+    heat_ceiling: int | None
+    inspection_modifier: float
+    source_region: str | None
+    source_port: str | None
+    offer_reason: str                      # why this offer exists
+    tags: list[str] = field(default_factory=list)
+    acceptance_window: int = 10            # days until offer expires if not accepted
+
+
+# ---------------------------------------------------------------------------
+# Active contract (accepted obligation)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ActiveContract:
+    """An accepted contract obligation."""
+    offer_id: str
+    template_id: str
+    family: ContractFamily
+    title: str
+    accepted_day: int
+    deadline_day: int
+    destination_port_id: str
+    good_id: str
+    required_quantity: int
+    delivered_quantity: int = 0
+    reward_silver: int = 0
+    bonus_reward: int = 0
+    source_region: str | None = None
+    source_port: str | None = None
+    inspection_modifier: float = 0.0
+    status: ContractStatus = ContractStatus.ACCEPTED
+
+
+# ---------------------------------------------------------------------------
+# Contract outcome (resolution truth)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ContractOutcome:
+    """Resolution of a completed/failed contract."""
+    contract_id: str
+    outcome_type: str              # completed, completed_bonus, expired, abandoned
+    silver_delta: int
+    trust_delta: int
+    standing_delta: int
+    heat_delta: int
+    completion_day: int
+    summary: str
+
+
+# ---------------------------------------------------------------------------
+# Contract board (session state)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ContractBoard:
+    """All contract state for a game session."""
+    offers: list[ContractOffer] = field(default_factory=list)
+    active: list[ActiveContract] = field(default_factory=list)
+    completed: list[ContractOutcome] = field(default_factory=list)
+    last_refresh_day: int = 0
+    max_offers: int = 5                    # board slots
+
+
+# ---------------------------------------------------------------------------
+# Generation
+# ---------------------------------------------------------------------------
+
+def _offer_id(template_id: str, port_id: str, day: int, seq: int) -> str:
+    raw = f"{template_id}:{port_id}:{day}:{seq}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
+
+
+def _pick_destination(
+    template: ContractTemplate,
+    issuer_port: "Port",
+    ports: dict[str, "Port"],
+    routes: list,
+) -> "Port | None":
+    """Pick a valid destination port for a contract."""
+    candidates = []
+    for pid, port in ports.items():
+        if pid == issuer_port.id:
+            continue
+        if template.destination_regions and port.region not in template.destination_regions:
+            continue
+        # Check route exists
+        has_route = any(
+            (r.port_a == issuer_port.id and r.port_b == pid) or
+            (r.port_a == pid and r.port_b == issuer_port.id)
+            for r in routes
+        )
+        # Also accept multi-hop (destination reachable from somewhere connected)
+        if not has_route:
+            # Check if destination is reachable from ANY port
+            has_route = any(
+                r.port_a == pid or r.port_b == pid
+                for r in routes
+            )
+        if has_route:
+            candidates.append(port)
+    return random.choice(candidates) if candidates else None
+
+
+def _compute_offer_reason(
+    template: ContractTemplate,
+    issuer_port: "Port",
+    dest_port: "Port",
+    good_id: str,
+) -> str:
+    """Generate a human-readable reason for this offer."""
+    match template.family:
+        case ContractFamily.PROCUREMENT:
+            return f"{dest_port.name} needs {good_id} delivered"
+        case ContractFamily.SHORTAGE:
+            return f"Shortage at {dest_port.name} — urgent demand for {good_id}"
+        case ContractFamily.LUXURY_DISCREET:
+            return f"Discreet buyer at {dest_port.name} wants {good_id}"
+        case ContractFamily.RETURN_FREIGHT:
+            return f"{issuer_port.name} has {good_id} that needs to reach {dest_port.name}"
+        case ContractFamily.CIRCUIT:
+            return f"Trade circuit opportunity: {good_id} to {dest_port.name}"
+        case ContractFamily.REPUTATION_CHARTER:
+            return f"Premium charter: deliver {good_id} to {dest_port.name}"
+        case _:
+            return f"Deliver {good_id} to {dest_port.name}"
+
+
+def generate_offers(
+    templates: list[ContractTemplate],
+    world: "WorldState",
+    port: "Port",
+    rep: "ReputationState",
+    captain_type: str,
+    rng: random.Random,
+    max_offers: int = 5,
+) -> list[ContractOffer]:
+    """Generate contract offers from world state at a port.
+
+    Reads scarcity, trust, heat, standing, captain type to shape the board.
+    """
+    from portlight.engine.reputation import get_trust_tier
+
+    trust_tier = get_trust_tier(rep)
+    trust_rank = {"unproven": 0, "new": 1, "credible": 2, "reliable": 3, "trusted": 4}
+    player_trust = trust_rank.get(trust_tier, 0)
+    region_standing = rep.regional_standing.get(port.region, 0)
+    region_heat = rep.customs_heat.get(port.region, 0)
+
+    eligible = []
+    for t in templates:
+        # Trust gate
+        required_trust = trust_rank.get(t.trust_requirement, 0)
+        if player_trust < required_trust:
+            continue
+        # Standing gate
+        if region_standing < t.standing_requirement:
+            continue
+        # Heat ceiling
+        if t.heat_ceiling is not None and region_heat > t.heat_ceiling:
+            continue
+        # Captain bias (weighted, not gated)
+        weight = 2.0 if captain_type in t.captain_bias else 1.0
+        # Shortage templates need actual scarcity somewhere
+        if t.family == ContractFamily.SHORTAGE:
+            has_scarcity = False
+            for p in world.ports.values():
+                for slot in p.market:
+                    if slot.good_id in t.goods_pool:
+                        if slot.stock_current < slot.stock_target * 0.5:
+                            has_scarcity = True
+                            break
+                if has_scarcity:
+                    break
+            if not has_scarcity:
+                weight *= 0.2  # still possible but much less likely
+
+        eligible.append((t, weight))
+
+    if not eligible:
+        return []
+
+    # Weighted selection without replacement
+    offers = []
+    used_templates = set()
+    attempts = 0
+    while len(offers) < max_offers and attempts < max_offers * 3:
+        attempts += 1
+        weights = [w for t, w in eligible if t.id not in used_templates]
+        choices = [t for t, w in eligible if t.id not in used_templates]
+        if not choices:
+            break
+
+        template = rng.choices(choices, weights=weights, k=1)[0]
+        used_templates.add(template.id)
+
+        # Pick good
+        good_id = rng.choice(template.goods_pool)
+
+        # Pick destination
+        dest = _pick_destination(template, port, world.ports, world.routes)
+        if dest is None:
+            continue
+
+        # Compute quantity
+        qty = rng.randint(template.quantity_min, template.quantity_max)
+
+        # Compute deadline (base + distance buffer)
+        deadline = world.day + template.deadline_days
+
+        # Compute reward
+        reward = qty * template.reward_per_unit
+
+        reason = _compute_offer_reason(template, port, dest, good_id)
+
+        offer = ContractOffer(
+            id=_offer_id(template.id, port.id, world.day, len(offers)),
+            template_id=template.id,
+            family=template.family,
+            title=template.title_pattern.format(
+                good=good_id, destination=dest.name, source=port.name,
+            ),
+            description=template.description,
+            issuer_port_id=port.id,
+            destination_port_id=dest.id,
+            good_id=good_id,
+            quantity=qty,
+            created_day=world.day,
+            deadline_day=deadline,
+            reward_silver=reward,
+            bonus_reward=template.bonus_reward,
+            required_trust_tier=template.trust_requirement,
+            required_standing=template.standing_requirement,
+            heat_ceiling=template.heat_ceiling,
+            inspection_modifier=template.inspection_modifier,
+            source_region=template.source_region,
+            source_port=template.source_port,
+            offer_reason=reason,
+            tags=list(template.tags),
+        )
+        offers.append(offer)
+
+    return offers
+
+
+# ---------------------------------------------------------------------------
+# Acceptance
+# ---------------------------------------------------------------------------
+
+def accept_offer(
+    board: ContractBoard,
+    offer_id: str,
+    day: int,
+) -> ActiveContract | str:
+    """Accept an offer. Returns ActiveContract on success, error string on failure."""
+    offer = next((o for o in board.offers if o.id == offer_id), None)
+    if offer is None:
+        return "Offer not found"
+    if len(board.active) >= 3:
+        return "Too many active contracts (max 3)"
+
+    contract = ActiveContract(
+        offer_id=offer.id,
+        template_id=offer.template_id,
+        family=offer.family,
+        title=offer.title,
+        accepted_day=day,
+        deadline_day=offer.deadline_day,
+        destination_port_id=offer.destination_port_id,
+        good_id=offer.good_id,
+        required_quantity=offer.quantity,
+        reward_silver=offer.reward_silver,
+        bonus_reward=offer.bonus_reward,
+        source_region=offer.source_region,
+        source_port=offer.source_port,
+        inspection_modifier=offer.inspection_modifier,
+    )
+    board.active.append(contract)
+    board.offers = [o for o in board.offers if o.id != offer_id]
+    return contract
+
+
+# ---------------------------------------------------------------------------
+# Delivery (checks real cargo sales)
+# ---------------------------------------------------------------------------
+
+def check_delivery(
+    board: ContractBoard,
+    port_id: str,
+    good_id: str,
+    quantity: int,
+    source_port: str,
+    source_region: str,
+) -> list[tuple[ActiveContract, int]]:
+    """Check if a sale at port fulfills any active contracts.
+
+    Returns list of (contract, credited_qty) pairs.
+    Only credits cargo that matches provenance requirements.
+    """
+    credited = []
+    for contract in board.active:
+        if contract.status != ContractStatus.ACCEPTED:
+            continue
+        if contract.destination_port_id != port_id:
+            continue
+        if contract.good_id != good_id:
+            continue
+        remaining = contract.required_quantity - contract.delivered_quantity
+        if remaining <= 0:
+            continue
+
+        # Source validation
+        if contract.source_region and source_region != contract.source_region:
+            continue
+        if contract.source_port and source_port != contract.source_port:
+            continue
+
+        credit = min(quantity, remaining)
+        contract.delivered_quantity += credit
+        quantity -= credit
+        credited.append((contract, credit))
+
+        if quantity <= 0:
+            break
+
+    return credited
+
+
+# ---------------------------------------------------------------------------
+# Completion / failure
+# ---------------------------------------------------------------------------
+
+def resolve_completed(
+    board: ContractBoard,
+    day: int,
+) -> list[ContractOutcome]:
+    """Check for completed contracts and resolve them."""
+    outcomes = []
+    still_active = []
+
+    for contract in board.active:
+        if contract.status != ContractStatus.ACCEPTED:
+            still_active.append(contract)
+            continue
+
+        if contract.delivered_quantity >= contract.required_quantity:
+            # Completed!
+            is_early = day < contract.deadline_day - 3
+            bonus = contract.bonus_reward if is_early and contract.bonus_reward > 0 else 0
+            total_reward = contract.reward_silver + bonus
+
+            outcome_type = "completed_bonus" if bonus > 0 else "completed"
+            outcome = ContractOutcome(
+                contract_id=contract.offer_id,
+                outcome_type=outcome_type,
+                silver_delta=total_reward,
+                trust_delta=2 if bonus > 0 else 1,
+                standing_delta=1,
+                heat_delta=-1,  # clean delivery reduces heat
+                completion_day=day,
+                summary=f"Delivered {contract.delivered_quantity} {contract.good_id} to {contract.destination_port_id}"
+                + (f" (early bonus: +{bonus} silver)" if bonus > 0 else ""),
+            )
+            contract.status = ContractStatus.COMPLETED
+            outcomes.append(outcome)
+            board.completed.append(outcome)
+        else:
+            still_active.append(contract)
+
+    board.active = still_active
+    return outcomes
+
+
+def tick_contracts(
+    board: ContractBoard,
+    day: int,
+) -> list[ContractOutcome]:
+    """Daily tick: expire overdue contracts, remove stale offers."""
+    outcomes = []
+    still_active = []
+
+    for contract in board.active:
+        if contract.status != ContractStatus.ACCEPTED:
+            still_active.append(contract)
+            continue
+
+        if day > contract.deadline_day:
+            # Expired
+            partial = contract.delivered_quantity > 0
+            if partial:
+                # Partial payout
+                partial_pct = contract.delivered_quantity / contract.required_quantity
+                payout = int(contract.reward_silver * partial_pct * 0.5)  # 50% of pro-rata
+                outcome = ContractOutcome(
+                    contract_id=contract.offer_id,
+                    outcome_type="expired",
+                    silver_delta=payout,
+                    trust_delta=-2,
+                    standing_delta=-1,
+                    heat_delta=1,
+                    completion_day=day,
+                    summary=f"Contract expired: delivered {contract.delivered_quantity}/{contract.required_quantity} {contract.good_id} (partial payout: {payout} silver)",
+                )
+            else:
+                outcome = ContractOutcome(
+                    contract_id=contract.offer_id,
+                    outcome_type="expired",
+                    silver_delta=0,
+                    trust_delta=-3,
+                    standing_delta=-2,
+                    heat_delta=2,
+                    completion_day=day,
+                    summary=f"Contract defaulted: failed to deliver {contract.good_id} to {contract.destination_port_id}",
+                )
+            contract.status = ContractStatus.EXPIRED
+            outcomes.append(outcome)
+            board.completed.append(outcome)
+        else:
+            still_active.append(contract)
+
+    board.active = still_active
+
+    # Remove expired offers
+    board.offers = [o for o in board.offers if day <= o.created_day + o.acceptance_window]
+
+    return outcomes
+
+
+def abandon_contract(
+    board: ContractBoard,
+    offer_id: str,
+    day: int,
+) -> ContractOutcome | str:
+    """Player abandons a contract. Reputation cost."""
+    contract = next((c for c in board.active if c.offer_id == offer_id), None)
+    if contract is None:
+        return "No active contract with that ID"
+
+    outcome = ContractOutcome(
+        contract_id=contract.offer_id,
+        outcome_type="abandoned",
+        silver_delta=0,
+        trust_delta=-2,
+        standing_delta=-1,
+        heat_delta=1,
+        completion_day=day,
+        summary=f"Abandoned contract: {contract.title}",
+    )
+    contract.status = ContractStatus.ABANDONED
+    board.active = [c for c in board.active if c.offer_id != offer_id]
+    board.completed.append(outcome)
+    return outcome

@@ -161,11 +161,17 @@ def execute_buy(
     slot.stock_current -= qty
 
     existing = _cargo_slot(captain, good_id)
-    if existing:
+    if existing and existing.acquired_port == port.id:
+        # Same good from same port — merge into existing stack
         existing.cost_basis += total
         existing.quantity += qty
     else:
-        captain.cargo.append(CargoItem(good_id=good_id, quantity=qty, cost_basis=total))
+        # New provenance lot (different port or first purchase)
+        captain.cargo.append(CargoItem(
+            good_id=good_id, quantity=qty, cost_basis=total,
+            acquired_port=port.id, acquired_region=port.region,
+            acquired_day=captain.day,
+        ))
 
     return TradeReceipt(
         receipt_id=_make_receipt_id(captain.name, port.id, good_id, captain.day, seq),
