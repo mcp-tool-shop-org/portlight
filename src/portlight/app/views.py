@@ -1,4 +1,4 @@
-"""Rich views — game-facing screens that answer player questions.
+"""Rich views - game-facing screens that answer player questions.
 
 Each view is a function that returns a Rich renderable (Panel, Table, Group).
 Views never mutate game state. They read and present.
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# Status view — the captain's dashboard
+# Status view - the captain's dashboard
 # ---------------------------------------------------------------------------
 
 def status_view(world: "WorldState", ledger: "ReceiptLedger") -> Panel:
@@ -65,7 +65,7 @@ def status_view(world: "WorldState", ledger: "ReceiptLedger") -> Panel:
     # Upgrade tracker
     next_ship = _next_upgrade(ship, captain.silver)
     if next_ship:
-        lines.append(f"Next upgrade: {next_ship.name} — {fmt.upgrade_distance(captain.silver, next_ship.price)}")
+        lines.append(f"Next upgrade: {next_ship.name} - {fmt.upgrade_distance(captain.silver, next_ship.price)}")
 
     # Net P&L
     if ledger.receipts:
@@ -75,7 +75,7 @@ def status_view(world: "WorldState", ledger: "ReceiptLedger") -> Panel:
 
 
 # ---------------------------------------------------------------------------
-# Port view — arrival screen
+# Port view - arrival screen
 # ---------------------------------------------------------------------------
 
 def port_view(port: "Port", captain: "Captain") -> Panel:
@@ -117,7 +117,7 @@ def port_view(port: "Port", captain: "Captain") -> Panel:
 
 
 # ---------------------------------------------------------------------------
-# Market view — the trading screen
+# Market view - the trading screen
 # ---------------------------------------------------------------------------
 
 def market_view(port: "Port", captain: "Captain") -> Panel:
@@ -150,8 +150,8 @@ def market_view(port: "Port", captain: "Captain") -> Panel:
             str(slot.sell_price),
             f"{slot.stock_current}/{slot.stock_target}",
             fmt.scarcity_tag(slot.stock_current, slot.stock_target),
-            str(held) if held > 0 else "[dim]—[/dim]",
-            str(affordable) if affordable > 0 else "[dim]—[/dim]",
+            str(held) if held > 0 else "[dim]-[/dim]",
+            str(affordable) if affordable > 0 else "[dim]-[/dim]",
         )
 
     return Panel(table, border_style="green")
@@ -190,7 +190,7 @@ def cargo_view(captain: "Captain") -> Panel:
 
 
 # ---------------------------------------------------------------------------
-# Routes view — where can I go
+# Routes view - where can I go
 # ---------------------------------------------------------------------------
 
 def routes_view(world: "WorldState") -> Panel:
@@ -235,7 +235,7 @@ def routes_view(world: "WorldState") -> Panel:
 
 
 # ---------------------------------------------------------------------------
-# Voyage view — at sea screen
+# Voyage view - at sea screen
 # ---------------------------------------------------------------------------
 
 def voyage_view(world: "WorldState", events: list | None = None) -> Panel:
@@ -255,7 +255,7 @@ def voyage_view(world: "WorldState", events: list | None = None) -> Panel:
         # Progress bar
         filled = pct // 10
         empty = 10 - filled
-        bar = f"[cyan]{'▓' * filled}{'░' * empty}[/cyan]"
+        bar = f"[cyan]{'#' * filled}{'-' * empty}[/cyan]"
         lines.append(f"{origin_name} {bar} {dest_name}")
         lines.append(f"Day {voyage.days_elapsed} at sea  |  {pct}% complete")
     else:
@@ -313,7 +313,7 @@ def ledger_view(ledger: "ReceiptLedger", captain: "Captain") -> Panel:
     # Upgrade tracker
     next_ship = _next_upgrade(captain.ship, captain.silver)
     if next_ship:
-        summary_lines.append(f"Next ship:    {next_ship.name} — {fmt.upgrade_distance(captain.silver, next_ship.price)}")
+        summary_lines.append(f"Next ship:    {next_ship.name} - {fmt.upgrade_distance(captain.silver, next_ship.price)}")
 
     summary = "\n".join(summary_lines)
 
@@ -341,7 +341,7 @@ def shipyard_view(captain: "Captain") -> Panel:
 
     for template in SHIPS.values():
         is_current = current and current.template_id == template.id
-        status = "[bold cyan]★ Current[/bold cyan]" if is_current else fmt.upgrade_distance(captain.silver, template.price)
+        status = "[bold cyan]* Current[/bold cyan]" if is_current else fmt.upgrade_distance(captain.silver, template.price)
 
         # Comparison arrows
         cargo_cmp = _compare(template.cargo_capacity, current.cargo_capacity if current else 0)
@@ -355,7 +355,7 @@ def shipyard_view(captain: "Captain") -> Panel:
             f"{template.speed} {speed_cmp}",
             f"{template.hull_max} {hull_cmp}",
             f"{template.crew_min}–{template.crew_max}",
-            fmt.silver(template.price) if template.price > 0 else "[dim]—[/dim]",
+            fmt.silver(template.price) if template.price > 0 else "[dim]-[/dim]",
             status,
         )
 
@@ -376,10 +376,6 @@ def _next_upgrade(ship: "Ship | None", silver: int) -> "ShipTemplate | None":
     """Find the cheapest ship the player doesn't have yet."""
     if ship is None:
         return None
-    from portlight.engine.models import ShipClass
-    current_class_order = ["sloop", "brigantine", "galleon"]
-    current_idx = current_class_order.index(ship.template_id.split("_")[0]) if "_" in ship.template_id else -1
-
     for template in sorted(SHIPS.values(), key=lambda s: s.price):
         if template.id != ship.template_id and template.price > 0:
             return template
@@ -388,9 +384,9 @@ def _next_upgrade(ship: "Ship | None", silver: int) -> "ShipTemplate | None":
 
 def _compare(new: float, current: float) -> str:
     if new > current:
-        return "[green]▲[/green]"
+        return "[green]+[/green]"
     elif new < current:
-        return "[red]▼[/red]"
+        return "[red]-[/red]"
     return ""
 
 
@@ -402,12 +398,12 @@ def _crew_min(ship: "Ship") -> int:
 
 def _event_icon(event_type: str) -> str:
     icons = {
-        "storm": "⛈",
-        "pirates": "☠",
-        "inspection": "⚓",
-        "favorable_wind": "💨",
-        "calm_seas": "🌊",
-        "provisions_spoiled": "🪱",
-        "nothing": "·",
+        "storm": "[red]*[/red]",
+        "pirates": "[red]![/red]",
+        "inspection": "[yellow]?[/yellow]",
+        "favorable_wind": "[green]>[/green]",
+        "calm_seas": "[cyan]~[/cyan]",
+        "provisions_spoiled": "[red]x[/red]",
+        "nothing": "[dim].[/dim]",
     }
     return icons.get(event_type, "·")

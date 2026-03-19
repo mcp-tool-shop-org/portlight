@@ -1,4 +1,4 @@
-"""Formatting primitives — money, quantities, condition, scarcity, risk.
+"""Formatting primitives - money, quantities, condition, scarcity, risk.
 
 These are the building blocks for views. They turn raw numbers into
 game-meaningful language that helps the player read situations.
@@ -27,7 +27,7 @@ def cargo_bar(used: float, capacity: int) -> str:
     filled = int(ratio * 10)
     empty = 10 - filled
     color = "green" if ratio < 0.7 else "yellow" if ratio < 0.9 else "red"
-    bar = f"[{color}]{'█' * filled}{'░' * empty}[/{color}]"
+    bar = f"[{color}]{'#' * filled}{'-' * empty}[/{color}]"
     return f"{bar} {int(used)}/{capacity}"
 
 
@@ -37,7 +37,7 @@ def hull_bar(current: int, maximum: int) -> str:
     filled = int(ratio * 10)
     empty = 10 - filled
     color = "green" if ratio > 0.6 else "yellow" if ratio > 0.3 else "red"
-    bar = f"[{color}]{'█' * filled}{'░' * empty}[/{color}]"
+    bar = f"[{color}]{'#' * filled}{'-' * empty}[/{color}]"
     return f"{bar} {current}/{maximum}"
 
 
@@ -55,7 +55,7 @@ def provision_status(provisions: int) -> str:
 def scarcity_tag(stock_current: int, stock_target: int) -> str:
     """Readable scarcity indicator for a market slot."""
     if stock_target == 0:
-        return "[dim]—[/dim]"
+        return "[dim]-[/dim]"
     ratio = stock_current / stock_target
     if ratio < 0.3:
         return "[bold red]Scarce[/bold red]"
