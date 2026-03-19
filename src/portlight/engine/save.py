@@ -38,6 +38,7 @@ from portlight.engine.infrastructure import (
     BrokerOffice,
     BrokerTier,
     InfrastructureState,
+    OwnedLicense,
     StoredLot,
     WarehouseLease,
     WarehouseTier,
@@ -433,6 +434,8 @@ def _broker_to_dict(b: BrokerOffice) -> dict:
         "region": b.region,
         "tier": b.tier.value,
         "opened_day": b.opened_day,
+        "upkeep_paid_through": b.upkeep_paid_through,
+        "active": b.active,
     }
 
 
@@ -441,6 +444,26 @@ def _broker_from_dict(d: dict) -> BrokerOffice:
         region=d["region"],
         tier=BrokerTier(d.get("tier", "none")),
         opened_day=d.get("opened_day", 0),
+        upkeep_paid_through=d.get("upkeep_paid_through", 0),
+        active=d.get("active", True),
+    )
+
+
+def _license_to_dict(lic: OwnedLicense) -> dict:
+    return {
+        "license_id": lic.license_id,
+        "purchased_day": lic.purchased_day,
+        "upkeep_paid_through": lic.upkeep_paid_through,
+        "active": lic.active,
+    }
+
+
+def _license_from_dict(d: dict) -> OwnedLicense:
+    return OwnedLicense(
+        license_id=d["license_id"],
+        purchased_day=d.get("purchased_day", 0),
+        upkeep_paid_through=d.get("upkeep_paid_through", 0),
+        active=d.get("active", True),
     )
 
 
@@ -448,6 +471,7 @@ def _infra_to_dict(state: InfrastructureState) -> dict:
     return {
         "warehouses": [_warehouse_to_dict(w) for w in state.warehouses],
         "brokers": [_broker_to_dict(b) for b in state.brokers],
+        "licenses": [_license_to_dict(lic) for lic in state.licenses],
     }
 
 
@@ -455,6 +479,7 @@ def _infra_from_dict(d: dict) -> InfrastructureState:
     return InfrastructureState(
         warehouses=[_warehouse_from_dict(w) for w in d.get("warehouses", [])],
         brokers=[_broker_from_dict(b) for b in d.get("brokers", [])],
+        licenses=[_license_from_dict(lic) for lic in d.get("licenses", [])],
     )
 
 

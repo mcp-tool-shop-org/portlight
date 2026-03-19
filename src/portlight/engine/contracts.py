@@ -235,10 +235,16 @@ def generate_offers(
     captain_type: str,
     rng: random.Random,
     max_offers: int = 5,
+    board_effects: dict[str, float] | None = None,
 ) -> list[ContractOffer]:
     """Generate contract offers from world state at a port.
 
     Reads scarcity, trust, heat, standing, captain type to shape the board.
+    board_effects from compute_board_effects() modifies weights:
+      - board_quality_bonus: multiplier on all premium template weights
+      - premium_offer_mult: extra multiplier on high-reward templates
+      - lawful_board_mult: multiplier on lawful family weights (procurement, charter)
+      - luxury_access: if > 0, luxury_discreet templates get weight boost
     """
     from portlight.engine.reputation import get_trust_tier
 
@@ -247,6 +253,13 @@ def generate_offers(
     player_trust = trust_rank.get(trust_tier, 0)
     region_standing = rep.regional_standing.get(port.region, 0)
     region_heat = rep.customs_heat.get(port.region, 0)
+
+    # Board effects defaults
+    bq = board_effects or {}
+    quality_mult = bq.get("board_quality_bonus", 1.0)
+    premium_mult = bq.get("premium_offer_mult", 1.0)
+    lawful_mult = bq.get("lawful_board_mult", 1.0)
+    luxury_access = bq.get("luxury_access", 0.0)
 
     eligible = []
     for t in templates:
@@ -275,6 +288,17 @@ def generate_offers(
                     break
             if not has_scarcity:
                 weight *= 0.2  # still possible but much less likely
+
+        # --- Infrastructure board effects ---
+        # Lawful families benefit from broker presence and charters
+        if t.family in (ContractFamily.PROCUREMENT, ContractFamily.REPUTATION_CHARTER):
+            weight *= lawful_mult
+        # Premium templates (high trust/standing req) benefit from board quality
+        if required_trust >= 2 or t.standing_requirement >= 10:
+            weight *= quality_mult * premium_mult
+        # Luxury discreet benefits from luxury access license
+        if t.family == ContractFamily.LUXURY_DISCREET and luxury_access > 0:
+            weight *= 1.5  # license makes luxury contracts notably more common
 
         eligible.append((t, weight))
 

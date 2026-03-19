@@ -26,7 +26,6 @@ from portlight.engine.reputation import (
 )
 from portlight.engine.contracts import (
     ContractBoard,
-    ContractOutcome,
     abandon_contract,
     accept_offer,
     check_delivery,
@@ -36,9 +35,11 @@ from portlight.engine.contracts import (
 )
 from portlight.engine.infrastructure import (
     InfrastructureState,
+    compute_board_effects,
     deposit_cargo,
-    get_warehouse,
     lease_warehouse,
+    open_broker_office,
+    purchase_license,
     tick_infrastructure,
     withdraw_cargo,
 )
@@ -436,6 +437,9 @@ class GameSession:
             return
         if self.board.last_refresh_day == self.world.day:
             return  # already refreshed today
+        # Compute infrastructure effects on contract board
+        from portlight.content.infrastructure import LICENSE_CATALOG
+        effects = compute_board_effects(self.infra, port.region, LICENSE_CATALOG)
         offers = generate_offers(
             CONTRACT_TEMPLATES,
             self.world,
@@ -444,6 +448,7 @@ class GameSession:
             self.world.captain.captain_type,
             self._rng,
             max_offers=self.board.max_offers,
+            board_effects=effects,
         )
         self.board.offers = offers
         self.board.last_refresh_day = self.world.day
@@ -515,3 +520,32 @@ class GameSession:
             return result
         self._save()
         return result
+
+    # --- Broker offices ---
+
+    def open_broker_cmd(self, region: str, spec) -> str | None:
+        """Open or upgrade a broker office. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        result = open_broker_office(
+            self.infra, self.world.captain, region, spec, self.world.day,
+        )
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None
+
+    # --- Licenses ---
+
+    def purchase_license_cmd(self, spec) -> str | None:
+        """Purchase a license. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        result = purchase_license(
+            self.infra, self.world.captain, spec,
+            self.world.captain.standing, self.world.day,
+        )
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None

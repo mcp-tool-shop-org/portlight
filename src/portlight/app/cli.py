@@ -467,6 +467,113 @@ def warehouse(
 
 
 # ---------------------------------------------------------------------------
+# Broker offices
+# ---------------------------------------------------------------------------
+
+@app.command()
+def office(
+    action: str = typer.Argument(None, help="open, upgrade, or omit to view"),
+    region: str = typer.Argument(None, help="Region name (Mediterranean, 'West Africa', 'East Indies')"),
+) -> None:
+    """Manage broker offices: view, open, or upgrade."""
+    s = _session()
+
+    if action is None:
+        console.print(views.offices_view(s.infra))
+        return
+
+    if action in ("open", "upgrade"):
+        if not s.current_port:
+            console.print("[yellow]Must be docked to manage broker offices.[/yellow]")
+            return
+        port_region = s.current_port.region
+        target_region = region or port_region
+
+        from portlight.engine.infrastructure import BrokerTier, get_broker_tier
+        from portlight.content.infrastructure import available_broker_tiers
+
+        current = get_broker_tier(s.infra, target_region)
+        tiers = available_broker_tiers(target_region)
+
+        if not tiers:
+            console.print(f"[red]No broker offices available in {target_region}.[/red]")
+            return
+
+        if region is None and action == "open":
+            # Show options
+            console.print(views.office_options_view(target_region, current.value))
+            return
+
+        # Find the right tier to open/upgrade to
+        if action == "open" and current == BrokerTier.NONE:
+            spec = tiers[0]  # Local tier
+        elif action == "upgrade" and current == BrokerTier.LOCAL:
+            spec = next((t for t in tiers if t.tier == BrokerTier.ESTABLISHED), None)
+            if not spec:
+                console.print(f"[red]No upgrade available in {target_region}.[/red]")
+                return
+        elif action == "open" and current != BrokerTier.NONE:
+            console.print(f"[yellow]Already have a broker in {target_region}. Use [bold]portlight office upgrade[/bold] to upgrade.[/yellow]")
+            return
+        else:
+            console.print(f"[yellow]Broker in {target_region} is already at maximum tier.[/yellow]")
+            return
+
+        err = s.open_broker_cmd(target_region, spec)
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+        console.print(f"\n[bold green]{spec.name} opened![/bold green]")
+        console.print(f"Board quality: +{int((spec.board_quality_bonus - 1) * 100)}% | Upkeep: {spec.upkeep_per_day}/day")
+        return
+
+    console.print(f"[red]Unknown office action: {action}[/red]. Use: open, upgrade")
+
+
+# ---------------------------------------------------------------------------
+# Licenses
+# ---------------------------------------------------------------------------
+
+@app.command()
+def license(
+    action: str = typer.Argument(None, help="buy or omit to view"),
+    license_id: str = typer.Argument(None, help="License ID to purchase"),
+) -> None:
+    """View or purchase commercial licenses."""
+    s = _session()
+
+    if action is None:
+        console.print(views.licenses_view(s.infra, s.captain.standing))
+        return
+
+    if action == "buy":
+        if license_id is None:
+            console.print("[red]Usage: portlight license buy <license_id>[/red]")
+            console.print(views.licenses_view(s.infra, s.captain.standing))
+            return
+        from portlight.content.infrastructure import get_license_spec
+        spec = get_license_spec(license_id)
+        if not spec:
+            # Try partial match
+            from portlight.content.infrastructure import LICENSE_CATALOG
+            matches = [s for s in LICENSE_CATALOG.values() if license_id in s.id]
+            if len(matches) == 1:
+                spec = matches[0]
+            else:
+                console.print(f"[red]Unknown license: {license_id}[/red]")
+                return
+        err = s.purchase_license_cmd(spec)
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+        console.print(f"\n[bold green]License purchased: {spec.name}![/bold green]")
+        console.print(f"Upkeep: {spec.upkeep_per_day}/day | Silver: {s.captain.silver}")
+        return
+
+    console.print(f"[red]Unknown license action: {action}[/red]. Use: buy")
+
+
+# ---------------------------------------------------------------------------
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------
 

@@ -798,3 +798,137 @@ def _warehouse_bar(used: int, capacity: int) -> str:
     pct = int(used / max(capacity, 1) * 10)
     filled = min(10, pct)
     return f"[cyan]{'#' * filled}{'-' * (10 - filled)}[/cyan] {used}/{capacity}"
+
+
+# ---------------------------------------------------------------------------
+# Broker offices
+# ---------------------------------------------------------------------------
+
+def offices_view(infra: "InfrastructureState") -> Panel:
+    """Show all broker offices and their status."""
+    from portlight.engine.infrastructure import BrokerTier
+    from portlight.content.infrastructure import get_broker_spec
+
+    active_brokers = [b for b in infra.brokers if b.active and b.tier != BrokerTier.NONE]
+
+    if not active_brokers:
+        return Panel(
+            "[dim]No broker offices established.\n"
+            "Use [bold]portlight office open <region>[/bold] to open one.[/dim]",
+            title="[bold]Broker Offices[/bold]",
+            border_style="blue",
+        )
+
+    table = Table(show_header=True, header_style="bold", expand=True)
+    table.add_column("Region")
+    table.add_column("Tier")
+    table.add_column("Upkeep")
+    table.add_column("Board Quality")
+    table.add_column("Market Signal")
+    table.add_column("Trade Terms")
+
+    for broker in sorted(active_brokers, key=lambda b: b.region):
+        spec = get_broker_spec(broker.region, broker.tier)
+        if not spec:
+            continue
+        quality_str = f"+{int((spec.board_quality_bonus - 1) * 100)}%"
+        signal_str = f"+{int(spec.market_signal_bonus * 100)}%"
+        terms_str = f"-{int((1 - spec.trade_term_modifier) * 100)}% spread"
+        table.add_row(
+            broker.region,
+            f"[cyan]{spec.name}[/cyan]",
+            f"{fmt.silver(spec.upkeep_per_day)}/day",
+            f"[green]{quality_str}[/green]",
+            f"[green]{signal_str}[/green]",
+            f"[green]{terms_str}[/green]",
+        )
+
+    return Panel(table, title="[bold]Broker Offices[/bold]", border_style="blue")
+
+
+def office_options_view(region: str, current_tier: str) -> Panel:
+    """Show broker office tiers available in a region."""
+    from portlight.content.infrastructure import available_broker_tiers
+
+    tiers = available_broker_tiers(region)
+
+    if not tiers:
+        return Panel(
+            f"[dim]No broker offices available in {region}.[/dim]",
+            title="[bold]Broker Offices[/bold]",
+            border_style="blue",
+        )
+
+    table = Table(show_header=True, header_style="bold", expand=True)
+    table.add_column("Tier")
+    table.add_column("Cost")
+    table.add_column("Upkeep")
+    table.add_column("Board Quality")
+    table.add_column("Description")
+
+    for spec in tiers:
+        is_current = spec.tier.value == current_tier
+        marker = " [green](current)[/green]" if is_current else ""
+        quality_str = f"+{int((spec.board_quality_bonus - 1) * 100)}%"
+        table.add_row(
+            f"[cyan]{spec.tier.value}[/cyan]{marker}",
+            fmt.silver(spec.purchase_cost),
+            f"{fmt.silver(spec.upkeep_per_day)}/day",
+            f"[green]{quality_str}[/green]",
+            spec.description,
+        )
+
+    return Panel(table, title=f"[bold]Broker Offices — {region}[/bold]", border_style="blue")
+
+
+# ---------------------------------------------------------------------------
+# Licenses
+# ---------------------------------------------------------------------------
+
+def licenses_view(infra: "InfrastructureState", rep: "ReputationState") -> Panel:
+    """Show all licenses — owned and available."""
+    from portlight.content.infrastructure import LICENSE_CATALOG
+    from portlight.engine.infrastructure import check_license_eligibility, has_license
+
+    table = Table(show_header=True, header_style="bold", expand=True)
+    table.add_column("License")
+    table.add_column("Region")
+    table.add_column("Cost")
+    table.add_column("Upkeep")
+    table.add_column("Status")
+    table.add_column("Effects")
+
+    for spec in sorted(LICENSE_CATALOG.values(), key=lambda s: s.purchase_cost):
+        owned = has_license(infra, spec.id)
+        if owned:
+            status = "[bold green]ACTIVE[/bold green]"
+        else:
+            err = check_license_eligibility(infra, spec, rep)
+            if err:
+                status = f"[red]{err}[/red]"
+            else:
+                status = "[yellow]Available[/yellow]"
+
+        region = spec.region_scope or "Global"
+        effects_parts = []
+        for key, val in spec.effects.items():
+            if key == "luxury_access":
+                effects_parts.append("Luxury access")
+            elif key == "customs_mult":
+                effects_parts.append(f"Customs -{int((1 - val) * 100)}%")
+            elif key == "lawful_board_mult":
+                effects_parts.append(f"Lawful +{int((val - 1) * 100)}%")
+            elif key == "premium_offer_mult":
+                effects_parts.append(f"Premium +{int((val - 1) * 100)}%")
+        effects_str = ", ".join(effects_parts) if effects_parts else "-"
+
+        table.add_row(
+            f"[cyan]{spec.name}[/cyan]",
+            region,
+            fmt.silver(spec.purchase_cost),
+            f"{fmt.silver(spec.upkeep_per_day)}/day",
+            status,
+            effects_str,
+        )
+
+    return Panel(table, title="[bold]Licenses & Charters[/bold]", border_style="magenta")
