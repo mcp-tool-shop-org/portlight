@@ -47,6 +47,7 @@ class MarketSlot:
     spread: float = 0.15             # buy/sell spread fraction (prevents round-trip)
     buy_price: int = 0               # computed by economy engine
     sell_price: int = 0              # computed by economy engine
+    flood_penalty: float = 0.0       # 0-1, rises when player dumps repeatedly, decays over time
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +71,9 @@ class Port:
     features: list[PortFeature] = field(default_factory=list)
     market: list[MarketSlot] = field(default_factory=list)
     port_fee: int = 5                # fixed docking cost
+    provision_cost: int = 2          # silver per day of provisions
+    repair_cost: int = 3             # silver per hull point
+    crew_cost: int = 5               # silver per crew hire
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +99,8 @@ class ShipTemplate:
     crew_min: int                    # minimum crew to sail
     crew_max: int                    # optimal crew
     price: int                       # purchase cost in silver
+    daily_wage: int = 1              # silver per crew per day at sea
+    storm_resist: float = 0.0        # fraction of storm damage absorbed (0-1)
 
 
 @dataclass
@@ -166,6 +172,7 @@ class Route:
     port_b: str
     distance: int
     danger: float = 0.1             # base event probability per day
+    min_ship_class: str = "sloop"   # minimum ship class to attempt this route
 
 
 # ---------------------------------------------------------------------------

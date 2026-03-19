@@ -83,6 +83,7 @@ def port_view(port: "Port", captain: "Captain") -> Panel:
     lines: list[str] = []
     lines.append(f"[italic]{port.description}[/italic]")
     lines.append(f"Region: {port.region}  |  Port fee: {fmt.silver(port.port_fee)}")
+    lines.append(f"Provisions: {port.provision_cost}/day  |  Repairs: {port.repair_cost}/hp  |  Crew: {port.crew_cost}/head")
 
     if port.features:
         feats = ", ".join(f.value.replace("_", " ").title() for f in port.features)
@@ -144,10 +145,17 @@ def market_view(port: "Port", captain: "Captain") -> Panel:
             space = ship.cargo_capacity - int(cargo_used)
             affordable = min(affordable, slot.stock_current, max(0, space))
 
+        # Show flood penalty as sell price warning
+        sell_str = str(slot.sell_price)
+        if slot.flood_penalty > 0.1:
+            sell_str = f"[red]{slot.sell_price}[/red] (flooded)"
+        elif slot.flood_penalty > 0:
+            sell_str = f"[yellow]{slot.sell_price}[/yellow]"
+
         table.add_row(
             good.name,
             str(slot.buy_price),
-            str(slot.sell_price),
+            sell_str,
             f"{slot.stock_current}/{slot.stock_target}",
             fmt.scarcity_tag(slot.stock_current, slot.stock_target),
             str(held) if held > 0 else "[dim]-[/dim]",
@@ -204,7 +212,10 @@ def routes_view(world: "WorldState") -> Panel:
     table.add_column("Distance", justify="right")
     table.add_column("Est. Days", justify="right")
     table.add_column("Risk")
-    table.add_column("Provisions Needed", justify="right")
+    table.add_column("Min Ship")
+    table.add_column("Provisions", justify="right")
+
+    from portlight.engine.voyage import check_route_suitability
 
     routes = _routes_from(world.routes, current_port_id)
     for route in routes:
@@ -219,12 +230,22 @@ def routes_view(world: "WorldState") -> Panel:
         prov_ok = world.captain.provisions >= prov_needed
         prov_color = "green" if prov_ok else "red"
 
+        # Ship suitability
+        suit_warning = check_route_suitability(route, ship) if ship else None
+        if suit_warning and "BLOCKED" in suit_warning:
+            ship_col = f"[bold red]{route.min_ship_class.title()}[/bold red]"
+        elif suit_warning:
+            ship_col = f"[yellow]{route.min_ship_class.title()}[/yellow]"
+        else:
+            ship_col = f"[dim]{route.min_ship_class.title()}[/dim]"
+
         table.add_row(
             dest_port.name,
             dest_port.region,
             str(route.distance),
             fmt.travel_time(route.distance, speed),
             fmt.risk_tag(route.danger),
+            ship_col,
             f"[{prov_color}]{prov_needed} days[/{prov_color}]",
         )
 
@@ -336,6 +357,8 @@ def shipyard_view(captain: "Captain") -> Panel:
     table.add_column("Speed", justify="right")
     table.add_column("Hull", justify="right")
     table.add_column("Crew", justify="right")
+    table.add_column("Wage/day", justify="right")
+    table.add_column("Storm Res.", justify="right")
     table.add_column("Price", justify="right")
     table.add_column("Status")
 
@@ -348,13 +371,19 @@ def shipyard_view(captain: "Captain") -> Panel:
         speed_cmp = _compare(template.speed, current.speed if current else 0)
         hull_cmp = _compare(template.hull_max, current.hull_max if current else 0)
 
+        # Daily wage cost (wage * crew_min is the minimum operating cost)
+        wage_str = f"{template.daily_wage * template.crew_min}-{template.daily_wage * template.crew_max}"
+        storm_str = f"{int(template.storm_resist * 100)}%" if template.storm_resist > 0 else "[dim]-[/dim]"
+
         table.add_row(
             template.name,
             template.ship_class.value.title(),
             f"{template.cargo_capacity} {cargo_cmp}",
             f"{template.speed} {speed_cmp}",
             f"{template.hull_max} {hull_cmp}",
-            f"{template.crew_min}–{template.crew_max}",
+            f"{template.crew_min}-{template.crew_max}",
+            wage_str,
+            storm_str,
             fmt.silver(template.price) if template.price > 0 else "[dim]-[/dim]",
             status,
         )

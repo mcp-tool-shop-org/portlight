@@ -1,21 +1,22 @@
-"""Economy engine — price computation, stock mutation, trade execution.
+"""Economy engine - price computation, stock mutation, trade execution.
 
 Contract:
-  - recalculate_prices(port) → updates all MarketSlot buy/sell prices in place
-  - tick_markets(ports, days=1) → drift all stocks toward target, apply shocks
-  - execute_buy(captain, port, good_id, qty) → TradeReceipt | error string
-  - execute_sell(captain, port, good_id, qty) → TradeReceipt | error string
+  - recalculate_prices(port) -> updates all MarketSlot buy/sell prices in place
+  - tick_markets(ports, days=1) -> drift all stocks toward target, apply shocks
+  - execute_buy(captain, port, good_id, qty) -> TradeReceipt | error string
+  - execute_sell(captain, port, good_id, qty) -> TradeReceipt | error string
 
-Price formula (Option 1.5 — lightweight scarcity):
+Price formula (Option 1.5 - lightweight scarcity):
   scarcity_ratio = stock_target / max(stock_current, 1)
   raw_price = base_price * scarcity_ratio / local_affinity
   buy_price  = round(raw_price * (1 + spread / 2))
-  sell_price = round(raw_price * (1 - spread / 2))
+  sell_price = round(raw_price * (1 - spread / 2) * (1 - flood_penalty))
 
-  - When stock_current < stock_target → scarcity → prices rise
-  - When stock_current > stock_target → abundance → prices fall
-  - spread prevents trivial buy-then-sell-same-port exploits
-  - local_affinity > 1 means port produces (cheaper), < 1 means port consumes (pricier)
+Anti-dominance:
+  - flood_penalty rises when player sells large quantities (diminishing margins)
+  - flood_penalty decays over time (market absorbs goods)
+  - Stronger restock pulls stock toward target faster
+  - Regional shocks occasionally disrupt supply chains
 """
 
 from __future__ import annotations
@@ -41,24 +42,53 @@ def recalculate_prices(port: Port, goods_table: dict[str, object]) -> None:
         scarcity = slot.stock_target / max(slot.stock_current, 1)
         raw = base * scarcity / max(slot.local_affinity, 0.1)
         slot.buy_price = max(1, round(raw * (1 + slot.spread / 2)))
-        slot.sell_price = max(1, round(raw * (1 - slot.spread / 2)))
+        # Flood penalty reduces sell price - dumping the same port tanks your margins
+        sell_mult = 1 - slot.flood_penalty * 0.5  # up to 50% sell price reduction
+        slot.sell_price = max(1, round(raw * (1 - slot.spread / 2) * sell_mult))
 
 
-def tick_markets(ports: dict[str, Port], days: int = 1, rng: random.Random | None = None) -> None:
-    """Advance all port markets by `days`. Stocks drift toward target; random shocks."""
+def tick_markets(ports: dict[str, Port], days: int = 1, rng: random.Random | None = None) -> list[str]:
+    """Advance all port markets by `days`. Returns list of shock messages (if any)."""
     rng = rng or random.Random()
+    messages: list[str] = []
     for port in ports.values():
         for slot in port.market:
             for _ in range(days):
-                # Drift toward target
+                # Drift toward target (stronger pull when far from target)
                 diff = slot.stock_target - slot.stock_current
-                restock = slot.restock_rate * (1 if diff > 0 else -0.5)
-                slot.stock_current += int(round(restock)) if abs(diff) > restock else diff
+                if abs(diff) <= 0:
+                    pass
+                elif abs(diff) > slot.restock_rate:
+                    # Proportional restock: faster recovery when further from target
+                    pull = slot.restock_rate * (1 + abs(diff) / slot.stock_target * 0.5)
+                    pull = pull if diff > 0 else -pull * 0.5
+                    slot.stock_current += int(round(pull))
+                else:
+                    slot.stock_current += diff
 
-                # Random shock (10% chance per day)
-                if rng.random() < 0.10:
-                    shock = rng.randint(-3, 3)
+                # Flood penalty decay (markets absorb goods over time)
+                if slot.flood_penalty > 0:
+                    slot.flood_penalty = max(0.0, slot.flood_penalty - 0.05)
+
+                # Random shock (8% chance per day)
+                if rng.random() < 0.08:
+                    shock = rng.randint(-4, 4)
                     slot.stock_current = max(0, slot.stock_current + shock)
+
+        # Regional supply shock (3% chance per port per day tick)
+        if rng.random() < 0.03 * days:
+            shock_slot = rng.choice(port.market) if port.market else None
+            if shock_slot:
+                direction = rng.choice([-1, 1])
+                magnitude = rng.randint(5, 12)
+                shock_slot.stock_current = max(0, shock_slot.stock_current + direction * magnitude)
+                good_name = shock_slot.good_id
+                if direction > 0:
+                    messages.append(f"Supply glut: {good_name} floods {port.name}")
+                else:
+                    messages.append(f"Shortage: {good_name} scarce at {port.name}")
+
+    return messages
 
 
 def _cargo_slot(captain: Captain, good_id: str) -> CargoItem | None:
@@ -152,6 +182,10 @@ def execute_sell(
     total = slot.sell_price * qty
     captain.silver += total
     slot.stock_current += qty
+
+    # Increase flood penalty proportional to dump size vs target
+    flood_increase = qty / max(slot.stock_target, 1) * 0.3
+    slot.flood_penalty = min(1.0, slot.flood_penalty + flood_increase)
 
     # Update cargo
     existing.quantity -= qty

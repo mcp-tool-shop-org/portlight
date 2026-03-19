@@ -110,9 +110,10 @@ class TestSessionProvisionRepair:
         s = GameSession(tmp_path)
         s.new()
         silver_before = s.captain.silver
+        # Porto Novo provision cost is 1/day
         err = s.provision(10)
         assert err is None
-        assert s.captain.silver == silver_before - 20
+        assert s.captain.silver == silver_before - 10  # 1 silver/day at Porto Novo
         assert s.captain.provisions == 40  # started with 30
 
     def test_repair_costs_silver(self, tmp_path: Path):
@@ -124,7 +125,8 @@ class TestSessionProvisionRepair:
         assert not isinstance(result, str)
         repaired, cost = result
         assert repaired == 20
-        assert cost == 60  # 3 per HP
+        # Porto Novo repair cost is 2/hp
+        assert cost == 40  # 2 per HP at Porto Novo
         assert s.captain.ship.hull == 60
 
     def test_provision_error_no_silver(self, tmp_path: Path):
@@ -187,28 +189,28 @@ class TestFullVoyageLoop:
         # 1. Buy grain at Porto Novo (cheap here, affinity 1.3)
         buy_result = s.buy("grain", 10)
         assert isinstance(buy_result, TradeReceipt)
-        buy_cost = buy_result.total_price
-        silver_after_buy = s.captain.silver
+        buy_price_per = buy_result.unit_price
 
         # 2. Sail to Al-Manar
         err = s.sail("al_manar")
         assert err is None
 
-        # 3. Sail through events
+        # 3. Sail through events (cargo may be damaged)
         for _ in range(20):
             events = s.advance()
             if s.current_port_id is not None:
                 break
         assert s.current_port_id == "al_manar"
 
-        # 4. Sell grain at Al-Manar (expensive here, affinity 0.6)
-        sell_result = s.sell("grain", 10)
+        # 4. Sell whatever grain survived the voyage
+        grain_held = sum(c.quantity for c in s.captain.cargo if c.good_id == "grain")
+        assert grain_held > 0, "All grain was lost during voyage"
+        sell_result = s.sell("grain", grain_held)
         assert isinstance(sell_result, TradeReceipt)
 
-        # 5. Check profit
-        # The sell price at a consuming port should exceed buy price at producer
-        assert sell_result.total_price > buy_cost, (
-            f"Grain run was not profitable: bought for {buy_cost}, sold for {sell_result.total_price}"
+        # 5. Sell price at consumer should be higher than buy price at producer
+        assert sell_result.unit_price > buy_price_per, (
+            f"Grain not profitable: bought at {buy_price_per}, sold at {sell_result.unit_price}"
         )
 
         # 6. Ledger reflects the trades

@@ -156,22 +156,23 @@ class GameSession:
     # --- Provisioning & Repair ---
 
     def provision(self, days: int) -> str | None:
-        """Buy provisions. Cost: 2 silver per day. Returns error or None."""
+        """Buy provisions at port-specific cost. Returns error or None."""
         if not self.world:
             return "No active game"
         port = self.current_port
         if not port:
             return "Must be docked to provision"
-        cost = days * 2
+        cost_per_day = port.provision_cost
+        cost = days * cost_per_day
         if cost > self.world.captain.silver:
-            return f"Need {cost} silver for {days} days of provisions, have {self.world.captain.silver}"
+            return f"Need {cost} silver for {days} days of provisions ({cost_per_day}/day here), have {self.world.captain.silver}"
         self.world.captain.silver -= cost
         self.world.captain.provisions += days
         self._save()
         return None
 
     def repair(self, amount: int | None = None) -> tuple[int, int] | str:
-        """Repair hull. Cost: 3 silver per HP. Returns (repaired, cost) or error."""
+        """Repair hull at port-specific cost. Returns (repaired, cost) or error."""
         if not self.world:
             return "No active game"
         port = self.current_port
@@ -186,13 +187,14 @@ class GameSession:
         if amount is None:
             amount = damage
         amount = min(amount, damage)
-        cost = amount * 3
+        cost_per_hp = port.repair_cost
+        cost = amount * cost_per_hp
         if cost > self.world.captain.silver:
-            affordable = self.world.captain.silver // 3
+            affordable = self.world.captain.silver // cost_per_hp if cost_per_hp > 0 else 0
             if affordable == 0:
                 return "Can't afford any repairs"
             amount = affordable
-            cost = amount * 3
+            cost = amount * cost_per_hp
         self.world.captain.silver -= cost
         ship.hull += amount
         self._save()
@@ -239,7 +241,7 @@ class GameSession:
     # --- Hire crew ---
 
     def hire_crew(self, count: int) -> str | None:
-        """Hire crew members. Cost: 5 silver each. Returns error or None."""
+        """Hire crew at port-specific cost. Returns error or None."""
         if not self.world:
             return "No active game"
         port = self.current_port
@@ -252,9 +254,10 @@ class GameSession:
         if space == 0:
             return "Crew is already full"
         count = min(count, space)
-        cost = count * 5
+        cost_per = port.crew_cost
+        cost = count * cost_per
         if cost > self.world.captain.silver:
-            return f"Need {cost} silver for {count} crew, have {self.world.captain.silver}"
+            return f"Need {cost} silver for {count} crew ({cost_per}/each here), have {self.world.captain.silver}"
         self.world.captain.silver -= cost
         ship.crew += count
         self._save()

@@ -1,4 +1,12 @@
-"""Phase 1 ship templates — 3 classes, progression path."""
+"""Phase 2 ship templates - 3 classes, each changes the game shape.
+
+Sloop: fast, fragile, small hold. Mediterranean-safe. Gets punished on long hauls.
+Brigantine: balanced, opens West Africa reliably and East Indies hub.
+  More cargo = bulk routes viable. Higher crew = real wage pressure.
+Galleon: slow fortress. Makes long-haul luxury profitable.
+  Huge hold but expensive crew, slow speed means more provisions burned.
+  Storm-resistant - the only ship that can reliably survive perilous routes.
+"""
 
 from portlight.engine.models import ShipClass, ShipTemplate
 
@@ -13,6 +21,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         crew_min=3,
         crew_max=8,
         price=0,  # starting ship
+        daily_wage=1,
+        storm_resist=0.0,
     ),
     ShipTemplate(
         id="trade_brigantine",
@@ -24,6 +34,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         crew_min=8,
         crew_max=20,
         price=800,
+        daily_wage=2,
+        storm_resist=0.3,  # absorbs 30% storm damage
     ),
     ShipTemplate(
         id="merchant_galleon",
@@ -35,6 +47,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         crew_min=15,
         crew_max=40,
         price=2200,
+        daily_wage=3,
+        storm_resist=0.6,  # absorbs 60% storm damage
     ),
 ]}
 

@@ -1,45 +1,47 @@
-"""Phase 1 route network — connections between ports.
+"""Phase 2 route network - connections between ports with ship class requirements.
 
-Distance determines travel time (distance / ship.speed = days).
-Danger scales hostile event probability.
+Route design creates three archetype tiers:
+  Tier 1 (Sloop): Mediterranean internal. Short, safe, low margins.
+  Tier 2 (Brigantine): Mediterranean-West Africa and W.Africa internal.
+    Medium distance, moderate risk. Bulk commodity routes become viable.
+  Tier 3 (Galleon): Long-haul East Indies and cross-region shortcuts.
+    High distance, high danger, but luxury margins justify the investment.
 
-Route design:
-  - Mediterranean ports are well-connected (short, safe)
-  - West Africa is reachable from Mediterranean (medium distance)
-  - East Indies require longer voyages (high reward, high risk)
-  - Crosswind Isle is the hub connecting regions
+min_ship_class gates which routes are available. A sloop CAN attempt
+a brigantine route but the voyage engine will warn about unsuitability
+and apply a danger penalty. Galleon routes are hard-gated.
 """
 
 from portlight.engine.models import Route
 
 ROUTES: list[Route] = [
-    # === Mediterranean internal ===
-    Route("porto_novo",     "al_manar",        distance=24,  danger=0.08),
-    Route("porto_novo",     "silva_bay",       distance=16,  danger=0.05),
-    Route("al_manar",       "silva_bay",       distance=20,  danger=0.07),
+    # === Mediterranean internal (Sloop-safe) ===
+    Route("porto_novo",     "al_manar",        distance=24,  danger=0.08,  min_ship_class="sloop"),
+    Route("porto_novo",     "silva_bay",       distance=16,  danger=0.05,  min_ship_class="sloop"),
+    Route("al_manar",       "silva_bay",       distance=20,  danger=0.07,  min_ship_class="sloop"),
 
-    # === Mediterranean → West Africa ===
-    Route("porto_novo",     "sun_harbor",      distance=40,  danger=0.12),
-    Route("al_manar",       "sun_harbor",      distance=48,  danger=0.15),
-    Route("silva_bay",      "palm_cove",       distance=44,  danger=0.13),
+    # === Mediterranean to West Africa (Brigantine recommended) ===
+    Route("porto_novo",     "sun_harbor",      distance=40,  danger=0.12,  min_ship_class="brigantine"),
+    Route("al_manar",       "sun_harbor",      distance=48,  danger=0.15,  min_ship_class="brigantine"),
+    Route("silva_bay",      "palm_cove",       distance=44,  danger=0.13,  min_ship_class="brigantine"),
 
-    # === West Africa internal ===
-    Route("sun_harbor",     "palm_cove",       distance=20,  danger=0.10),
-    Route("sun_harbor",     "iron_point",      distance=18,  danger=0.09),
-    Route("palm_cove",      "iron_point",      distance=22,  danger=0.11),
+    # === West Africa internal (Brigantine recommended) ===
+    Route("sun_harbor",     "palm_cove",       distance=20,  danger=0.10,  min_ship_class="sloop"),
+    Route("sun_harbor",     "iron_point",      distance=18,  danger=0.09,  min_ship_class="sloop"),
+    Route("palm_cove",      "iron_point",      distance=22,  danger=0.11,  min_ship_class="sloop"),
 
-    # === West Africa → East Indies (long haul) ===
-    Route("sun_harbor",     "crosswind_isle",  distance=64,  danger=0.18),
-    Route("iron_point",     "crosswind_isle",  distance=60,  danger=0.16),
+    # === West Africa to East Indies (Galleon-class voyages) ===
+    Route("sun_harbor",     "crosswind_isle",  distance=64,  danger=0.18,  min_ship_class="galleon"),
+    Route("iron_point",     "crosswind_isle",  distance=60,  danger=0.16,  min_ship_class="brigantine"),
 
-    # === East Indies internal ===
-    Route("crosswind_isle", "jade_port",       distance=28,  danger=0.10),
-    Route("crosswind_isle", "monsoon_reach",   distance=24,  danger=0.09),
-    Route("crosswind_isle", "silk_haven",      distance=32,  danger=0.12),
-    Route("jade_port",      "monsoon_reach",   distance=20,  danger=0.08),
-    Route("jade_port",      "silk_haven",      distance=18,  danger=0.07),
-    Route("monsoon_reach",  "silk_haven",      distance=22,  danger=0.10),
+    # === East Indies internal (Brigantine minimum) ===
+    Route("crosswind_isle", "jade_port",       distance=28,  danger=0.10,  min_ship_class="brigantine"),
+    Route("crosswind_isle", "monsoon_reach",   distance=24,  danger=0.09,  min_ship_class="brigantine"),
+    Route("crosswind_isle", "silk_haven",      distance=32,  danger=0.12,  min_ship_class="brigantine"),
+    Route("jade_port",      "monsoon_reach",   distance=20,  danger=0.08,  min_ship_class="brigantine"),
+    Route("jade_port",      "silk_haven",      distance=18,  danger=0.07,  min_ship_class="brigantine"),
+    Route("monsoon_reach",  "silk_haven",      distance=22,  danger=0.10,  min_ship_class="brigantine"),
 
-    # === Mediterranean → East Indies (dangerous shortcuts) ===
-    Route("al_manar",       "monsoon_reach",   distance=72,  danger=0.22),
+    # === Dangerous long-haul shortcuts (Galleon only) ===
+    Route("al_manar",       "monsoon_reach",   distance=72,  danger=0.22,  min_ship_class="galleon"),
 ]

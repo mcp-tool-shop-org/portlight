@@ -81,6 +81,7 @@ def _slot_to_dict(slot: MarketSlot) -> dict:
         "spread": slot.spread,
         "buy_price": slot.buy_price,
         "sell_price": slot.sell_price,
+        "flood_penalty": slot.flood_penalty,
     }
 
 
@@ -97,6 +98,9 @@ def _port_to_dict(port: Port) -> dict:
         "features": [f.value for f in port.features],
         "market": [_slot_to_dict(s) for s in port.market],
         "port_fee": port.port_fee,
+        "provision_cost": port.provision_cost,
+        "repair_cost": port.repair_cost,
+        "crew_cost": port.crew_cost,
     }
 
 
@@ -109,6 +113,9 @@ def _port_from_dict(d: dict) -> Port:
         features=[PortFeature(f) for f in d.get("features", [])],
         market=[_slot_from_dict(s) for s in d.get("market", [])],
         port_fee=d.get("port_fee", 5),
+        provision_cost=d.get("provision_cost", 2),
+        repair_cost=d.get("repair_cost", 3),
+        crew_cost=d.get("crew_cost", 5),
     )
 
 
@@ -195,7 +202,7 @@ def world_to_dict(world: WorldState, ledger: ReceiptLedger | None = None) -> dic
         "version": 1,
         "captain": _captain_to_dict(world.captain),
         "ports": {pid: _port_to_dict(p) for pid, p in world.ports.items()},
-        "routes": [{"port_a": r.port_a, "port_b": r.port_b, "distance": r.distance, "danger": r.danger} for r in world.routes],
+        "routes": [{"port_a": r.port_a, "port_b": r.port_b, "distance": r.distance, "danger": r.danger, "min_ship_class": r.min_ship_class} for r in world.routes],
         "voyage": _voyage_to_dict(world.voyage) if world.voyage else None,
         "day": world.day,
         "seed": world.seed,
