@@ -13,6 +13,7 @@ from pathlib import Path
 from portlight.content.goods import GOODS
 from portlight.content.ships import SHIPS, create_ship_from_template
 from portlight.content.world import new_game
+from portlight.engine.captain_identity import CAPTAIN_TEMPLATES, CaptainType
 from portlight.engine.economy import execute_buy, execute_sell, recalculate_prices, tick_markets
 from portlight.engine.models import VoyageStatus, WorldState
 from portlight.engine.save import load_game, save_game
@@ -59,9 +60,26 @@ class GameSession:
                 self.world.voyage is not None and
                 self.world.voyage.status == VoyageStatus.AT_SEA)
 
-    def new(self, captain_name: str = "Captain", starting_port: str = "porto_novo") -> None:
-        """Start a fresh game."""
-        self.world = new_game(captain_name, starting_port)
+    @property
+    def captain_template(self):
+        """Get the active captain's archetype template."""
+        if not self.world:
+            return None
+        try:
+            ct = CaptainType(self.world.captain.captain_type)
+            return CAPTAIN_TEMPLATES[ct]
+        except (ValueError, KeyError):
+            return CAPTAIN_TEMPLATES[CaptainType.MERCHANT]
+
+    def new(
+        self,
+        captain_name: str = "Captain",
+        starting_port: str | None = None,
+        captain_type: str = "merchant",
+    ) -> None:
+        """Start a fresh game. captain_type: 'merchant', 'smuggler', or 'navigator'."""
+        ct = CaptainType(captain_type)
+        self.world = new_game(captain_name, starting_port, ct)
         self._rng = random.Random(self.world.seed)
         self.ledger = ReceiptLedger(run_id=f"run-{self.world.seed}")
         self._trade_seq = 0
@@ -77,10 +95,20 @@ class GameSession:
         self._trade_seq = len(self.ledger.receipts)
         return True
 
+    @property
+    def _pricing(self):
+        """Captain's pricing modifiers for economy calls."""
+        t = self.captain_template
+        return t.pricing if t else None
+
     def _save(self) -> None:
         """Auto-save after every mutation."""
         if self.world:
             save_game(self.world, self.ledger, self.base_path)
+
+    def _recalc(self, port) -> None:
+        """Recalculate prices at a port with captain modifiers."""
+        recalculate_prices(port, GOODS, self._pricing)
 
     # --- Trading ---
 
@@ -93,7 +121,7 @@ class GameSession:
         if isinstance(result, TradeReceipt):
             self.ledger.append(result)
             self._trade_seq += 1
-            recalculate_prices(port, GOODS)
+            self._recalc(port)
             self._save()
         return result
 
@@ -106,7 +134,7 @@ class GameSession:
         if isinstance(result, TradeReceipt):
             self.ledger.append(result)
             self._trade_seq += 1
-            recalculate_prices(port, GOODS)
+            self._recalc(port)
             self._save()
         return result
 
@@ -132,7 +160,7 @@ class GameSession:
             self.world.day += 1
             self.world.captain.day += 1
             for port in self.world.ports.values():
-                recalculate_prices(port, GOODS)
+                self._recalc(port)
             self._save()
             return []
 
@@ -144,11 +172,11 @@ class GameSession:
             # Recalculate prices at new port
             port = self.current_port
             if port:
-                recalculate_prices(port, GOODS)
+                self._recalc(port)
 
         # Recalculate all markets (time passes)
         for port in self.world.ports.values():
-            recalculate_prices(port, GOODS)
+            self._recalc(port)
 
         self._save()
         return events

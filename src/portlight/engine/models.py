@@ -8,6 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from portlight.engine.captain_identity import CaptainType
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +121,30 @@ class Ship:
 
 
 # ---------------------------------------------------------------------------
+# Reputation (multi-axis access model)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ReputationState:
+    """Tracks the player's standing across regions, ports, and institutions.
+
+    This is not a single number. It's a topology that opens and closes doors.
+    """
+    # Regional standing (how established you are in each region)
+    regional_standing: dict[str, int] = field(default_factory=lambda: {
+        "Mediterranean": 0, "West Africa": 0, "East Indies": 0,
+    })
+    # Port-specific standing (major ports only, affects local services)
+    port_standing: dict[str, int] = field(default_factory=dict)
+    # Customs heat (anti-abuse pressure, rises from suspicious behavior)
+    customs_heat: dict[str, int] = field(default_factory=lambda: {
+        "Mediterranean": 0, "West Africa": 0, "East Indies": 0,
+    })
+    # Commercial trust (does the market believe you can deliver?)
+    commercial_trust: int = 0
+
+
+# ---------------------------------------------------------------------------
 # Captain (player state)
 # ---------------------------------------------------------------------------
 
@@ -132,12 +160,14 @@ class CargoItem:
 class Captain:
     """The player character."""
     name: str = "Captain"
+    captain_type: str = "merchant"   # CaptainType value string
     silver: int = 500                # starting capital
-    reputation: int = 0              # earned through trades
+    reputation: int = 0              # legacy field (kept for compat)
     ship: Ship | None = None
     cargo: list[CargoItem] = field(default_factory=list)
     provisions: int = 30             # days of food/water
     day: int = 1                     # current game day
+    standing: ReputationState = field(default_factory=ReputationState)
 
 
 # ---------------------------------------------------------------------------

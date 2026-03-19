@@ -18,7 +18,7 @@ class TestSaveLoad:
         assert result is not None
         loaded, ledger = result
         assert loaded.captain.name == "Hawk"
-        assert loaded.captain.silver == 500
+        assert loaded.captain.silver == 550  # Merchant starting silver
         assert loaded.day == 1
         assert len(loaded.ports) == 10
 

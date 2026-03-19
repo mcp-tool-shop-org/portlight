@@ -49,8 +49,10 @@ class TestDeparture:
         world = new_game()
         silver_before = world.captain.silver
         port_fee = world.ports["porto_novo"].port_fee
+        # Merchant pays 70% port fees (fee_mult=0.7)
+        expected_fee = max(1, int(port_fee * 0.7))
         depart(world, "al_manar")
-        assert world.captain.silver == silver_before - port_fee
+        assert world.captain.silver == silver_before - expected_fee
 
     def test_depart_insufficient_port_fee(self):
         world = new_game()

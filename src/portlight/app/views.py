@@ -3,6 +3,8 @@
 Each view is a function that returns a Rich renderable (Panel, Table, Group).
 Views never mutate game state. They read and present.
 
+Captain screen answers: who am I, what advantages, what posture, what next.
+Reputation screen answers: where do I stand, what's open, what's endangered.
 Port screen answers: what's cheap, what's expensive, what do I hold, readiness.
 Market screen answers: buy/sell prices, scarcity, what I can afford.
 Route screen answers: where can I go, how long, how risky, can I provision it.
@@ -25,8 +27,95 @@ from portlight.content.goods import GOODS
 from portlight.content.ships import SHIPS
 
 if TYPE_CHECKING:
-    from portlight.engine.models import Captain, Port, Route, Ship, WorldState
+    from portlight.engine.captain_identity import CaptainTemplate
+    from portlight.engine.models import Captain, Port, ReputationState, Route, Ship, WorldState
     from portlight.receipts.models import ReceiptLedger
+
+
+# ---------------------------------------------------------------------------
+# Captain view - identity, advantages, posture
+# ---------------------------------------------------------------------------
+
+def captain_view(captain: "Captain", template: "CaptainTemplate") -> Panel:
+    """Captain identity screen: who you are, your modifiers, your posture."""
+    lines: list[str] = []
+    lines.append(f"[bold]{captain.name}[/bold] - {template.title}")
+    lines.append(f"[italic]{template.description}[/italic]")
+    lines.append("")
+
+    # Pricing modifiers
+    p = template.pricing
+    lines.append("[bold]Trade Profile[/bold]")
+    lines.append(f"  Buy prices:    {fmt.modifier_str(p.buy_price_mult, invert=True)}")
+    lines.append(f"  Sell prices:   {fmt.modifier_str(p.sell_price_mult)}")
+    if p.luxury_sell_bonus > 0:
+        lines.append(f"  Luxury bonus:  [green]+{int(p.luxury_sell_bonus * 100)}% on silk/spice/porcelain[/green]")
+    lines.append(f"  Port fees:     {fmt.modifier_str(p.port_fee_mult, invert=True)}")
+    lines.append("")
+
+    # Voyage modifiers
+    v = template.voyage
+    lines.append("[bold]Voyage Profile[/bold]")
+    lines.append(f"  Provision burn:  {fmt.modifier_str(v.provision_burn, invert=True)}")
+    if v.speed_bonus > 0:
+        lines.append(f"  Speed bonus:     [green]+{v.speed_bonus}[/green]")
+    if v.storm_resist_bonus > 0:
+        lines.append(f"  Storm resist:    [green]+{int(v.storm_resist_bonus * 100)}%[/green]")
+    lines.append(f"  Cargo damage:    {fmt.modifier_str(v.cargo_damage_mult, invert=True)}")
+    lines.append("")
+
+    # Inspection profile
+    i = template.inspection
+    lines.append("[bold]Inspection Profile[/bold]")
+    lines.append(f"  Frequency:  {fmt.modifier_str(i.inspection_chance_mult, invert=True)}")
+    if i.seizure_risk > 0:
+        lines.append(f"  Seizure:    [red]{int(i.seizure_risk * 100)}% per inspection[/red]")
+    lines.append(f"  Fines:      {fmt.modifier_str(i.fine_mult, invert=True)}")
+    lines.append("")
+
+    # Strengths / weaknesses
+    lines.append("[bold green]Strengths[/bold green]")
+    for s in template.strengths:
+        lines.append(f"  + {s}")
+    lines.append("[bold red]Weaknesses[/bold red]")
+    for w in template.weaknesses:
+        lines.append(f"  - {w}")
+
+    return Panel("\n".join(lines), title=f"[bold]{template.name}[/bold]", border_style="blue")
+
+
+# ---------------------------------------------------------------------------
+# Reputation view - standing, heat, trust
+# ---------------------------------------------------------------------------
+
+def reputation_view(standing: "ReputationState", captain: "Captain") -> Panel:
+    """Reputation screen: regional standing, customs heat, commercial trust."""
+    lines: list[str] = []
+
+    # Regional standing
+    lines.append("[bold]Regional Standing[/bold]")
+    for region, value in standing.regional_standing.items():
+        lines.append(f"  {region:20s} {fmt.standing_tag(value)} ({value})")
+    lines.append("")
+
+    # Customs heat
+    lines.append("[bold]Customs Heat[/bold]")
+    for region, value in standing.customs_heat.items():
+        lines.append(f"  {region:20s} {fmt.heat_tag(value)} ({value})")
+    lines.append("")
+
+    # Commercial trust
+    lines.append("[bold]Commercial Trust[/bold]")
+    lines.append(f"  {fmt.trust_tag(standing.commercial_trust)} ({standing.commercial_trust})")
+    lines.append("")
+
+    # Port standing (only show non-zero)
+    if standing.port_standing:
+        lines.append("[bold]Port Standing[/bold]")
+        for port_id, value in sorted(standing.port_standing.items()):
+            lines.append(f"  {port_id:20s} {fmt.standing_tag(value)} ({value})")
+
+    return Panel("\n".join(lines), title="[bold]Reputation[/bold]", border_style="cyan")
 
 
 # ---------------------------------------------------------------------------

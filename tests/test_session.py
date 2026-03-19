@@ -16,7 +16,7 @@ class TestSessionNew:
         s.new("Hawk")
         assert s.active
         assert s.captain.name == "Hawk"
-        assert s.captain.silver == 500
+        assert s.captain.silver == 550  # Merchant starting silver
         assert s.current_port_id == "porto_novo"
 
     def test_new_game_auto_saves(self, tmp_path: Path):
@@ -35,7 +35,7 @@ class TestSessionTrading:
         result = s.buy("grain", 5)
         assert isinstance(result, TradeReceipt)
         assert result.action == TradeAction.BUY
-        assert s.captain.silver < 500
+        assert s.captain.silver < 550  # spent silver from starting 550
 
     def test_buy_error_at_sea(self, tmp_path: Path):
         s = GameSession(tmp_path)

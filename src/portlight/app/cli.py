@@ -34,14 +34,47 @@ def _session() -> GameSession:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def new(name: str = typer.Argument("Captain", help="Captain name")) -> None:
-    """Start a new game."""
+def new(
+    name: str = typer.Argument("Captain", help="Captain name"),
+    captain_type: str = typer.Option("merchant", "--type", "-t", help="Captain type: merchant, smuggler, navigator"),
+) -> None:
+    """Start a new game. Choose your captain type to shape your career."""
+    if captain_type not in ("merchant", "smuggler", "navigator"):
+        console.print(f"[red]Unknown captain type: {captain_type}[/red]")
+        console.print("Choose: [bold]merchant[/bold], [bold]smuggler[/bold], or [bold]navigator[/bold]")
+        raise typer.Exit(1)
     s = GameSession()
-    s.new(name)
+    s.new(name, captain_type=captain_type)
     console.print(f"\n[bold green]A new voyage begins.[/bold green]\n")
+    console.print(views.captain_view(s.captain, s.captain_template))
     console.print(views.port_view(s.current_port, s.captain))
     console.print(views.status_view(s.world, s.ledger))
-    console.print(views.market_view(s.current_port, s.captain))
+
+
+# ---------------------------------------------------------------------------
+# Captain identity
+# ---------------------------------------------------------------------------
+
+@app.command()
+def captain() -> None:
+    """Show captain identity and advantages."""
+    s = _session()
+    t = s.captain_template
+    if not t:
+        console.print("[red]Unknown captain type[/red]")
+        return
+    console.print(views.captain_view(s.captain, t))
+
+
+# ---------------------------------------------------------------------------
+# Reputation
+# ---------------------------------------------------------------------------
+
+@app.command()
+def reputation() -> None:
+    """Show standing, customs heat, and commercial trust."""
+    s = _session()
+    console.print(views.reputation_view(s.captain.standing, s.captain))
 
 
 # ---------------------------------------------------------------------------

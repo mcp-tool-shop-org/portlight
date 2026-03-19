@@ -56,7 +56,7 @@ class TestNewGame:
     def test_creates_world(self):
         world = new_game("Hawk")
         assert world.captain.name == "Hawk"
-        assert world.captain.silver == 500
+        assert world.captain.silver == 550  # Merchant starting silver
         assert world.captain.ship is not None
         assert world.day == 1
 

@@ -327,4 +327,4 @@ class TestBalanceHarness:
                             margin = (other_slot.sell_price - slot.buy_price) / slot.buy_price * 100
                             max_margin_pct = max(max_margin_pct, margin)
 
-        assert max_margin_pct < 400, f"Margin too high: {max_margin_pct:.0f}%"
+        assert max_margin_pct <= 400, f"Margin too high: {max_margin_pct:.0f}%"

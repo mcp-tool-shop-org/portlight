@@ -8,6 +8,12 @@ Phase 2 additions:
   - Opportunity events (flotsam, merchant encounter)
   - Undermanned penalty (speed reduction)
 
+Phase 3A additions:
+  - Captain identity modifiers (provision burn, speed, storm resist, cargo damage)
+  - Inspection profile (frequency, seizure risk, fine multiplier)
+  - Port fee multiplier from captain type
+  - Reputation mutations from trade and inspection events
+
 Contract:
   - depart(world, destination_id) -> VoyageState | error string
   - advance_day(world, rng) -> list[VoyageEvent]  (may include arrival)
@@ -24,7 +30,18 @@ from typing import TYPE_CHECKING
 from portlight.engine.models import Route, VoyageState, VoyageStatus
 
 if TYPE_CHECKING:
+    from portlight.engine.captain_identity import CaptainTemplate
     from portlight.engine.models import Captain, Ship, WorldState
+
+
+def _get_captain_mods(captain: "Captain") -> "CaptainTemplate | None":
+    """Load captain template from captain_type string. Returns None for unknown types."""
+    try:
+        from portlight.engine.captain_identity import CAPTAIN_TEMPLATES, CaptainType
+        ct = CaptainType(captain.captain_type)
+        return CAPTAIN_TEMPLATES[ct]
+    except (ValueError, KeyError):
+        return None
 
 
 class EventType(str, Enum):
@@ -86,7 +103,10 @@ _EVENT_WEIGHTS: list[tuple[EventType, float]] = [
 ]
 
 
-def _pick_event(danger: float, rng: random.Random) -> EventType:
+def _pick_event(
+    danger: float, rng: random.Random,
+    inspection_mult: float = 1.0,
+) -> EventType:
     """Weighted random event, danger level scales hostile events."""
     weights = []
     for etype, base_w in _EVENT_WEIGHTS:
@@ -95,6 +115,8 @@ def _pick_event(danger: float, rng: random.Random) -> EventType:
             w *= (1 + danger * 2)
         elif etype in (EventType.MERCHANT_ENCOUNTER, EventType.FLOTSAM):
             w *= max(0.5, 1 - danger)  # less likely on dangerous routes
+        elif etype == EventType.INSPECTION:
+            w *= inspection_mult  # captain identity affects inspection frequency
         weights.append(w)
     return rng.choices([e for e, _ in _EVENT_WEIGHTS], weights=weights, k=1)[0]
 
@@ -107,6 +129,16 @@ def _resolve_event(
     from portlight.content.ships import SHIPS
     template = SHIPS.get(ship.template_id)
     storm_resist = template.storm_resist if template else 0.0
+
+    # Captain identity modifiers
+    cap_mods = _get_captain_mods(captain)
+    if cap_mods:
+        storm_resist = min(0.8, storm_resist + cap_mods.voyage.storm_resist_bonus)
+        cargo_dmg_mult = cap_mods.voyage.cargo_damage_mult
+        insp = cap_mods.inspection
+    else:
+        cargo_dmg_mult = 1.0
+        insp = None
 
     match event_type:
         case EventType.STORM:
@@ -133,8 +165,20 @@ def _resolve_event(
 
         case EventType.INSPECTION:
             fee = rng.randint(5, 25)
-            return VoyageEvent(EventType.INSPECTION,
-                "A patrol inspects your cargo and levies a fee.", silver_delta=-fee)
+            fine_mult = insp.fine_mult if insp else 1.0
+            fee = max(1, int(fee * fine_mult))
+            # Seizure risk (smuggler penalty)
+            seized_goods: dict[str, int] | None = None
+            seizure_msg = ""
+            if insp and insp.seizure_risk > 0 and captain.cargo:
+                if rng.random() < insp.seizure_risk:
+                    target = rng.choice(captain.cargo)
+                    seized = min(target.quantity, rng.randint(1, 3))
+                    seized_goods = {target.good_id: seized}
+                    seizure_msg = f" They confiscate {seized} units of {target.good_id}!"
+            msg = f"A patrol inspects your cargo and levies a {fee} silver fee.{seizure_msg}"
+            return VoyageEvent(EventType.INSPECTION, msg,
+                               silver_delta=-fee, cargo_lost=seized_goods)
 
         case EventType.FAVORABLE_WIND:
             return VoyageEvent(EventType.FAVORABLE_WIND,
@@ -150,10 +194,12 @@ def _resolve_event(
                 "Calm seas. Good for rest, bad for progress.", speed_modifier=0.6)
 
         case EventType.CARGO_DAMAGED:
-            # Damage random cargo in hold
+            # Damage random cargo in hold (captain modifier reduces loss)
             if captain.cargo:
                 target = rng.choice(captain.cargo)
-                lost = min(target.quantity, rng.randint(1, 3))
+                raw_lost = rng.randint(1, 3)
+                lost = max(1, int(raw_lost * cargo_dmg_mult))
+                lost = min(target.quantity, lost)
                 return VoyageEvent(
                     EventType.CARGO_DAMAGED,
                     f"Rough seas damaged {lost} units of {target.good_id} in the hold.",
@@ -225,12 +271,15 @@ def depart(world: "WorldState", destination_id: str) -> VoyageState | str:
     if suitability and suitability.startswith("BLOCKED"):
         return suitability
 
-    # Pay port fee
+    # Pay port fee (captain modifier applies)
     port = world.ports.get(current_port_id)
-    if port and port.port_fee > captain.silver:
-        return f"Need {port.port_fee} silver for port fee, have {captain.silver}"
     if port:
-        captain.silver -= port.port_fee
+        cap_mods = _get_captain_mods(captain)
+        fee_mult = cap_mods.pricing.port_fee_mult if cap_mods else 1.0
+        fee = max(1, int(port.port_fee * fee_mult))
+        if fee > captain.silver:
+            return f"Need {fee} silver for port fee, have {captain.silver}"
+        captain.silver -= fee
 
     voyage = VoyageState(
         origin_id=current_port_id,
@@ -255,8 +304,16 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
 
     events: list[VoyageEvent] = []
 
-    # Consume provisions
-    captain.provisions -= 1
+    # Captain modifiers
+    cap_mods = _get_captain_mods(captain)
+    provision_burn = cap_mods.voyage.provision_burn if cap_mods else 1.0
+    speed_bonus = cap_mods.voyage.speed_bonus if cap_mods else 0.0
+    inspection_mult = cap_mods.inspection.inspection_chance_mult if cap_mods else 1.0
+
+    # Consume provisions (captain modifier affects burn rate)
+    # provision_burn < 1.0 means some days you don't consume
+    if provision_burn >= 1.0 or rng.random() < provision_burn:
+        captain.provisions -= 1
     if captain.provisions < 0:
         captain.provisions = 0
         events.append(VoyageEvent(EventType.NOTHING,
@@ -285,7 +342,7 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         if ship_rank < route_rank:
             danger *= 1.5  # 50% more danger with unsuitable ship
 
-    event_type = _pick_event(danger, rng)
+    event_type = _pick_event(danger, rng, inspection_mult)
     event = _resolve_event(event_type, rng, captain, captain.ship)
     events.append(event)
 
@@ -305,8 +362,8 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
                         captain.cargo.remove(item)
                     break
 
-    # Progress (undermanned penalty)
-    base_speed = captain.ship.speed
+    # Progress (undermanned penalty + captain speed bonus)
+    base_speed = captain.ship.speed + speed_bonus
     crew_min = template.crew_min if template else 1
     if captain.ship.crew < crew_min:
         base_speed *= 0.5  # half speed when undermanned

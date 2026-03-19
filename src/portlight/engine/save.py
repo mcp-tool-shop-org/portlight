@@ -18,6 +18,7 @@ from portlight.engine.models import (
     MarketSlot,
     Port,
     PortFeature,
+    ReputationState,
     Route,
     Ship,
     VoyageState,
@@ -47,27 +48,50 @@ def _ship_from_dict(d: dict) -> Ship:
     return Ship(**d)
 
 
+def _reputation_to_dict(rep: ReputationState) -> dict:
+    return {
+        "regional_standing": rep.regional_standing,
+        "port_standing": rep.port_standing,
+        "customs_heat": rep.customs_heat,
+        "commercial_trust": rep.commercial_trust,
+    }
+
+
+def _reputation_from_dict(d: dict) -> ReputationState:
+    return ReputationState(
+        regional_standing=d.get("regional_standing", {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}),
+        port_standing=d.get("port_standing", {}),
+        customs_heat=d.get("customs_heat", {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}),
+        commercial_trust=d.get("commercial_trust", 0),
+    )
+
+
 def _captain_to_dict(captain: Captain) -> dict:
     return {
         "name": captain.name,
+        "captain_type": captain.captain_type,
         "silver": captain.silver,
         "reputation": captain.reputation,
         "ship": _ship_to_dict(captain.ship) if captain.ship else None,
         "cargo": [{"good_id": c.good_id, "quantity": c.quantity, "cost_basis": c.cost_basis} for c in captain.cargo],
         "provisions": captain.provisions,
         "day": captain.day,
+        "standing": _reputation_to_dict(captain.standing),
     }
 
 
 def _captain_from_dict(d: dict) -> Captain:
+    standing = _reputation_from_dict(d["standing"]) if "standing" in d else ReputationState()
     return Captain(
         name=d["name"],
+        captain_type=d.get("captain_type", "merchant"),
         silver=d["silver"],
         reputation=d.get("reputation", 0),
         ship=_ship_from_dict(d["ship"]) if d.get("ship") else None,
         cargo=[CargoItem(**c) for c in d.get("cargo", [])],
         provisions=d["provisions"],
         day=d["day"],
+        standing=standing,
     )
 
 

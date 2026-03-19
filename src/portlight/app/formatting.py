@@ -117,3 +117,56 @@ def crew_status(crew: int, crew_max: int, crew_min: int) -> str:
     elif crew == crew_min:
         return f"[dim]{crew}/{crew_max} (skeleton)[/dim]"
     return f"[bold red]{crew}/{crew_max} (undermanned!)[/bold red]"
+
+
+def standing_tag(value: int) -> str:
+    """Regional or port standing as a readable level."""
+    if value >= 50:
+        return "[bold green]Renowned[/bold green]"
+    elif value >= 30:
+        return "[green]Established[/green]"
+    elif value >= 15:
+        return "[cyan]Known[/cyan]"
+    elif value >= 5:
+        return "[dim]Familiar[/dim]"
+    elif value > 0:
+        return "[dim]Newcomer[/dim]"
+    return "[dim]Unknown[/dim]"
+
+
+def heat_tag(value: int) -> str:
+    """Customs heat as a readable threat level."""
+    if value >= 40:
+        return "[bold red]Wanted[/bold red]"
+    elif value >= 25:
+        return "[red]High[/red]"
+    elif value >= 15:
+        return "[yellow]Watched[/yellow]"
+    elif value >= 5:
+        return "[dim]Noticed[/dim]"
+    return "[green]Clean[/green]"
+
+
+def trust_tag(value: int) -> str:
+    """Commercial trust as a readable level."""
+    if value >= 40:
+        return "[bold green]Trusted[/bold green]"
+    elif value >= 25:
+        return "[green]Reliable[/green]"
+    elif value >= 10:
+        return "[cyan]Credible[/cyan]"
+    elif value >= 1:
+        return "[dim]New[/dim]"
+    return "[dim]Unproven[/dim]"
+
+
+def modifier_str(value: float, invert: bool = False) -> str:
+    """Format a multiplier as a +/- percentage, colored by advantage."""
+    pct = int((value - 1.0) * 100)
+    if pct == 0:
+        return "[dim]--[/dim]"
+    # For some mods (like buy_price), lower is better (invert)
+    is_good = pct < 0 if invert else pct > 0
+    color = "green" if is_good else "red"
+    sign = "+" if pct > 0 else ""
+    return f"[{color}]{sign}{pct}%[/{color}]"

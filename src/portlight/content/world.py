@@ -9,24 +9,55 @@ from portlight.content.goods import GOODS
 from portlight.content.ports import PORTS
 from portlight.content.routes import ROUTES
 from portlight.content.ships import SHIPS, create_ship_from_template
+from portlight.engine.captain_identity import CAPTAIN_TEMPLATES, CaptainType
 from portlight.engine.economy import recalculate_prices
-from portlight.engine.models import Captain, VoyageState, VoyageStatus, WorldState
+from portlight.engine.models import Captain, ReputationState, VoyageState, VoyageStatus, WorldState
 
 
-def new_game(captain_name: str = "Captain", starting_port: str = "porto_novo") -> WorldState:
-    """Create a fresh game world with initial market prices computed."""
+def new_game(
+    captain_name: str = "Captain",
+    starting_port: str | None = None,
+    captain_type: CaptainType = CaptainType.MERCHANT,
+) -> WorldState:
+    """Create a fresh game world with initial market prices computed.
+
+    If starting_port is None, uses the captain template's home port.
+    """
+    template = CAPTAIN_TEMPLATES[captain_type]
+
     ports = copy.deepcopy(PORTS)
     routes = list(ROUTES)
 
-    # Starting ship
-    sloop = SHIPS["coastal_sloop"]
-    ship = create_ship_from_template(sloop)
+    # Starting ship from template
+    ship_template = SHIPS[template.starting_ship_id]
+    ship = create_ship_from_template(ship_template)
+
+    # Build reputation from seed
+    seed = template.reputation_seed
+    standing = ReputationState(
+        regional_standing={
+            "Mediterranean": seed.mediterranean,
+            "West Africa": seed.west_africa,
+            "East Indies": seed.east_indies,
+        },
+        port_standing={},
+        customs_heat={
+            "Mediterranean": seed.customs_heat,
+            "West Africa": seed.customs_heat,
+            "East Indies": seed.customs_heat,
+        },
+        commercial_trust=seed.commercial_trust,
+    )
+
+    port_id = starting_port or template.home_port_id
 
     captain = Captain(
         name=captain_name,
-        silver=500,
+        captain_type=captain_type.value,
+        silver=template.starting_silver,
         ship=ship,
-        provisions=30,
+        provisions=template.starting_provisions,
+        standing=standing,
     )
 
     world = WorldState(
@@ -34,8 +65,8 @@ def new_game(captain_name: str = "Captain", starting_port: str = "porto_novo") -
         ports=ports,
         routes=routes,
         voyage=VoyageState(
-            origin_id=starting_port,
-            destination_id=starting_port,
+            origin_id=port_id,
+            destination_id=port_id,
             distance=0,
             status=VoyageStatus.IN_PORT,
         ),

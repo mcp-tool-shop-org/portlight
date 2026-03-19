@@ -111,11 +111,12 @@ class TestBuySell:
         world = new_game()
         port = world.ports["porto_novo"]
         recalculate_prices(port, GOODS)
+        silver_before = world.captain.silver
         result = execute_buy(world.captain, port, "grain", 5, GOODS)
         assert isinstance(result, TradeReceipt)
         assert result.action == TradeAction.BUY
         assert result.quantity == 5
-        assert world.captain.silver < 500
+        assert world.captain.silver < silver_before
 
     def test_buy_insufficient_silver(self):
         world = new_game()

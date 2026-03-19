@@ -25,15 +25,24 @@ import hashlib
 import random
 from typing import TYPE_CHECKING
 
-from portlight.engine.models import CargoItem, MarketSlot, Port
+from portlight.engine.models import CargoItem, GoodCategory, MarketSlot, Port
 from portlight.receipts.models import TradeAction, TradeReceipt
 
 if TYPE_CHECKING:
+    from portlight.engine.captain_identity import PricingModifiers
     from portlight.engine.models import Captain, WorldState
 
 
-def recalculate_prices(port: Port, goods_table: dict[str, object]) -> None:
-    """Recompute buy/sell prices for every market slot in a port."""
+def recalculate_prices(
+    port: Port,
+    goods_table: dict[str, object],
+    pricing: "PricingModifiers | None" = None,
+) -> None:
+    """Recompute buy/sell prices for every market slot in a port.
+
+    If pricing modifiers are provided (from captain identity), they affect
+    the final buy/sell prices the player sees.
+    """
     for slot in port.market:
         good = goods_table.get(slot.good_id)
         if good is None:
@@ -41,10 +50,22 @@ def recalculate_prices(port: Port, goods_table: dict[str, object]) -> None:
         base = good.base_price  # type: ignore[union-attr]
         scarcity = slot.stock_target / max(slot.stock_current, 1)
         raw = base * scarcity / max(slot.local_affinity, 0.1)
-        slot.buy_price = max(1, round(raw * (1 + slot.spread / 2)))
+
+        buy_mult = 1.0
+        sell_mult_cap = 1.0
+        if pricing:
+            buy_mult = pricing.buy_price_mult
+            sell_mult_cap = pricing.sell_price_mult
+            # Luxury sell bonus for luxury goods
+            if pricing.luxury_sell_bonus > 0:
+                category = good.category if hasattr(good, "category") else None  # type: ignore[union-attr]
+                if category == GoodCategory.LUXURY:
+                    sell_mult_cap += pricing.luxury_sell_bonus
+
+        slot.buy_price = max(1, round(raw * (1 + slot.spread / 2) * buy_mult))
         # Flood penalty reduces sell price - dumping the same port tanks your margins
-        sell_mult = 1 - slot.flood_penalty * 0.5  # up to 50% sell price reduction
-        slot.sell_price = max(1, round(raw * (1 - slot.spread / 2) * sell_mult))
+        flood_mult = 1 - slot.flood_penalty * 0.5  # up to 50% sell price reduction
+        slot.sell_price = max(1, round(raw * (1 - slot.spread / 2) * flood_mult * sell_mult_cap))
 
 
 def tick_markets(ports: dict[str, Port], days: int = 1, rng: random.Random | None = None) -> list[str]:
