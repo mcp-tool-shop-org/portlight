@@ -166,6 +166,14 @@ def _resolve_event(
         case EventType.INSPECTION:
             fee = rng.randint(5, 25)
             fine_mult = insp.fine_mult if insp else 1.0
+            # Heat-based fine amplification from reputation
+            if hasattr(captain, 'standing') and captain.standing.customs_heat:
+                # Use highest regional heat as proxy (voyage crosses regions)
+                max_heat = max(captain.standing.customs_heat.values())
+                if max_heat >= 30:
+                    fine_mult *= 1.5
+                elif max_heat >= 15:
+                    fine_mult *= 1.2
             fee = max(1, int(fee * fine_mult))
             # Seizure risk (smuggler penalty)
             seized_goods: dict[str, int] | None = None
@@ -309,6 +317,13 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     provision_burn = cap_mods.voyage.provision_burn if cap_mods else 1.0
     speed_bonus = cap_mods.voyage.speed_bonus if cap_mods else 0.0
     inspection_mult = cap_mods.inspection.inspection_chance_mult if cap_mods else 1.0
+
+    # Heat-based inspection amplification (reputation access effect)
+    if hasattr(captain, 'standing'):
+        from portlight.engine.reputation import get_inspection_modifier
+        dest_port = world.ports.get(voyage.destination_id)
+        region = dest_port.region if dest_port else "Mediterranean"
+        inspection_mult *= get_inspection_modifier(captain.standing, region)
 
     # Consume provisions (captain modifier affects burn rate)
     # provision_burn < 1.0 means some days you don't consume

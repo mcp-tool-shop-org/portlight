@@ -16,8 +16,15 @@ from portlight.content.world import new_game
 from portlight.engine.captain_identity import CAPTAIN_TEMPLATES, CaptainType
 from portlight.engine.economy import execute_buy, execute_sell, recalculate_prices, tick_markets
 from portlight.engine.models import VoyageStatus, WorldState
+from portlight.engine.reputation import (
+    get_service_modifier,
+    record_inspection_outcome,
+    record_port_arrival,
+    record_trade_outcome,
+    tick_reputation,
+)
 from portlight.engine.save import load_game, save_game
-from portlight.engine.voyage import advance_day, arrive, depart
+from portlight.engine.voyage import EventType, advance_day, arrive, depart
 from portlight.receipts.models import ReceiptLedger, TradeReceipt
 
 
@@ -126,17 +133,59 @@ class GameSession:
         return result
 
     def sell(self, good_id: str, qty: int) -> TradeReceipt | str:
-        """Sell goods at current port."""
+        """Sell goods at current port. Mutates reputation based on suspicion."""
         port = self.current_port
         if not port:
             return "Not docked at a port"
+
+        # Snapshot slot before sell for margin computation
+        slot = next((s for s in port.market if s.good_id == good_id), None)
+        flood_before = slot.flood_penalty if slot else 0.0
+        stock_target = slot.stock_target if slot else 50
+
         result = execute_sell(self.world.captain, port, good_id, qty, self._trade_seq)
         if isinstance(result, TradeReceipt):
             self.ledger.append(result)
             self._trade_seq += 1
+
+            # Compute margin for reputation
+            cost_basis = self._estimate_cost_basis(good_id, result.quantity)
+            revenue = result.total_price
+            margin_pct = ((revenue - cost_basis) / max(cost_basis, 1)) * 100 if cost_basis > 0 else 50.0
+
+            good = GOODS.get(good_id)
+            good_category = good.category if good else None
+            from portlight.engine.models import GoodCategory
+            category = good_category if good_category else GoodCategory.COMMODITY
+
+            record_trade_outcome(
+                self.world.captain.standing,
+                self.world.captain.captain_type,
+                self.world.day,
+                port.id,
+                port.region,
+                good_id,
+                category,
+                result.quantity,
+                margin_pct,
+                stock_target,
+                flood_before,
+                is_sell=True,
+            )
+
             self._recalc(port)
             self._save()
         return result
+
+    def _estimate_cost_basis(self, good_id: str, qty: int) -> int:
+        """Estimate cost basis for sold goods from cargo records."""
+        for item in self.world.captain.cargo:
+            if item.good_id == good_id and item.quantity > 0:
+                avg = item.cost_basis / item.quantity if item.quantity > 0 else 0
+                return int(avg * qty)
+        # Fallback: use base price
+        good = GOODS.get(good_id)
+        return good.base_price * qty if good else qty * 10
 
     # --- Voyage ---
 
@@ -154,6 +203,10 @@ class GameSession:
         """Advance one day. Returns voyage events."""
         if not self.world:
             return []
+
+        # Daily reputation tick (heat decay)
+        tick_reputation(self.world.captain.standing)
+
         if not self.at_sea:
             # In port: tick markets forward
             tick_markets(self.world.ports, days=1, rng=self._rng)
@@ -166,12 +219,30 @@ class GameSession:
 
         events = advance_day(self.world, self._rng)
 
+        # Record inspection events for reputation
+        voyage = self.world.voyage
+        for event in events:
+            if event.event_type == EventType.INSPECTION:
+                # Determine which region the voyage is in
+                region = self._voyage_region()
+                port_id = voyage.origin_id if voyage else ""
+                cargo_seized = event.cargo_lost is not None and len(event.cargo_lost) > 0
+                record_inspection_outcome(
+                    self.world.captain.standing,
+                    self.world.day, port_id, region,
+                    abs(event.silver_delta), cargo_seized,
+                )
+
         # Check arrival
         if self.world.voyage and self.world.voyage.status == VoyageStatus.ARRIVED:
             arrive(self.world)
-            # Recalculate prices at new port
             port = self.current_port
             if port:
+                # Record arrival for reputation
+                record_port_arrival(
+                    self.world.captain.standing,
+                    self.world.day, port.id, port.region,
+                )
                 self._recalc(port)
 
         # Recalculate all markets (time passes)
@@ -181,7 +252,22 @@ class GameSession:
         self._save()
         return events
 
+    def _voyage_region(self) -> str:
+        """Best guess of the current voyage's region (use destination port)."""
+        if self.world and self.world.voyage:
+            dest = self.world.ports.get(self.world.voyage.destination_id)
+            if dest:
+                return dest.region
+        return "Mediterranean"
+
     # --- Provisioning & Repair ---
+
+    def _service_mult(self) -> float:
+        """Get service cost multiplier from port standing reputation."""
+        port = self.current_port
+        if not port or not self.world:
+            return 1.0
+        return get_service_modifier(self.world.captain.standing, port.id)
 
     def provision(self, days: int) -> str | None:
         """Buy provisions at port-specific cost. Returns error or None."""
@@ -190,7 +276,8 @@ class GameSession:
         port = self.current_port
         if not port:
             return "Must be docked to provision"
-        cost_per_day = port.provision_cost
+        svc_mult = self._service_mult()
+        cost_per_day = max(1, int(port.provision_cost * svc_mult))
         cost = days * cost_per_day
         if cost > self.world.captain.silver:
             return f"Need {cost} silver for {days} days of provisions ({cost_per_day}/day here), have {self.world.captain.silver}"
@@ -215,7 +302,8 @@ class GameSession:
         if amount is None:
             amount = damage
         amount = min(amount, damage)
-        cost_per_hp = port.repair_cost
+        svc_mult = self._service_mult()
+        cost_per_hp = max(1, int(port.repair_cost * svc_mult))
         cost = amount * cost_per_hp
         if cost > self.world.captain.silver:
             affordable = self.world.captain.silver // cost_per_hp if cost_per_hp > 0 else 0

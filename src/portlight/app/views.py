@@ -89,31 +89,68 @@ def captain_view(captain: "Captain", template: "CaptainTemplate") -> Panel:
 # ---------------------------------------------------------------------------
 
 def reputation_view(standing: "ReputationState", captain: "Captain") -> Panel:
-    """Reputation screen: regional standing, customs heat, commercial trust."""
+    """Reputation screen: standing, heat, trust, access effects, recent incidents."""
+    from portlight.engine.reputation import (
+        get_fee_modifier,
+        get_inspection_modifier,
+        get_service_modifier,
+        get_trust_tier,
+    )
+
     lines: list[str] = []
 
-    # Regional standing
+    # Regional standing with fee effects
     lines.append("[bold]Regional Standing[/bold]")
     for region, value in standing.regional_standing.items():
-        lines.append(f"  {region:20s} {fmt.standing_tag(value)} ({value})")
+        fee_mod = get_fee_modifier(standing, region)
+        effect = ""
+        if fee_mod < 1.0:
+            effect = f"  [green]({int((1 - fee_mod) * 100)}% cheaper fees)[/green]"
+        elif fee_mod > 1.0:
+            effect = f"  [red](+{int((fee_mod - 1) * 100)}% fees)[/red]"
+        lines.append(f"  {region:20s} {fmt.standing_tag(value)} ({value}){effect}")
     lines.append("")
 
-    # Customs heat
+    # Customs heat with inspection effects
     lines.append("[bold]Customs Heat[/bold]")
     for region, value in standing.customs_heat.items():
-        lines.append(f"  {region:20s} {fmt.heat_tag(value)} ({value})")
+        insp_mod = get_inspection_modifier(standing, region)
+        effect = ""
+        if insp_mod > 1.0:
+            effect = f"  [red](+{int((insp_mod - 1) * 100)}% inspections)[/red]"
+        lines.append(f"  {region:20s} {fmt.heat_tag(value)} ({value}){effect}")
     lines.append("")
 
-    # Commercial trust
+    # Commercial trust with tier
+    trust_tier = get_trust_tier(standing)
     lines.append("[bold]Commercial Trust[/bold]")
-    lines.append(f"  {fmt.trust_tag(standing.commercial_trust)} ({standing.commercial_trust})")
+    lines.append(f"  {fmt.trust_tag(standing.commercial_trust)} ({standing.commercial_trust}) - tier: [bold]{trust_tier}[/bold]")
     lines.append("")
 
-    # Port standing (only show non-zero)
+    # Port standing with service effects (top 5 by value)
     if standing.port_standing:
         lines.append("[bold]Port Standing[/bold]")
-        for port_id, value in sorted(standing.port_standing.items()):
-            lines.append(f"  {port_id:20s} {fmt.standing_tag(value)} ({value})")
+        sorted_ports = sorted(standing.port_standing.items(), key=lambda x: x[1], reverse=True)
+        for port_id, value in sorted_ports[:8]:
+            svc_mod = get_service_modifier(standing, port_id)
+            effect = ""
+            if svc_mod < 1.0:
+                effect = f"  [green]({int((1 - svc_mod) * 100)}% cheaper services)[/green]"
+            lines.append(f"  {port_id:20s} {fmt.standing_tag(value)} ({value}){effect}")
+        lines.append("")
+
+    # Recent incidents (last 5)
+    if standing.recent_incidents:
+        lines.append("[bold]Recent Incidents[/bold]")
+        for inc in standing.recent_incidents[:5]:
+            # Color based on whether it was good or bad
+            if inc.heat_delta > 0:
+                icon = "[red]![/red]"
+            elif inc.standing_delta > 0 or inc.trust_delta > 0:
+                icon = "[green]+[/green]"
+            else:
+                icon = "[dim].[/dim]"
+            lines.append(f"  {icon} Day {inc.day} at {inc.port_id}: {inc.description}")
 
     return Panel("\n".join(lines), title="[bold]Reputation[/bold]", border_style="cyan")
 

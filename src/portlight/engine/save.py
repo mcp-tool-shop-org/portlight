@@ -18,6 +18,7 @@ from portlight.engine.models import (
     MarketSlot,
     Port,
     PortFeature,
+    ReputationIncident,
     ReputationState,
     Route,
     Ship,
@@ -48,21 +49,41 @@ def _ship_from_dict(d: dict) -> Ship:
     return Ship(**d)
 
 
+def _incident_to_dict(inc: ReputationIncident) -> dict:
+    return {
+        "day": inc.day,
+        "port_id": inc.port_id,
+        "region": inc.region,
+        "incident_type": inc.incident_type,
+        "description": inc.description,
+        "heat_delta": inc.heat_delta,
+        "standing_delta": inc.standing_delta,
+        "trust_delta": inc.trust_delta,
+    }
+
+
+def _incident_from_dict(d: dict) -> ReputationIncident:
+    return ReputationIncident(**d)
+
+
 def _reputation_to_dict(rep: ReputationState) -> dict:
     return {
         "regional_standing": rep.regional_standing,
         "port_standing": rep.port_standing,
         "customs_heat": rep.customs_heat,
         "commercial_trust": rep.commercial_trust,
+        "recent_incidents": [_incident_to_dict(i) for i in rep.recent_incidents],
     }
 
 
 def _reputation_from_dict(d: dict) -> ReputationState:
+    incidents = [_incident_from_dict(i) for i in d.get("recent_incidents", [])]
     return ReputationState(
         regional_standing=d.get("regional_standing", {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}),
         port_standing=d.get("port_standing", {}),
         customs_heat=d.get("customs_heat", {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}),
         commercial_trust=d.get("commercial_trust", 0),
+        recent_incidents=incidents,
     )
 
 

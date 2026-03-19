@@ -125,6 +125,19 @@ class Ship:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class ReputationIncident:
+    """One recorded reputation-affecting event."""
+    day: int
+    port_id: str
+    region: str
+    incident_type: str       # "trade", "inspection", "seizure", "arrival", "contract"
+    description: str
+    heat_delta: int = 0
+    standing_delta: int = 0
+    trust_delta: int = 0
+
+
+@dataclass
 class ReputationState:
     """Tracks the player's standing across regions, ports, and institutions.
 
@@ -142,6 +155,8 @@ class ReputationState:
     })
     # Commercial trust (does the market believe you can deliver?)
     commercial_trust: int = 0
+    # Recent incidents (capped at 20, newest first)
+    recent_incidents: list[ReputationIncident] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
