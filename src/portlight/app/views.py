@@ -1,0 +1,413 @@
+"""Rich views — game-facing screens that answer player questions.
+
+Each view is a function that returns a Rich renderable (Panel, Table, Group).
+Views never mutate game state. They read and present.
+
+Port screen answers: what's cheap, what's expensive, what do I hold, readiness.
+Market screen answers: buy/sell prices, scarcity, what I can afford.
+Route screen answers: where can I go, how long, how risky, can I provision it.
+Ledger screen answers: what trades made money, what routes work, upgrade progress.
+Shipyard screen answers: what ships, how they compare, can I afford one.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from rich.columns import Columns
+from rich.console import Group
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
+from portlight.app import formatting as fmt
+from portlight.content.goods import GOODS
+from portlight.content.ships import SHIPS
+
+if TYPE_CHECKING:
+    from portlight.engine.models import Captain, Port, Route, Ship, WorldState
+    from portlight.receipts.models import ReceiptLedger
+
+
+# ---------------------------------------------------------------------------
+# Status view — the captain's dashboard
+# ---------------------------------------------------------------------------
+
+def status_view(world: "WorldState", ledger: "ReceiptLedger") -> Panel:
+    """Captain overview: silver, ship, cargo, provisions, position, upgrade distance."""
+    captain = world.captain
+    ship = captain.ship
+
+    lines: list[str] = []
+    lines.append(f"[bold]{captain.name}[/bold]  Day {world.day}")
+    lines.append(f"Silver: {fmt.silver(captain.silver)}")
+
+    if ship:
+        lines.append(f"Ship: [bold]{ship.name}[/bold] ({ship.template_id})")
+        cargo_used = sum(c.quantity for c in captain.cargo)
+        lines.append(f"Cargo: {fmt.cargo_bar(cargo_used, ship.cargo_capacity)}")
+        lines.append(f"Hull:  {fmt.hull_bar(ship.hull, ship.hull_max)}")
+        lines.append(f"Crew:  {fmt.crew_status(ship.crew, ship.crew_max, _crew_min(ship))}")
+    lines.append(f"Provisions: {fmt.provision_status(captain.provisions)}")
+
+    # Current location
+    if world.voyage:
+        from portlight.engine.models import VoyageStatus
+        if world.voyage.status == VoyageStatus.AT_SEA:
+            pct = int(world.voyage.progress / max(world.voyage.distance, 1) * 100)
+            dest_name = world.ports.get(world.voyage.destination_id)
+            dest_label = dest_name.name if dest_name else world.voyage.destination_id
+            lines.append(f"[bold cyan]At sea[/bold cyan] → {dest_label} ({pct}% complete, day {world.voyage.days_elapsed})")
+        else:
+            port = world.ports.get(world.voyage.destination_id)
+            lines.append(f"Docked at [bold]{port.name if port else '???'}[/bold]")
+
+    # Upgrade tracker
+    next_ship = _next_upgrade(ship, captain.silver)
+    if next_ship:
+        lines.append(f"Next upgrade: {next_ship.name} — {fmt.upgrade_distance(captain.silver, next_ship.price)}")
+
+    # Net P&L
+    if ledger.receipts:
+        lines.append(f"Net P&L: {fmt.silver_delta(ledger.net_profit)} ({len(ledger.receipts)} trades)")
+
+    return Panel("\n".join(lines), title="[bold]Captain Status[/bold]", border_style="blue")
+
+
+# ---------------------------------------------------------------------------
+# Port view — arrival screen
+# ---------------------------------------------------------------------------
+
+def port_view(port: "Port", captain: "Captain") -> Panel:
+    """Port arrival screen: name, features, notable market conditions."""
+    lines: list[str] = []
+    lines.append(f"[italic]{port.description}[/italic]")
+    lines.append(f"Region: {port.region}  |  Port fee: {fmt.silver(port.port_fee)}")
+
+    if port.features:
+        feats = ", ".join(f.value.replace("_", " ").title() for f in port.features)
+        lines.append(f"Facilities: [cyan]{feats}[/cyan]")
+
+    # Market highlights
+    cheap = []
+    expensive = []
+    for slot in port.market:
+        good = GOODS.get(slot.good_id)
+        if not good:
+            continue
+        ratio = slot.stock_current / max(slot.stock_target, 1)
+        if ratio > 1.3:
+            cheap.append(f"[green]{good.name}[/green]")
+        elif ratio < 0.5:
+            expensive.append(f"[red]{good.name}[/red]")
+
+    if cheap:
+        lines.append(f"Cheap here: {', '.join(cheap)}")
+    if expensive:
+        lines.append(f"Pricey here: {', '.join(expensive)}")
+
+    # Cargo summary
+    if captain.cargo:
+        cargo_names = [f"{c.quantity}x {GOODS[c.good_id].name}" for c in captain.cargo if c.good_id in GOODS]
+        lines.append(f"You carry: {', '.join(cargo_names)}")
+    else:
+        lines.append("[dim]Hold is empty[/dim]")
+
+    return Panel("\n".join(lines), title=f"[bold]{port.name}[/bold]", border_style="cyan")
+
+
+# ---------------------------------------------------------------------------
+# Market view — the trading screen
+# ---------------------------------------------------------------------------
+
+def market_view(port: "Port", captain: "Captain") -> Panel:
+    """Full market board: buy/sell prices, scarcity, what you hold, what you can afford."""
+    table = Table(title=f"{port.name} Market", show_header=True, header_style="bold")
+    table.add_column("Good", style="bold")
+    table.add_column("Buy", justify="right")
+    table.add_column("Sell", justify="right")
+    table.add_column("Stock", justify="center")
+    table.add_column("Status")
+    table.add_column("You Hold", justify="right")
+    table.add_column("Can Buy", justify="right")
+
+    for slot in port.market:
+        good = GOODS.get(slot.good_id)
+        if not good:
+            continue
+        held = sum(c.quantity for c in captain.cargo if c.good_id == slot.good_id)
+        affordable = captain.silver // slot.buy_price if slot.buy_price > 0 else 0
+        # Cap by available stock and cargo space
+        ship = captain.ship
+        if ship:
+            cargo_used = sum(c.quantity for c in captain.cargo)
+            space = ship.cargo_capacity - int(cargo_used)
+            affordable = min(affordable, slot.stock_current, max(0, space))
+
+        table.add_row(
+            good.name,
+            str(slot.buy_price),
+            str(slot.sell_price),
+            f"{slot.stock_current}/{slot.stock_target}",
+            fmt.scarcity_tag(slot.stock_current, slot.stock_target),
+            str(held) if held > 0 else "[dim]—[/dim]",
+            str(affordable) if affordable > 0 else "[dim]—[/dim]",
+        )
+
+    return Panel(table, border_style="green")
+
+
+# ---------------------------------------------------------------------------
+# Cargo view
+# ---------------------------------------------------------------------------
+
+def cargo_view(captain: "Captain") -> Panel:
+    """What's in the hold, cost basis, current value hints."""
+    if not captain.cargo:
+        return Panel("[dim]Hold is empty[/dim]", title="[bold]Cargo[/bold]", border_style="yellow")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Good", style="bold")
+    table.add_column("Qty", justify="right")
+    table.add_column("Avg Cost", justify="right")
+    table.add_column("Total Cost", justify="right")
+
+    for item in captain.cargo:
+        good = GOODS.get(item.good_id)
+        name = good.name if good else item.good_id
+        avg = item.cost_basis // item.quantity if item.quantity > 0 else 0
+        table.add_row(name, str(item.quantity), str(avg), str(item.cost_basis))
+
+    ship = captain.ship
+    if ship:
+        cargo_used = sum(c.quantity for c in captain.cargo)
+        footer = f"\nCargo: {fmt.cargo_bar(cargo_used, ship.cargo_capacity)}"
+    else:
+        footer = ""
+
+    return Panel(Group(table, Text.from_markup(footer) if footer else Text("")),
+                 title="[bold]Cargo Hold[/bold]", border_style="yellow")
+
+
+# ---------------------------------------------------------------------------
+# Routes view — where can I go
+# ---------------------------------------------------------------------------
+
+def routes_view(world: "WorldState") -> Panel:
+    """Available routes from current port with travel time, risk, provision cost."""
+    current_port_id = world.voyage.destination_id if world.voyage else None
+    ship = world.captain.ship
+
+    table = Table(title="Available Routes", show_header=True, header_style="bold")
+    table.add_column("Destination", style="bold")
+    table.add_column("Region")
+    table.add_column("Distance", justify="right")
+    table.add_column("Est. Days", justify="right")
+    table.add_column("Risk")
+    table.add_column("Provisions Needed", justify="right")
+
+    routes = _routes_from(world.routes, current_port_id)
+    for route in routes:
+        dest_id = route.port_b if route.port_a == current_port_id else route.port_a
+        dest_port = world.ports.get(dest_id)
+        if not dest_port:
+            continue
+        speed = ship.speed if ship else 4
+        est_days = max(1, round(route.distance / speed))
+        prov_needed = est_days + 2  # buffer
+
+        prov_ok = world.captain.provisions >= prov_needed
+        prov_color = "green" if prov_ok else "red"
+
+        table.add_row(
+            dest_port.name,
+            dest_port.region,
+            str(route.distance),
+            fmt.travel_time(route.distance, speed),
+            fmt.risk_tag(route.danger),
+            f"[{prov_color}]{prov_needed} days[/{prov_color}]",
+        )
+
+    if not routes:
+        return Panel("[dim]No routes available from here[/dim]", title="Routes", border_style="magenta")
+
+    return Panel(table, border_style="magenta")
+
+
+# ---------------------------------------------------------------------------
+# Voyage view — at sea screen
+# ---------------------------------------------------------------------------
+
+def voyage_view(world: "WorldState", events: list | None = None) -> Panel:
+    """At-sea status: progress, recent events, ship condition."""
+    voyage = world.voyage
+    captain = world.captain
+
+    lines: list[str] = []
+
+    if voyage:
+        origin = world.ports.get(voyage.origin_id)
+        dest = world.ports.get(voyage.destination_id)
+        origin_name = origin.name if origin else voyage.origin_id
+        dest_name = dest.name if dest else voyage.destination_id
+
+        pct = int(voyage.progress / max(voyage.distance, 1) * 100)
+        # Progress bar
+        filled = pct // 10
+        empty = 10 - filled
+        bar = f"[cyan]{'▓' * filled}{'░' * empty}[/cyan]"
+        lines.append(f"{origin_name} {bar} {dest_name}")
+        lines.append(f"Day {voyage.days_elapsed} at sea  |  {pct}% complete")
+    else:
+        lines.append("[dim]Not at sea[/dim]")
+
+    if captain.ship:
+        lines.append(f"Hull: {fmt.hull_bar(captain.ship.hull, captain.ship.hull_max)}")
+        lines.append(f"Crew: {fmt.crew_status(captain.ship.crew, captain.ship.crew_max, _crew_min(captain.ship))}")
+    lines.append(f"Provisions: {fmt.provision_status(captain.provisions)}")
+    lines.append(f"Silver: {fmt.silver(captain.silver)}")
+
+    if events:
+        lines.append("")
+        for event in events:
+            lines.append(f"  {_event_icon(event.event_type.value)} {event.message}")
+
+    return Panel("\n".join(lines), title="[bold]At Sea[/bold]", border_style="cyan")
+
+
+# ---------------------------------------------------------------------------
+# Ledger view
+# ---------------------------------------------------------------------------
+
+def ledger_view(ledger: "ReceiptLedger", captain: "Captain") -> Panel:
+    """Trade history with P&L, route analysis, upgrade tracker."""
+    if not ledger.receipts:
+        return Panel("[dim]No trades recorded yet[/dim]", title="[bold]Trade Ledger[/bold]", border_style="white")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Day", justify="right")
+    table.add_column("Port")
+    table.add_column("Action", justify="center")
+    table.add_column("Good")
+    table.add_column("Qty", justify="right")
+    table.add_column("Price", justify="right")
+    table.add_column("Total", justify="right")
+
+    # Show last 15 receipts
+    recent = ledger.receipts[-15:]
+    for r in recent:
+        action_style = "[green]BUY[/green]" if r.action.value == "buy" else "[red]SELL[/red]"
+        good = GOODS.get(r.good_id)
+        good_name = good.name if good else r.good_id
+        table.add_row(
+            str(r.day), r.port_id, action_style, good_name,
+            str(r.quantity), str(r.unit_price), str(r.total_price),
+        )
+
+    summary_lines = []
+    summary_lines.append(f"Total bought: {fmt.silver(ledger.total_buys)}")
+    summary_lines.append(f"Total sold:   {fmt.silver(ledger.total_sells)}")
+    summary_lines.append(f"Net P&L:      {fmt.silver_delta(ledger.net_profit)}")
+    summary_lines.append(f"Trades:       {len(ledger.receipts)}")
+
+    # Upgrade tracker
+    next_ship = _next_upgrade(captain.ship, captain.silver)
+    if next_ship:
+        summary_lines.append(f"Next ship:    {next_ship.name} — {fmt.upgrade_distance(captain.silver, next_ship.price)}")
+
+    summary = "\n".join(summary_lines)
+
+    return Panel(Group(table, Text(""), Text.from_markup(summary)),
+                 title="[bold]Trade Ledger[/bold]", border_style="white")
+
+
+# ---------------------------------------------------------------------------
+# Shipyard view
+# ---------------------------------------------------------------------------
+
+def shipyard_view(captain: "Captain") -> Panel:
+    """Ship comparison panel for upgrade decisions."""
+    current = captain.ship
+
+    table = Table(title="Shipyard", show_header=True, header_style="bold")
+    table.add_column("Ship", style="bold")
+    table.add_column("Class")
+    table.add_column("Cargo", justify="right")
+    table.add_column("Speed", justify="right")
+    table.add_column("Hull", justify="right")
+    table.add_column("Crew", justify="right")
+    table.add_column("Price", justify="right")
+    table.add_column("Status")
+
+    for template in SHIPS.values():
+        is_current = current and current.template_id == template.id
+        status = "[bold cyan]★ Current[/bold cyan]" if is_current else fmt.upgrade_distance(captain.silver, template.price)
+
+        # Comparison arrows
+        cargo_cmp = _compare(template.cargo_capacity, current.cargo_capacity if current else 0)
+        speed_cmp = _compare(template.speed, current.speed if current else 0)
+        hull_cmp = _compare(template.hull_max, current.hull_max if current else 0)
+
+        table.add_row(
+            template.name,
+            template.ship_class.value.title(),
+            f"{template.cargo_capacity} {cargo_cmp}",
+            f"{template.speed} {speed_cmp}",
+            f"{template.hull_max} {hull_cmp}",
+            f"{template.crew_min}–{template.crew_max}",
+            fmt.silver(template.price) if template.price > 0 else "[dim]—[/dim]",
+            status,
+        )
+
+    return Panel(table, border_style="yellow")
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _routes_from(routes: list["Route"], port_id: str | None) -> list["Route"]:
+    if port_id is None:
+        return []
+    return [r for r in routes if r.port_a == port_id or r.port_b == port_id]
+
+
+def _next_upgrade(ship: "Ship | None", silver: int) -> "ShipTemplate | None":
+    """Find the cheapest ship the player doesn't have yet."""
+    if ship is None:
+        return None
+    from portlight.engine.models import ShipClass
+    current_class_order = ["sloop", "brigantine", "galleon"]
+    current_idx = current_class_order.index(ship.template_id.split("_")[0]) if "_" in ship.template_id else -1
+
+    for template in sorted(SHIPS.values(), key=lambda s: s.price):
+        if template.id != ship.template_id and template.price > 0:
+            return template
+    return None
+
+
+def _compare(new: float, current: float) -> str:
+    if new > current:
+        return "[green]▲[/green]"
+    elif new < current:
+        return "[red]▼[/red]"
+    return ""
+
+
+def _crew_min(ship: "Ship") -> int:
+    """Get crew_min from template."""
+    template = SHIPS.get(ship.template_id)
+    return template.crew_min if template else 1
+
+
+def _event_icon(event_type: str) -> str:
+    icons = {
+        "storm": "⛈",
+        "pirates": "☠",
+        "inspection": "⚓",
+        "favorable_wind": "💨",
+        "calm_seas": "🌊",
+        "provisions_spoiled": "🪱",
+        "nothing": "·",
+    }
+    return icons.get(event_type, "·")
