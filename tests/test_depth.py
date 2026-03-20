@@ -15,7 +15,6 @@ from portlight.app.session import GameSession
 from portlight.content.goods import GOODS
 from portlight.content.world import new_game
 from portlight.engine.economy import execute_buy, execute_sell, recalculate_prices, tick_markets
-from portlight.engine.models import MarketSlot, Port
 from portlight.engine.voyage import check_route_suitability, find_route, ship_class_rank
 from portlight.receipts.models import TradeReceipt
 
@@ -51,17 +50,14 @@ class TestFloodPenalty:
         grain_slot = next(s for s in port.market if s.good_id == "grain")
 
         recalculate_prices(port, GOODS)
-        price_before = grain_slot.sell_price
 
         execute_sell(world.captain, port, "grain", 10)
         recalculate_prices(port, GOODS)
-        price_after_first = grain_slot.sell_price
 
         # Refill and sell again
         execute_buy(world.captain, porto, "grain", 10, GOODS)
         execute_sell(world.captain, port, "grain", 10)
         recalculate_prices(port, GOODS)
-        price_after_second = grain_slot.sell_price
 
         # Prices should decrease or at least the flood penalty should be higher
         assert grain_slot.flood_penalty > 0.2
@@ -262,8 +258,6 @@ class TestBalanceHarness:
         if len(profits) >= 2:
             # Later runs should generally be less profitable (flood + stock recovery)
             # This is a soft assertion - RNG can cause variance
-            avg_early = profits[0]
-            avg_late = profits[-1]
             # At minimum, the route shouldn't get MORE profitable
             assert True  # logging test, not hard assertion
 
@@ -306,7 +300,7 @@ class TestBalanceHarness:
         assert grain_margin > 0, f"Grain route not profitable: buy {grain_buy}, sell {grain_sell}"
         if silk_sell_slot:
             silk_margin = silk_sell_slot.sell_price - silk_buy
-            assert silk_margin > 0 or silk_buy < 60, f"Silk route should be viable"
+            assert silk_margin > 0 or silk_buy < 60, "Silk route should be viable"
         assert cotton_margin > 0, f"Cotton route not profitable: buy {cotton_buy}, sell {cotton_sell}"
 
     def test_no_route_dominates_completely(self):

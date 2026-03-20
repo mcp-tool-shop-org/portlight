@@ -20,8 +20,8 @@ from portlight.engine.captain_identity import (
 )
 from portlight.engine.economy import recalculate_prices
 from portlight.engine.models import ReputationState
-from portlight.engine.save import load_game, save_game, world_from_dict, world_to_dict
-from portlight.engine.voyage import advance_day, find_route
+from portlight.engine.save import world_from_dict, world_to_dict
+from portlight.engine.voyage import advance_day
 
 
 class TestCaptainTemplates:

@@ -1308,13 +1308,11 @@ def milestones_view(
 ) -> Panel:
     """Show completed milestones, career profile, and victory progress."""
     from portlight.engine.campaign import (
-        CampaignState,
         MilestoneFamily,
-        SessionSnapshot,
         compute_career_profile,
         compute_victory_progress,
     )
-    from portlight.content.campaign import MILESTONE_SPECS, MILESTONE_BY_ID
+    from portlight.content.campaign import MILESTONE_SPECS
 
     parts = []
 

@@ -25,12 +25,12 @@ import hashlib
 import random
 from typing import TYPE_CHECKING
 
-from portlight.engine.models import CargoItem, GoodCategory, MarketSlot, Port
+from portlight.engine.models import CargoItem, GoodCategory, Port
 from portlight.receipts.models import TradeAction, TradeReceipt
 
 if TYPE_CHECKING:
     from portlight.engine.captain_identity import PricingModifiers
-    from portlight.engine.models import Captain, WorldState
+    from portlight.engine.models import Captain
 
 
 def recalculate_prices(

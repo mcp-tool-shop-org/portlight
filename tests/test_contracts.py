@@ -20,7 +20,6 @@ from portlight.engine.contracts import (
     ContractFamily,
     ContractOffer,
     ContractOutcome,
-    ContractStatus,
     abandon_contract,
     accept_offer,
     check_delivery,
@@ -28,7 +27,7 @@ from portlight.engine.contracts import (
     resolve_completed,
     tick_contracts,
 )
-from portlight.engine.economy import execute_buy, execute_sell, recalculate_prices
+from portlight.engine.economy import execute_buy, recalculate_prices
 from portlight.engine.models import ReputationState
 from portlight.engine.save import world_from_dict, world_to_dict
 

@@ -6,7 +6,6 @@ Proves: new → buy → sail → events → arrive → sell → ledger → upgra
 from pathlib import Path
 
 from portlight.app.session import GameSession
-from portlight.engine.models import VoyageStatus
 from portlight.receipts.models import TradeAction, TradeReceipt
 
 
@@ -120,7 +119,6 @@ class TestSessionProvisionRepair:
         s = GameSession(tmp_path)
         s.new()
         s.captain.ship.hull = 40  # damage 20 HP
-        silver_before = s.captain.silver
         result = s.repair()
         assert not isinstance(result, str)
         repaired, cost = result
@@ -197,7 +195,7 @@ class TestFullVoyageLoop:
 
         # 3. Sail through events (cargo may be damaged)
         for _ in range(20):
-            events = s.advance()
+            s.advance()
             if s.current_port_id is not None:
                 break
         assert s.current_port_id == "al_manar"

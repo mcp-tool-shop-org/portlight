@@ -224,7 +224,7 @@ class TestDeposit:
         deposit_cargo(infra, "porto_novo", world.captain, "grain", 5, day=3)
         wh = get_warehouse(infra, "porto_novo")
         # Should merge into single lot (same provenance)
-        grain_lots = [l for l in wh.inventory if l.good_id == "grain"]
+        grain_lots = [lot for lot in wh.inventory if lot.good_id == "grain"]
         assert len(grain_lots) == 1
         assert grain_lots[0].quantity == 8  # 3 + 5
 
@@ -304,9 +304,9 @@ class TestWithdraw:
         result = withdraw_cargo(infra, "porto_novo", world.captain, "grain", 3, source_port="al_manar")
         assert result == 3
         # Should only take from al_manar lot
-        al_lot = next(l for l in wh.inventory if l.acquired_port == "al_manar")
+        al_lot = next(lot for lot in wh.inventory if lot.acquired_port == "al_manar")
         assert al_lot.quantity == 2
-        porto_lot = next(l for l in wh.inventory if l.acquired_port == "porto_novo")
+        porto_lot = next(lot for lot in wh.inventory if lot.acquired_port == "porto_novo")
         assert porto_lot.quantity == 5  # Untouched
 
 

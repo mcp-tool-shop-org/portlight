@@ -23,7 +23,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from portlight.engine.models import Captain, Port, ReputationState, WorldState
+    from portlight.engine.models import Port, ReputationState, WorldState
 
 
 # ---------------------------------------------------------------------------

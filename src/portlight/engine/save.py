@@ -598,7 +598,7 @@ def _milestone_from_dict(d: dict) -> MilestoneCompletion:
     )
 
 
-def _victory_completion_to_dict(vc: "VictoryCompletion") -> dict:
+def _victory_completion_to_dict(vc: "VictoryCompletion") -> dict:  # noqa: F821
     return {
         "path_id": vc.path_id,
         "completion_day": vc.completion_day,
@@ -607,7 +607,7 @@ def _victory_completion_to_dict(vc: "VictoryCompletion") -> dict:
     }
 
 
-def _victory_completion_from_dict(d: dict) -> "VictoryCompletion":
+def _victory_completion_from_dict(d: dict) -> "VictoryCompletion":  # noqa: F821
     from portlight.engine.campaign import VictoryCompletion
     return VictoryCompletion(
         path_id=d["path_id"],

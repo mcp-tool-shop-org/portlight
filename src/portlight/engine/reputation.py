@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 from portlight.engine.models import GoodCategory, ReputationIncident
 
 if TYPE_CHECKING:
-    from portlight.engine.models import Captain, Port, ReputationState
+    from portlight.engine.models import ReputationState
 
 # Maximum values (prevent runaway)
 MAX_STANDING = 100

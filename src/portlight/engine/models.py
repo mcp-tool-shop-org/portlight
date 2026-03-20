@@ -11,7 +11,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from portlight.engine.captain_identity import CaptainType
+    pass
 
 
 # ---------------------------------------------------------------------------

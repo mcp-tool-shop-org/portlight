@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from portlight.engine.contracts import ContractBoard
     from portlight.engine.infrastructure import InfrastructureState
-    from portlight.engine.models import Captain, ReputationState, WorldState
+    from portlight.engine.models import Captain, WorldState
     from portlight.receipts.models import ReceiptLedger
 
 
@@ -266,7 +266,6 @@ def _completed_contracts(snap: SessionSnapshot) -> list:
 
 def _completed_contract_families(snap: SessionSnapshot) -> dict[str, int]:
     """Count completed contracts by template family."""
-    from portlight.engine.contracts import ContractFamily
     counts: dict[str, int] = {}
     for c in snap.board.completed:
         if c.outcome_type in ("completed", "completed_bonus"):
@@ -366,7 +365,7 @@ def _eval_presence_two_regions(snap: SessionSnapshot) -> tuple[bool, str]:
 def _eval_sustained_three_regions(snap: SessionSnapshot) -> tuple[bool, str]:
     regions = _regions_with_standing(snap, 10)
     if len(regions) >= 3:
-        return True, f"Standing 10+ in all three regions"
+        return True, "Standing 10+ in all three regions"
     return False, ""
 
 
@@ -538,11 +537,16 @@ def _eval_full_spectrum(snap: SessionSnapshot) -> tuple[bool, str]:
     met = sum([wh, brokers, licenses, insured, credit])
     if met >= 4:
         parts = []
-        if wh: parts.append("warehouse")
-        if brokers: parts.append("broker")
-        if licenses: parts.append("license")
-        if insured: parts.append("insurance")
-        if credit: parts.append("credit")
+        if wh:
+            parts.append("warehouse")
+        if brokers:
+            parts.append("broker")
+        if licenses:
+            parts.append("license")
+        if insured:
+            parts.append("insurance")
+        if credit:
+            parts.append("credit")
         return True, f"Using {', '.join(parts)}"
     return False, ""
 

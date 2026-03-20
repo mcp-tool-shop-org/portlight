@@ -53,7 +53,7 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
 ]}
 
 
-def create_ship_from_template(template: ShipTemplate, name: str | None = None) -> "Ship":
+def create_ship_from_template(template: ShipTemplate, name: str | None = None) -> "Ship":  # noqa: F821
     """Instantiate a Ship from a template."""
     from portlight.engine.models import Ship
     return Ship(

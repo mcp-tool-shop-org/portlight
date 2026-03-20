@@ -14,13 +14,10 @@ Behavioral proofs:
 from pathlib import Path
 
 from portlight.app.session import GameSession
-from portlight.content.goods import GOODS
 from portlight.content.world import new_game
 from portlight.engine.captain_identity import CaptainType
 from portlight.engine.models import GoodCategory, ReputationIncident, ReputationState
 from portlight.engine.reputation import (
-    MAX_HEAT,
-    MAX_STANDING,
     _compute_suspicion,
     get_fee_modifier,
     get_inspection_modifier,
@@ -462,8 +459,6 @@ class TestSessionReputation:
         s.new("Trader", captain_type="merchant")
         # Buy grain, sell it to trigger reputation mutation
         s.buy("grain", 10)
-        heat_before = s.captain.standing.customs_heat.get("Mediterranean", 0)
-        trust_before = s.captain.standing.commercial_trust
         # Sell at same port (low margin, should be clean)
         s.sell("grain", 10)
         # After a sell, some reputation state should have changed

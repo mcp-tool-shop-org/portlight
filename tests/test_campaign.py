@@ -11,20 +11,16 @@ Coverage:
   - Session integration: advance() triggers milestones
 """
 
-import pytest
-from dataclasses import field
 
 from portlight.engine.campaign import (
     CampaignState,
     CareerProfile,
     MilestoneCompletion,
     MilestoneFamily,
-    MilestoneSpec,
     ProfileConfidence,
     ProfileScore,
     SessionSnapshot,
     VictoryCompletion,
-    VictoryPathProgress,
     compute_career_profile,
     compute_career_profile_legacy,
     compute_victory_progress,
@@ -34,7 +30,6 @@ from portlight.engine.campaign import (
 from portlight.content.campaign import MILESTONE_SPECS, MILESTONE_BY_ID
 from portlight.engine.models import (
     Captain,
-    CargoItem,
     Port,
     ReputationState,
     Route,
@@ -57,7 +52,7 @@ from portlight.engine.infrastructure import (
     WarehouseLease,
     WarehouseTier,
 )
-from portlight.receipts.models import ReceiptLedger, TradeReceipt, TradeAction
+from portlight.receipts.models import ReceiptLedger
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +241,7 @@ class TestLawfulHouseMilestones:
                 ContractOutcome(
                     contract_id=f"c{i}", outcome_type="completed",
                     silver_delta=100, trust_delta=1, standing_delta=1,
-                    heat_delta=0, completion_day=i + 1, summary=f"Delivered grain",
+                    heat_delta=0, completion_day=i + 1, summary="Delivered grain",
                 )
                 for i in range(5)
             ],
@@ -352,7 +347,6 @@ class TestOceanicMilestones:
 
 class TestFinanceMilestones:
     def test_credit_opened_fires(self):
-        from portlight.engine.infrastructure import InsuranceClaim
         infra = InfrastructureState(
             credit=CreditState(
                 tier=CreditTier.MERCHANT_LINE,
