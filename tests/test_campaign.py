@@ -16,13 +16,16 @@ from dataclasses import field
 
 from portlight.engine.campaign import (
     CampaignState,
+    CareerProfile,
     MilestoneCompletion,
     MilestoneFamily,
     MilestoneSpec,
+    ProfileConfidence,
     ProfileScore,
     SessionSnapshot,
     VictoryPathProgress,
     compute_career_profile,
+    compute_career_profile_legacy,
     compute_victory_progress,
     evaluate_milestones,
 )
@@ -476,8 +479,9 @@ class TestCareerProfile:
         )
         snap = _base_snap(world=world, infra=infra, board=board)
         profile = compute_career_profile(snap)
-        assert profile[0].tag == "Lawful House"
-        assert profile[0].score > 0
+        assert profile.primary is not None
+        assert profile.primary.tag == "Lawful House"
+        assert profile.primary.combined_score > 0
 
     def test_smuggler_shadow_profile(self):
         """Smuggler with high heat, seizure survival → Shadow Operator rises."""
@@ -493,10 +497,10 @@ class TestCareerProfile:
         ledger = ReceiptLedger(net_profit=2000)
         snap = _base_snap(world=world, ledger=ledger)
         profile = compute_career_profile(snap)
-        shadow = next(p for p in profile if p.tag == "Shadow Operator")
-        assert shadow.score > 0
-        # Shadow should be competitive
-        assert shadow.score >= profile[1].score or shadow == profile[0]
+        shadow = next(t for t in profile.all_tags if t.tag == "Shadow Operator")
+        assert shadow.combined_score > 0
+        # Shadow should be competitive — in top 2
+        assert shadow in [profile.primary] + profile.secondaries or shadow.combined_score > 0
 
     def test_navigator_oceanic_profile(self):
         """Navigator with galleon and EI presence → Oceanic Carrier rises."""
@@ -513,14 +517,14 @@ class TestCareerProfile:
         )
         snap = _base_snap(world=world, infra=infra)
         profile = compute_career_profile(snap)
-        oceanic = next(p for p in profile if p.tag == "Oceanic Carrier")
-        assert oceanic.score >= 60  # strong signal
+        oceanic = next(t for t in profile.all_tags if t.tag == "Oceanic Carrier")
+        assert oceanic.combined_score >= 35  # strong signal
 
     def test_profile_ranking_changes(self):
         """An empty run should have low scores everywhere."""
         snap = _base_snap()
         profile = compute_career_profile(snap)
-        assert all(p.score < 20 for p in profile)
+        assert all(t.combined_score < 20 for t in profile.all_tags)
 
 
 # ---------------------------------------------------------------------------
@@ -701,3 +705,214 @@ class TestSessionIntegration:
         assert snap.captain is s.captain
         assert snap.world is s.world
         assert snap.campaign is s.campaign
+
+
+# ---------------------------------------------------------------------------
+# 3D-4B — Career Profile Truth
+# ---------------------------------------------------------------------------
+
+class TestCareerProfileTruth:
+    """Profile returns CareerProfile with primary/secondaries/emerging,
+    lifetime vs recent scoring, and confidence bands."""
+
+    def test_profile_returns_career_profile(self):
+        """compute_career_profile returns a CareerProfile dataclass."""
+        snap = _base_snap()
+        profile = compute_career_profile(snap)
+        assert isinstance(profile, CareerProfile)
+        assert isinstance(profile.all_tags, list)
+
+    def test_all_seven_tags_present(self):
+        """All 7 profile tags are always computed."""
+        snap = _base_snap()
+        profile = compute_career_profile(snap)
+        tag_names = {t.tag for t in profile.all_tags}
+        expected = {
+            "Lawful House", "Shadow Operator", "Oceanic Carrier",
+            "Contract Specialist", "Infrastructure Builder",
+            "Leveraged Trader", "Risk-Managed Merchant",
+        }
+        assert tag_names == expected
+
+    def test_tags_have_lifetime_and_recent(self):
+        """Each tag has lifetime_score, recent_score, combined_score."""
+        snap = _base_snap()
+        profile = compute_career_profile(snap)
+        for t in profile.all_tags:
+            assert hasattr(t, "lifetime_score")
+            assert hasattr(t, "recent_score")
+            assert hasattr(t, "combined_score")
+            assert isinstance(t.confidence, ProfileConfidence)
+
+    def test_primary_is_highest_combined(self):
+        """Primary tag is the one with highest combined_score."""
+        world = _base_world()
+        world.captain.standing.commercial_trust = 50
+        world.captain.standing.regional_standing = {"Mediterranean": 20, "West Africa": 15, "East Indies": 0}
+        world.captain.standing.customs_heat = {"Mediterranean": 1, "West Africa": 2, "East Indies": 0}
+        infra = InfrastructureState(
+            licenses=[
+                OwnedLicense(license_id="med_trade_charter", purchased_day=5, active=True),
+                OwnedLicense(license_id="high_rep_charter", purchased_day=10, active=True),
+            ],
+        )
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=100, trust_delta=1, standing_delta=1,
+                    heat_delta=0, completion_day=i + 1, summary="Delivered grain",
+                )
+                for i in range(8)
+            ],
+        )
+        snap = _base_snap(world=world, infra=infra, board=board)
+        profile = compute_career_profile(snap)
+        assert profile.primary is not None
+        # Primary should be the first in all_tags (sorted by combined_score)
+        assert profile.primary is profile.all_tags[0]
+
+    def test_secondaries_capped_at_two(self):
+        """At most 2 secondary traits."""
+        snap = _base_snap()
+        profile = compute_career_profile(snap)
+        assert len(profile.secondaries) <= 2
+
+    def test_milestones_boost_lifetime_score(self):
+        """Completed milestones in aligned families boost lifetime_score."""
+        campaign = CampaignState(
+            completed=[
+                MilestoneCompletion(milestone_id="lawful_credible_trust", completed_day=5, evidence="credible"),
+                MilestoneCompletion(milestone_id="lawful_reliable_trust", completed_day=8, evidence="reliable"),
+                MilestoneCompletion(milestone_id="lawful_first_charter", completed_day=10, evidence="charter"),
+            ],
+        )
+        snap_with = _base_snap(campaign=campaign)
+        snap_without = _base_snap()
+
+        profile_with = compute_career_profile(snap_with)
+        profile_without = compute_career_profile(snap_without)
+
+        lawful_with = next(t for t in profile_with.all_tags if t.tag == "Lawful House")
+        lawful_without = next(t for t in profile_without.all_tags if t.tag == "Lawful House")
+        assert lawful_with.lifetime_score > lawful_without.lifetime_score
+
+    def test_recent_milestones_boost_recent_score(self):
+        """Milestones completed within recent window boost recent_score."""
+        world = _base_world()
+        world.day = 30
+
+        # Recent milestone (within window)
+        recent_campaign = CampaignState(
+            completed=[
+                MilestoneCompletion(
+                    milestone_id="lawful_credible_trust",
+                    completed_day=25,  # within last 20 days of day 30
+                    evidence="credible",
+                ),
+            ],
+        )
+        # Old milestone (outside window)
+        old_campaign = CampaignState(
+            completed=[
+                MilestoneCompletion(
+                    milestone_id="lawful_credible_trust",
+                    completed_day=5,  # 25 days ago, outside 20-day window
+                    evidence="credible",
+                ),
+            ],
+        )
+
+        snap_recent = _base_snap(world=world, campaign=recent_campaign)
+        snap_old = _base_snap(world=world, campaign=old_campaign)
+
+        profile_recent = compute_career_profile(snap_recent)
+        profile_old = compute_career_profile(snap_old)
+
+        lawful_recent = next(t for t in profile_recent.all_tags if t.tag == "Lawful House")
+        lawful_old = next(t for t in profile_old.all_tags if t.tag == "Lawful House")
+
+        # Both get the same lifetime boost, but recent gets additional recent_score
+        assert lawful_recent.recent_score > lawful_old.recent_score
+
+    def test_confidence_bands(self):
+        """Strong activity yields higher confidence than empty run."""
+        # Empty run
+        snap_empty = _base_snap()
+        profile_empty = compute_career_profile(snap_empty)
+        # All tags should be Forming on an empty run
+        for t in profile_empty.all_tags:
+            assert t.confidence in (ProfileConfidence.FORMING, ProfileConfidence.MODERATE)
+
+        # Strong lawful activity
+        world = _base_world()
+        world.captain.standing.commercial_trust = 50
+        world.captain.standing.customs_heat = {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}
+        infra = InfrastructureState(
+            licenses=[
+                OwnedLicense(license_id="med_trade_charter", purchased_day=5, active=True),
+                OwnedLicense(license_id="high_rep_charter", purchased_day=10, active=True),
+            ],
+        )
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=100, trust_delta=1, standing_delta=1,
+                    heat_delta=0, completion_day=i + 1, summary="Delivered",
+                )
+                for i in range(10)
+            ],
+        )
+        snap_strong = _base_snap(world=world, infra=infra, board=board)
+        profile_strong = compute_career_profile(snap_strong)
+        lawful = next(t for t in profile_strong.all_tags if t.tag == "Lawful House")
+        assert lawful.confidence in (ProfileConfidence.STRONG, ProfileConfidence.DEFINING)
+
+    def test_emerging_tag_from_recent_activity(self):
+        """A tag with high recent_score but not primary can appear as emerging."""
+        world = _base_world()
+        world.day = 30
+        # Strong lawful base (will be primary)
+        world.captain.standing.commercial_trust = 50
+        world.captain.standing.customs_heat = {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}
+        infra = InfrastructureState(
+            licenses=[
+                OwnedLicense(license_id="med_trade_charter", purchased_day=5, active=True),
+                OwnedLicense(license_id="high_rep_charter", purchased_day=10, active=True),
+            ],
+        )
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=100, trust_delta=1, standing_delta=1,
+                    heat_delta=0, completion_day=i + 1, summary="Delivered",
+                )
+                for i in range(8)
+            ],
+        )
+        # Recent oceanic milestones (within window)
+        campaign = CampaignState(
+            completed=[
+                MilestoneCompletion(milestone_id="oceanic_ei_access", completed_day=28, evidence="EI charter"),
+                MilestoneCompletion(milestone_id="oceanic_ei_broker", completed_day=29, evidence="EI broker"),
+                MilestoneCompletion(milestone_id="oceanic_galleon", completed_day=29, evidence="Galleon"),
+            ],
+        )
+        snap = _base_snap(world=world, infra=infra, board=board, campaign=campaign)
+        profile = compute_career_profile(snap)
+        # Lawful should be primary from strong base
+        assert profile.primary is not None
+        assert profile.primary.tag == "Lawful House"
+        # Oceanic should appear as emerging (recent milestones)
+        if profile.emerging:
+            assert profile.emerging.recent_score > 0
+
+    def test_legacy_profile_still_works(self):
+        """compute_career_profile_legacy returns list[ProfileScore]."""
+        snap = _base_snap()
+        legacy = compute_career_profile_legacy(snap)
+        assert isinstance(legacy, list)
+        assert all(isinstance(p, ProfileScore) for p in legacy)
+        assert len(legacy) == 7

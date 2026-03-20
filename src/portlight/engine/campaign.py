@@ -102,12 +102,39 @@ class SessionSnapshot:
 # Career profile
 # ---------------------------------------------------------------------------
 
+class ProfileConfidence(str, Enum):
+    FORMING = "Forming"         # early signal, not yet established
+    MODERATE = "Moderate"       # meaningful evidence, not dominant
+    STRONG = "Strong"           # clear pattern with solid evidence
+    DEFINING = "Defining"       # dominant identity of the run
+
+
 @dataclass
 class ProfileScore:
-    """A weighted profile tag with evidence."""
+    """Legacy profile score — kept for backward compat in tests."""
     tag: str
     score: float
     evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CareerProfileTag:
+    """A richer profile tag with lifetime, recent, and confidence scoring."""
+    tag: str
+    lifetime_score: float       # accumulated business history
+    recent_score: float         # what player is doing now (last ~20 days)
+    combined_score: float       # weighted blend for ranking
+    confidence: ProfileConfidence
+    evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CareerProfile:
+    """Interpreted career profile — not just a ranked list."""
+    primary: CareerProfileTag | None = None
+    secondaries: list[CareerProfileTag] = field(default_factory=list)
+    emerging: CareerProfileTag | None = None
+    all_tags: list[CareerProfileTag] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -570,17 +597,14 @@ def evaluate_milestones(
 # Career profile scoring
 # ---------------------------------------------------------------------------
 
-def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
-    """Derive ranked profile tags from session truth.
-
-    Returns list sorted by score descending. Top tag = primary identity.
-    """
+def _compute_base_scores(snap: SessionSnapshot) -> dict[str, tuple[float, list[str]]]:
+    """Compute raw session-truth scores per tag. Returns {tag: (score, evidence)}."""
     rep = snap.captain.standing
-    scores: list[ProfileScore] = []
+    results: dict[str, tuple[float, list[str]]] = {}
 
     # --- Lawful House ---
     lawful = 0.0
-    lawful_ev = []
+    lawful_ev: list[str] = []
     tier = _trust_tier(snap)
     rank = _trust_rank(tier)
     lawful += rank * 10
@@ -597,11 +621,11 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
     lawful += min(completed * 3, 30)
     if completed >= 3:
         lawful_ev.append(f"{completed} contracts completed")
-    scores.append(ProfileScore("Lawful House", lawful, lawful_ev))
+    results["Lawful House"] = (lawful, lawful_ev)
 
     # --- Shadow Operator ---
     shadow = 0.0
-    shadow_ev = []
+    shadow_ev: list[str] = []
     max_h = _max_heat(snap)
     if max_h >= 10:
         shadow += min(max_h * 2, 40)
@@ -609,7 +633,6 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
     if snap.captain.captain_type == "smuggler":
         shadow += 15
         shadow_ev.append("smuggler captain")
-    # Seizure survival
     seizures = sum(
         1 for i in rep.recent_incidents
         if "seized" in i.description.lower()
@@ -620,11 +643,11 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
     if snap.ledger.net_profit > 1500 and max_h >= 10:
         shadow += 20
         shadow_ev.append("profitable under heat")
-    scores.append(ProfileScore("Shadow Operator", shadow, shadow_ev))
+    results["Shadow Operator"] = (shadow, shadow_ev)
 
     # --- Oceanic Carrier ---
     oceanic = 0.0
-    oceanic_ev = []
+    oceanic_ev: list[str] = []
     ei_standing = rep.regional_standing.get("East Indies", 0)
     if ei_standing >= 5:
         oceanic += ei_standing * 2
@@ -641,11 +664,11 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
     elif _ship_class(snap) == "brigantine":
         oceanic += 10
         oceanic_ev.append("brigantine capable")
-    scores.append(ProfileScore("Oceanic Carrier", oceanic, oceanic_ev))
+    results["Oceanic Carrier"] = (oceanic, oceanic_ev)
 
     # --- Contract Specialist ---
     contract = 0.0
-    contract_ev = []
+    contract_ev: list[str] = []
     contract += min(completed * 5, 50)
     if completed >= 3:
         contract_ev.append(f"{completed} contracts delivered")
@@ -653,11 +676,11 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
     if bonus_count > 0:
         contract += bonus_count * 8
         contract_ev.append(f"{bonus_count} early bonuses")
-    scores.append(ProfileScore("Contract Specialist", contract, contract_ev))
+    results["Contract Specialist"] = (contract, contract_ev)
 
     # --- Infrastructure Builder ---
     infra = 0.0
-    infra_ev = []
+    infra_ev: list[str] = []
     wh = len(_active_warehouses(snap))
     bk = len(_active_brokers(snap))
     lics = len(_active_licenses(snap))
@@ -672,11 +695,11 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
     if len(regions) >= 2:
         infra += 15
         infra_ev.append(f"presence in {len(regions)} regions")
-    scores.append(ProfileScore("Infrastructure Builder", infra, infra_ev))
+    results["Infrastructure Builder"] = (infra, infra_ev)
 
     # --- Leveraged Trader ---
     leverage = 0.0
-    leverage_ev = []
+    leverage_ev: list[str] = []
     credit = snap.infra.credit
     if credit and credit.total_borrowed > 0:
         leverage += min(credit.total_borrowed // 10, 30)
@@ -687,11 +710,11 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
         if credit.total_repaid > credit.total_borrowed * 0.5:
             leverage += 15
             leverage_ev.append("repaying responsibly")
-    scores.append(ProfileScore("Leveraged Trader", leverage, leverage_ev))
+    results["Leveraged Trader"] = (leverage, leverage_ev)
 
     # --- Risk-Managed Merchant ---
     risk = 0.0
-    risk_ev = []
+    risk_ev: list[str] = []
     policies = _policies_purchased(snap)
     claims_paid = _insurance_claims_paid(snap)
     if policies > 0:
@@ -703,9 +726,130 @@ def compute_career_profile(snap: SessionSnapshot) -> list[ProfileScore]:
     if policies >= 3 and _trust_rank(_trust_tier(snap)) >= 2:
         risk += 15
         risk_ev.append("systematic insurance user")
-    scores.append(ProfileScore("Risk-Managed Merchant", risk, risk_ev))
+    results["Risk-Managed Merchant"] = (risk, risk_ev)
 
-    # Sort by score descending
+    return results
+
+
+def _milestone_scores(snap: SessionSnapshot) -> dict[str, tuple[float, float]]:
+    """Compute per-tag milestone contributions split into lifetime and recent.
+
+    Returns {tag: (lifetime_bonus, recent_bonus)}.
+    """
+    from portlight.content.campaign import (
+        MILESTONE_WEIGHT,
+        PROFILE_MILESTONE_FAMILIES,
+        RECENT_MILESTONE_BONUS,
+        RECENT_WINDOW_DAYS,
+    )
+
+    current_day = snap.world.day
+    lifetime: dict[str, float] = {}
+    recent: dict[str, float] = {}
+
+    # Build family→tag reverse map
+    family_to_tags: dict[str, list[str]] = {}
+    for tag, families in PROFILE_MILESTONE_FAMILIES.items():
+        for fam in families:
+            family_to_tags.setdefault(fam, []).append(tag)
+
+    for comp in snap.campaign.completed:
+        # Look up which family this milestone belongs to
+        from portlight.content.campaign import MILESTONE_BY_ID
+        spec = MILESTONE_BY_ID.get(comp.milestone_id)
+        if not spec:
+            continue
+        tags = family_to_tags.get(spec.family.value, [])
+        for tag in tags:
+            lifetime[tag] = lifetime.get(tag, 0.0) + MILESTONE_WEIGHT
+            if (current_day - comp.completed_day) <= RECENT_WINDOW_DAYS:
+                recent[tag] = recent.get(tag, 0.0) + RECENT_MILESTONE_BONUS
+
+    return {
+        tag: (lifetime.get(tag, 0.0), recent.get(tag, 0.0))
+        for tag in PROFILE_MILESTONE_FAMILIES
+    }
+
+
+def compute_career_profile(snap: SessionSnapshot) -> CareerProfile:
+    """Derive a weighted, interpreted career profile from session truth.
+
+    For each tag, computes:
+      - lifetime_score: accumulated business history + milestone history
+      - recent_score: session-truth base + recent milestone bonus
+      - combined_score: weighted blend (tunable from content)
+      - confidence: how strongly earned the tag is
+
+    Returns a CareerProfile with primary, secondaries, and emerging tags.
+    """
+    from portlight.content.campaign import (
+        CONFIDENCE_THRESHOLDS,
+        EMERGING_MIN_RECENT,
+        LIFETIME_WEIGHT,
+        RECENT_WEIGHT,
+        SECONDARY_THRESHOLD,
+    )
+
+    base_scores = _compute_base_scores(snap)
+    ms_scores = _milestone_scores(snap)
+    all_tags: list[CareerProfileTag] = []
+
+    for tag, (base, evidence) in base_scores.items():
+        ms_lifetime, ms_recent = ms_scores.get(tag, (0.0, 0.0))
+
+        lifetime = base + ms_lifetime
+        recent = base * 0.5 + ms_recent   # recent uses half-base + recent milestones
+        combined = lifetime * LIFETIME_WEIGHT + recent * RECENT_WEIGHT
+
+        # Determine confidence band
+        confidence = ProfileConfidence.FORMING
+        for level, threshold in CONFIDENCE_THRESHOLDS.items():
+            if combined >= threshold:
+                confidence = ProfileConfidence(level)
+                break
+
+        all_tags.append(CareerProfileTag(
+            tag=tag,
+            lifetime_score=round(lifetime, 1),
+            recent_score=round(recent, 1),
+            combined_score=round(combined, 1),
+            confidence=confidence,
+            evidence=evidence,
+        ))
+
+    # Sort by combined_score descending
+    all_tags.sort(key=lambda t: t.combined_score, reverse=True)
+
+    # Interpret into primary / secondaries / emerging
+    primary = all_tags[0] if all_tags and all_tags[0].combined_score > 0 else None
+    secondaries = [
+        t for t in all_tags[1:3]
+        if t.combined_score >= SECONDARY_THRESHOLD
+    ]
+    # Emerging: highest recent_score tag that isn't already primary,
+    # if it has meaningful recent activity
+    emerging = None
+    for t in all_tags:
+        if t is primary:
+            continue
+        if t in secondaries:
+            continue
+        if t.recent_score >= EMERGING_MIN_RECENT:
+            emerging = t
+            break
+
+    return CareerProfile(
+        primary=primary,
+        secondaries=secondaries,
+        emerging=emerging,
+        all_tags=all_tags,
+    )
+
+
+def compute_career_profile_legacy(snap: SessionSnapshot) -> list[ProfileScore]:
+    """Legacy profile scoring — flat ranked list for backward compat."""
+    base = _compute_base_scores(snap)
+    scores = [ProfileScore(tag, score, ev) for tag, (score, ev) in base.items()]
     scores.sort(key=lambda s: s.score, reverse=True)
     return scores
 

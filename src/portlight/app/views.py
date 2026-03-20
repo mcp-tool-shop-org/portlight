@@ -1194,20 +1194,35 @@ def milestones_view(
 
     # --- Career profile ---
     profile = compute_career_profile(snap)
-    if profile and profile[0].score > 0:
+    if profile.primary and profile.primary.combined_score > 0:
         parts.append(Text("[bold]Career Profile[/bold]"))
-        for i, ps in enumerate(profile[:5]):
-            if ps.score <= 0:
-                break
-            bar_len = min(int(ps.score / 5), 20)
+
+        # Primary identity
+        p = profile.primary
+        bar_len = min(int(p.combined_score / 4), 20)
+        bar = "█" * bar_len
+        ev = ", ".join(p.evidence[:3]) if p.evidence else ""
+        parts.append(Text(f"  [bold cyan]{p.tag}[/bold cyan] {bar} {p.combined_score:.0f}  [{p.confidence.value}]"))
+        if ev:
+            parts.append(Text(f"    Primary: {ev}"))
+
+        # Secondary traits (up to 2)
+        for s in profile.secondaries:
+            bar_len = min(int(s.combined_score / 4), 20)
             bar = "█" * bar_len
-            label = "[bold cyan]" if i == 0 else "[dim]"
-            close = "[/bold cyan]" if i == 0 else "[/dim]"
-            rank = "Primary" if i == 0 else ("Secondary" if i <= 2 and ps.score >= profile[0].score * 0.4 else "")
-            ev = ", ".join(ps.evidence[:3]) if ps.evidence else ""
-            parts.append(Text(f"  {label}{ps.tag}{close} {bar} {ps.score:.0f}"))
-            if rank:
-                parts.append(Text(f"    {rank}: {ev}"))
+            ev = ", ".join(s.evidence[:2]) if s.evidence else ""
+            parts.append(Text(f"  [dim]{s.tag}[/dim] {bar} {s.combined_score:.0f}  [{s.confidence.value}]"))
+            if ev:
+                parts.append(Text(f"    Secondary: {ev}"))
+
+        # Emerging direction
+        if profile.emerging:
+            e = profile.emerging
+            ev = ", ".join(e.evidence[:2]) if e.evidence else ""
+            parts.append(Text(f"  [italic yellow]{e.tag}[/italic yellow] ↑ {e.recent_score:.0f} recent  [{e.confidence.value}]"))
+            if ev:
+                parts.append(Text(f"    Emerging: {ev}"))
+
         parts.append(Text(""))
 
     # --- Victory progress ---

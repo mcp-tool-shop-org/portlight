@@ -232,3 +232,51 @@ MILESTONE_BY_ID: dict[str, MilestoneSpec] = {s.id: s for s in MILESTONE_SPECS}
 def get_milestone_spec(milestone_id: str) -> MilestoneSpec | None:
     """Get a milestone spec by ID."""
     return MILESTONE_BY_ID.get(milestone_id)
+
+
+# ---------------------------------------------------------------------------
+# Career profile scoring weights
+# ---------------------------------------------------------------------------
+# Each tag has: base scoring weights for session-truth signals,
+# and milestone families that contribute to it.
+# Tunable here so balance changes don't require engine edits.
+
+# Which milestone families feed each profile tag (tag → list of families).
+# Milestones in these families add to the tag's lifetime score.
+PROFILE_MILESTONE_FAMILIES: dict[str, list[str]] = {
+    "Lawful House": ["lawful_house", "regional_foothold"],
+    "Shadow Operator": ["shadow_network"],
+    "Oceanic Carrier": ["oceanic_reach"],
+    "Contract Specialist": ["regional_foothold", "integrated_house"],
+    "Infrastructure Builder": ["integrated_house", "commercial_finance"],
+    "Leveraged Trader": ["commercial_finance"],
+    "Risk-Managed Merchant": ["commercial_finance"],
+}
+
+# Points awarded per milestone completed in an aligned family.
+MILESTONE_WEIGHT: float = 8.0
+
+# Recent window: milestones completed within the last N days count
+# toward recent_score as well as lifetime.
+RECENT_WINDOW_DAYS: int = 20
+
+# Recent milestone bonus (on top of lifetime credit).
+RECENT_MILESTONE_BONUS: float = 5.0
+
+# Lifetime vs recent blend for combined_score.
+LIFETIME_WEIGHT: float = 0.6
+RECENT_WEIGHT: float = 0.4
+
+# Confidence thresholds (on combined_score).
+CONFIDENCE_THRESHOLDS: dict[str, float] = {
+    "Defining": 60.0,
+    "Strong": 35.0,
+    "Moderate": 15.0,
+    # Below Moderate → Forming
+}
+
+# Minimum combined_score to appear as a secondary trait.
+SECONDARY_THRESHOLD: float = 15.0
+
+# Minimum recent_score for an emerging tag (must not already be primary).
+EMERGING_MIN_RECENT: float = 12.0
