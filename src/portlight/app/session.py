@@ -37,9 +37,12 @@ from portlight.engine.infrastructure import (
     InfrastructureState,
     compute_board_effects,
     deposit_cargo,
+    expire_voyage_policies,
     lease_warehouse,
     open_broker_office,
     purchase_license,
+    purchase_policy,
+    resolve_claim,
     tick_infrastructure,
     withdraw_cargo,
 )
@@ -251,6 +254,15 @@ class GameSession:
         contract_outcomes = tick_contracts(self.board, self.world.day)
         for outcome in contract_outcomes:
             self.world.captain.silver += outcome.silver_delta
+            # Resolve contract guarantee insurance on failure/expiry
+            if outcome.outcome_type in ("expired", "abandoned"):
+                # Loss value = the reward that was missed + reputation damage cost
+                loss_value = abs(outcome.trust_delta) * 50 + abs(outcome.standing_delta) * 30
+                resolve_claim(
+                    self.infra, self.world.captain,
+                    "contract_failure", loss_value, self.world.day,
+                    contract_id=outcome.contract_id,
+                )
 
         # Daily infrastructure upkeep
         tick_infrastructure(self.infra, self.world.captain, self.world.day)
@@ -267,11 +279,11 @@ class GameSession:
 
         events = advance_day(self.world, self._rng)
 
-        # Record inspection events for reputation
+        # Record inspection events for reputation + resolve insurance claims
         voyage = self.world.voyage
+        dest = voyage.destination_id if voyage else ""
         for event in events:
             if event.event_type == EventType.INSPECTION:
-                # Determine which region the voyage is in
                 region = self._voyage_region()
                 port_id = voyage.origin_id if voyage else ""
                 cargo_seized = event.cargo_lost is not None and len(event.cargo_lost) > 0
@@ -281,18 +293,21 @@ class GameSession:
                     abs(event.silver_delta), cargo_seized,
                 )
 
+            # Resolve insurance claims for damaging events
+            self._resolve_event_insurance(event, dest)
+
         # Check arrival
         if self.world.voyage and self.world.voyage.status == VoyageStatus.ARRIVED:
             arrive(self.world)
+            # Expire voyage-scoped policies on arrival
+            expire_voyage_policies(self.infra)
             port = self.current_port
             if port:
-                # Record arrival for reputation
                 record_port_arrival(
                     self.world.captain.standing,
                     self.world.day, port.id, port.region,
                 )
                 self._recalc(port)
-                # Refresh contract board at new port
                 self._refresh_board(port)
 
         # Recalculate all markets (time passes)
@@ -549,3 +564,60 @@ class GameSession:
             return result
         self._save()
         return None
+
+    # --- Insurance ---
+
+    def purchase_policy_cmd(
+        self, spec, target_id: str = "", voyage_origin: str = "", voyage_destination: str = "",
+    ) -> str | None:
+        """Purchase an insurance policy. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        region = self._voyage_region() if self.at_sea else (
+            self.current_port.region if self.current_port else "Mediterranean"
+        )
+        heat = self.world.captain.standing.customs_heat.get(region, 0)
+        result = purchase_policy(
+            self.infra, self.world.captain, spec, self.world.day,
+            heat=heat, target_id=target_id,
+            voyage_origin=voyage_origin, voyage_destination=voyage_destination,
+        )
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None
+
+    def _resolve_event_insurance(self, event, voyage_destination: str = "") -> None:
+        """Check active policies against a voyage event and resolve claims."""
+        if not self.world:
+            return
+
+        incident_type = event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type)
+
+        # Hull damage claim
+        if event.hull_delta < 0:
+            # Estimate hull repair value (3 silver per HP is base repair cost)
+            hull_loss_value = abs(event.hull_delta) * 3
+            resolve_claim(
+                self.infra, self.world.captain,
+                incident_type, hull_loss_value, self.world.day,
+                voyage_destination=voyage_destination,
+            )
+
+        # Cargo loss claim
+        if event.cargo_lost:
+            for good_id, qty in event.cargo_lost.items():
+                good = GOODS.get(good_id)
+                if not good:
+                    continue
+                cargo_value = good.base_price * qty
+                cargo_category = good.category.value if good.category else ""
+                resolve_claim(
+                    self.infra, self.world.captain,
+                    incident_type, cargo_value, self.world.day,
+                    cargo_category=cargo_category,
+                    voyage_destination=voyage_destination,
+                )
+
+        # Silver loss from fines/fees (not insurable for hull/cargo,
+        # but inspection silver loss is effectively a fine — not covered separately)

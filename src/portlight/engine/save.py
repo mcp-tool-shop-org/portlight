@@ -35,10 +35,14 @@ from portlight.engine.contracts import (
     ContractStatus,
 )
 from portlight.engine.infrastructure import (
+    ActivePolicy,
     BrokerOffice,
     BrokerTier,
     InfrastructureState,
+    InsuranceClaim,
     OwnedLicense,
+    PolicyFamily,
+    PolicyScope,
     StoredLot,
     WarehouseLease,
     WarehouseTier,
@@ -467,11 +471,67 @@ def _license_from_dict(d: dict) -> OwnedLicense:
     )
 
 
+def _policy_to_dict(p: ActivePolicy) -> dict:
+    return {
+        "id": p.id,
+        "spec_id": p.spec_id,
+        "family": p.family.value,
+        "scope": p.scope.value,
+        "purchased_day": p.purchased_day,
+        "coverage_pct": p.coverage_pct,
+        "coverage_cap": p.coverage_cap,
+        "premium_paid": p.premium_paid,
+        "target_id": p.target_id,
+        "claims_made": p.claims_made,
+        "total_paid_out": p.total_paid_out,
+        "active": p.active,
+        "voyage_origin": p.voyage_origin,
+        "voyage_destination": p.voyage_destination,
+    }
+
+
+def _policy_from_dict(d: dict) -> ActivePolicy:
+    return ActivePolicy(
+        id=d["id"],
+        spec_id=d["spec_id"],
+        family=PolicyFamily(d["family"]),
+        scope=PolicyScope(d["scope"]),
+        purchased_day=d.get("purchased_day", 0),
+        coverage_pct=d.get("coverage_pct", 0.5),
+        coverage_cap=d.get("coverage_cap", 100),
+        premium_paid=d.get("premium_paid", 0),
+        target_id=d.get("target_id", ""),
+        claims_made=d.get("claims_made", 0),
+        total_paid_out=d.get("total_paid_out", 0),
+        active=d.get("active", True),
+        voyage_origin=d.get("voyage_origin", ""),
+        voyage_destination=d.get("voyage_destination", ""),
+    )
+
+
+def _claim_to_dict(c: InsuranceClaim) -> dict:
+    return {
+        "policy_id": c.policy_id,
+        "day": c.day,
+        "incident_type": c.incident_type,
+        "loss_value": c.loss_value,
+        "payout": c.payout,
+        "denied": c.denied,
+        "denial_reason": c.denial_reason,
+    }
+
+
+def _claim_from_dict(d: dict) -> InsuranceClaim:
+    return InsuranceClaim(**d)
+
+
 def _infra_to_dict(state: InfrastructureState) -> dict:
     return {
         "warehouses": [_warehouse_to_dict(w) for w in state.warehouses],
         "brokers": [_broker_to_dict(b) for b in state.brokers],
         "licenses": [_license_to_dict(lic) for lic in state.licenses],
+        "policies": [_policy_to_dict(p) for p in state.policies],
+        "claims": [_claim_to_dict(c) for c in state.claims],
     }
 
 
@@ -480,6 +540,8 @@ def _infra_from_dict(d: dict) -> InfrastructureState:
         warehouses=[_warehouse_from_dict(w) for w in d.get("warehouses", [])],
         brokers=[_broker_from_dict(b) for b in d.get("brokers", [])],
         licenses=[_license_from_dict(lic) for lic in d.get("licenses", [])],
+        policies=[_policy_from_dict(p) for p in d.get("policies", [])],
+        claims=[_claim_from_dict(c) for c in d.get("claims", [])],
     )
 
 

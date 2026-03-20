@@ -574,6 +574,71 @@ def license(
 
 
 # ---------------------------------------------------------------------------
+# Insurance
+# ---------------------------------------------------------------------------
+
+@app.command()
+def insure(
+    action: str = typer.Argument(None, help="buy or omit to view"),
+    policy_id: str = typer.Argument(None, help="Policy ID to purchase"),
+    contract: str = typer.Option(None, "--contract", "-c", help="Contract ID for guarantee policies"),
+) -> None:
+    """View or purchase insurance policies."""
+    s = _session()
+
+    region = s.current_port.region if s.current_port else "Mediterranean"
+    heat = s.captain.standing.customs_heat.get(region, 0)
+
+    if action is None:
+        console.print(views.insurance_view(s.infra, heat))
+        return
+
+    if action == "buy":
+        if policy_id is None:
+            console.print("[red]Usage: portlight insure buy <policy_id>[/red]")
+            console.print(views.insurance_view(s.infra, heat))
+            return
+        from portlight.content.infrastructure import get_policy_spec
+        spec = get_policy_spec(policy_id)
+        if not spec:
+            from portlight.content.infrastructure import POLICY_CATALOG
+            matches = [p for p in POLICY_CATALOG.values() if policy_id in p.id]
+            if len(matches) == 1:
+                spec = matches[0]
+            else:
+                console.print(f"[red]Unknown policy: {policy_id}[/red]")
+                return
+
+        # Determine scope targets
+        target_id = contract or ""
+        voyage_origin = ""
+        voyage_destination = ""
+        if s.at_sea and s.world.voyage:
+            voyage_origin = s.world.voyage.origin_id
+            voyage_destination = s.world.voyage.destination_id
+        elif s.current_port:
+            voyage_origin = s.current_port.id
+
+        err = s.purchase_policy_cmd(
+            spec, target_id=target_id,
+            voyage_origin=voyage_origin, voyage_destination=voyage_destination,
+        )
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+
+        # Show heat-adjusted premium
+        heat_surcharge = max(0, heat) * spec.heat_premium_mult
+        adj_premium = int(spec.premium * (1.0 + heat_surcharge))
+        console.print(f"\n[bold green]Policy purchased: {spec.name}![/bold green]")
+        console.print(f"Premium: {adj_premium} silver | Coverage: {int(spec.coverage_pct * 100)}% up to {spec.coverage_cap} silver")
+        console.print(f"Silver: {s.captain.silver}")
+        return
+
+    console.print(f"[red]Unknown insure action: {action}[/red]. Use: buy")
+
+
+# ---------------------------------------------------------------------------
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------
 

@@ -165,6 +165,8 @@ class InfrastructureState:
     warehouses: list[WarehouseLease] = field(default_factory=list)
     brokers: list[BrokerOffice] = field(default_factory=list)
     licenses: list[OwnedLicense] = field(default_factory=list)
+    policies: list["ActivePolicy"] = field(default_factory=list)
+    claims: list["InsuranceClaim"] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -732,3 +734,233 @@ def compute_board_effects(
                         effects[key] *= value  # multiplicative
 
     return effects
+
+
+# ---------------------------------------------------------------------------
+# Insurance — risk pricing for calculated operators
+# ---------------------------------------------------------------------------
+
+class PolicyFamily(str, Enum):
+    HULL = "hull"                      # covers ship damage
+    PREMIUM_CARGO = "premium_cargo"    # covers cargo loss on luxury/high-value
+    CONTRACT_GUARANTEE = "contract_guarantee"  # covers contract failure downside
+
+
+class PolicyScope(str, Enum):
+    NEXT_VOYAGE = "next_voyage"        # expires on arrival
+    ACTIVE_CARGO = "active_cargo"      # while specific cargo is held
+    NAMED_CONTRACT = "named_contract"  # tied to a specific contract
+
+
+@dataclass
+class PolicySpec:
+    """Static definition of an insurance policy."""
+    id: str
+    family: PolicyFamily
+    name: str
+    description: str
+    premium: int                       # one-time silver cost
+    coverage_pct: float                # 0.0-1.0 portion of loss covered
+    coverage_cap: int                  # max silver payout per claim
+    scope: PolicyScope
+    covered_risks: list[str]           # event types or risk classes covered
+    exclusions: list[str]              # e.g. ["contraband", "high_heat"]
+    heat_max: int | None               # max heat to purchase (None = no limit)
+    heat_premium_mult: float           # premium multiplier per heat point above 0
+
+
+@dataclass
+class ActivePolicy:
+    """A purchased insurance policy in effect."""
+    id: str
+    spec_id: str
+    family: PolicyFamily
+    scope: PolicyScope
+    purchased_day: int
+    coverage_pct: float
+    coverage_cap: int
+    premium_paid: int
+    target_id: str = ""                # contract_id for guarantee, voyage destination, etc.
+    claims_made: int = 0
+    total_paid_out: int = 0
+    active: bool = True
+    voyage_origin: str = ""            # for next_voyage scope: origin port
+    voyage_destination: str = ""       # for next_voyage scope: destination port
+
+
+@dataclass
+class InsuranceClaim:
+    """Record of a resolved insurance claim."""
+    policy_id: str
+    day: int
+    incident_type: str                 # storm, pirates, inspection, contract_failure
+    loss_value: int                    # total loss in silver
+    payout: int                        # what insurance actually paid
+    denied: bool = False
+    denial_reason: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Insurance state extension
+# ---------------------------------------------------------------------------
+# ActivePolicy and InsuranceClaim lists live on InfrastructureState
+# (added via dataclass field extension below — done in the state class above)
+
+
+def _policy_id(spec_id: str, day: int, seq: int) -> str:
+    raw = f"pol:{spec_id}:{day}:{seq}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
+
+
+def purchase_policy(
+    state: InfrastructureState,
+    captain: "Captain",
+    spec: PolicySpec,
+    day: int,
+    heat: int = 0,
+    target_id: str = "",
+    voyage_origin: str = "",
+    voyage_destination: str = "",
+) -> ActivePolicy | str:
+    """Purchase an insurance policy. Returns ActivePolicy or error string."""
+    # Heat gate
+    if spec.heat_max is not None and heat > spec.heat_max:
+        return f"Heat too high ({heat}) for {spec.name} — max {spec.heat_max}"
+
+    # Heat-adjusted premium
+    heat_surcharge = max(0, heat) * spec.heat_premium_mult
+    adjusted_premium = int(spec.premium * (1.0 + heat_surcharge))
+
+    if adjusted_premium > captain.silver:
+        return f"Need {adjusted_premium} silver for {spec.name}, have {captain.silver}"
+
+    # Check for duplicate active policy of same type and scope
+    for existing in state.policies:
+        if (existing.active and existing.spec_id == spec.id and
+                existing.target_id == target_id):
+            return f"Already have active {spec.name}"
+
+    captain.silver -= adjusted_premium
+
+    seq = len(state.policies)
+    policy = ActivePolicy(
+        id=_policy_id(spec.id, day, seq),
+        spec_id=spec.id,
+        family=spec.family,
+        scope=spec.scope,
+        purchased_day=day,
+        coverage_pct=spec.coverage_pct,
+        coverage_cap=spec.coverage_cap,
+        premium_paid=adjusted_premium,
+        target_id=target_id,
+        voyage_origin=voyage_origin,
+        voyage_destination=voyage_destination,
+        active=True,
+    )
+    state.policies.append(policy)
+    return policy
+
+
+def resolve_claim(
+    state: InfrastructureState,
+    captain: "Captain",
+    incident_type: str,
+    loss_value: int,
+    day: int,
+    cargo_category: str = "",
+    contract_id: str = "",
+    voyage_destination: str = "",
+) -> list[InsuranceClaim]:
+    """Check all active policies against an incident. Returns list of claims resolved.
+
+    Called from session after voyage events or contract failures.
+    """
+    claims: list[InsuranceClaim] = []
+
+    for policy in state.policies:
+        if not policy.active:
+            continue
+
+        # Match incident to policy family
+        if policy.family == PolicyFamily.HULL and incident_type not in ("storm", "pirates"):
+            continue
+        if policy.family == PolicyFamily.PREMIUM_CARGO and incident_type not in ("pirates", "storm", "inspection"):
+            continue
+        if policy.family == PolicyFamily.CONTRACT_GUARANTEE and incident_type != "contract_failure":
+            continue
+
+        # Scope check
+        if policy.scope == PolicyScope.NAMED_CONTRACT:
+            if not contract_id or policy.target_id != contract_id:
+                continue
+        if policy.scope == PolicyScope.NEXT_VOYAGE:
+            if voyage_destination and policy.voyage_destination and policy.voyage_destination != voyage_destination:
+                continue
+
+        # Check covered risks
+        from portlight.content.infrastructure import get_policy_spec
+        spec = get_policy_spec(policy.spec_id)
+        if spec is None:
+            continue
+
+        if incident_type not in spec.covered_risks:
+            continue
+
+        # Check exclusions
+        denied = False
+        denial_reason = ""
+        if "contraband" in spec.exclusions and cargo_category == "contraband":
+            denied = True
+            denial_reason = "Contraband cargo excluded from coverage"
+
+        if denied:
+            claim = InsuranceClaim(
+                policy_id=policy.id,
+                day=day,
+                incident_type=incident_type,
+                loss_value=loss_value,
+                payout=0,
+                denied=True,
+                denial_reason=denial_reason,
+            )
+            claims.append(claim)
+            state.claims.append(claim)
+            continue
+
+        # Calculate payout
+        raw_payout = int(loss_value * policy.coverage_pct)
+        remaining_cap = policy.coverage_cap - policy.total_paid_out
+        payout = min(raw_payout, remaining_cap)
+        payout = max(0, payout)
+
+        if payout > 0:
+            captain.silver += payout
+            policy.claims_made += 1
+            policy.total_paid_out += payout
+
+        claim = InsuranceClaim(
+            policy_id=policy.id,
+            day=day,
+            incident_type=incident_type,
+            loss_value=loss_value,
+            payout=payout,
+        )
+        claims.append(claim)
+        state.claims.append(claim)
+
+    return claims
+
+
+def expire_voyage_policies(state: InfrastructureState) -> list[str]:
+    """Expire next_voyage policies on arrival. Returns messages."""
+    messages = []
+    for policy in state.policies:
+        if policy.active and policy.scope == PolicyScope.NEXT_VOYAGE:
+            policy.active = False
+            messages.append(f"Voyage policy expired: {policy.spec_id}")
+    return messages
+
+
+def get_active_policies(state: InfrastructureState) -> list[ActivePolicy]:
+    """Get all active insurance policies."""
+    return [p for p in state.policies if p.active]

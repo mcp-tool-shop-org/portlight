@@ -23,6 +23,9 @@ from portlight.engine.infrastructure import (
     BrokerOfficeSpec,
     BrokerTier,
     LicenseSpec,
+    PolicyFamily,
+    PolicyScope,
+    PolicySpec,
     WarehouseTier,
     WarehouseTierSpec,
 )
@@ -262,3 +265,119 @@ def get_license_spec(license_id: str) -> LicenseSpec | None:
 def available_licenses() -> list[LicenseSpec]:
     """Get all license specs, ordered by purchase cost."""
     return sorted(LICENSE_CATALOG.values(), key=lambda s: s.purchase_cost)
+
+
+# ---------------------------------------------------------------------------
+# Insurance policy specs
+# ---------------------------------------------------------------------------
+
+POLICY_CATALOG: dict[str, PolicySpec] = {
+    # --- Hull policies ---
+    "hull_basic": PolicySpec(
+        id="hull_basic",
+        family=PolicyFamily.HULL,
+        name="Basic Hull Insurance",
+        description="Covers storm and pirate damage to ship hull. "
+                    "Partial coverage — reduces repair costs, not eliminates them.",
+        premium=40,
+        coverage_pct=0.50,             # 50% of hull repair value
+        coverage_cap=150,              # max 150 silver per voyage
+        scope=PolicyScope.NEXT_VOYAGE,
+        covered_risks=["storm", "pirates"],
+        exclusions=[],
+        heat_max=None,                 # available to anyone
+        heat_premium_mult=0.05,        # 5% surcharge per heat point
+    ),
+    "hull_comprehensive": PolicySpec(
+        id="hull_comprehensive",
+        family=PolicyFamily.HULL,
+        name="Comprehensive Hull Insurance",
+        description="Full hull protection for serious operators. "
+                    "Higher coverage and cap, but requires clean reputation.",
+        premium=80,
+        coverage_pct=0.75,             # 75% of hull repair value
+        coverage_cap=400,              # generous cap
+        scope=PolicyScope.NEXT_VOYAGE,
+        covered_risks=["storm", "pirates"],
+        exclusions=[],
+        heat_max=5,                    # clean operators only
+        heat_premium_mult=0.10,        # steep surcharge for borderline heat
+    ),
+
+    # --- Premium cargo policies ---
+    "cargo_standard": PolicySpec(
+        id="cargo_standard",
+        family=PolicyFamily.PREMIUM_CARGO,
+        name="Standard Cargo Insurance",
+        description="Covers cargo loss from storms, piracy, and inspection seizure. "
+                    "Contraband is excluded.",
+        premium=50,
+        coverage_pct=0.40,             # 40% of cargo value
+        coverage_cap=200,              # modest cap
+        scope=PolicyScope.NEXT_VOYAGE,
+        covered_risks=["storm", "pirates", "inspection"],
+        exclusions=["contraband"],
+        heat_max=None,
+        heat_premium_mult=0.08,
+    ),
+    "cargo_premium": PolicySpec(
+        id="cargo_premium",
+        family=PolicyFamily.PREMIUM_CARGO,
+        name="Premium Cargo Insurance",
+        description="High-coverage protection for luxury cargo runs. "
+                    "Requires low heat. Contraband excluded.",
+        premium=100,
+        coverage_pct=0.65,             # 65% of cargo value
+        coverage_cap=500,              # serious cap
+        scope=PolicyScope.NEXT_VOYAGE,
+        covered_risks=["storm", "pirates", "inspection"],
+        exclusions=["contraband"],
+        heat_max=4,                    # clean operators
+        heat_premium_mult=0.12,
+    ),
+
+    # --- Contract guarantee policies ---
+    "contract_basic": PolicySpec(
+        id="contract_basic",
+        family=PolicyFamily.CONTRACT_GUARANTEE,
+        name="Contract Guarantee — Basic",
+        description="Covers part of the penalty if a contract fails or expires. "
+                    "Tied to a specific contract.",
+        premium=60,
+        coverage_pct=0.50,             # 50% of contract penalty
+        coverage_cap=250,
+        scope=PolicyScope.NAMED_CONTRACT,
+        covered_risks=["contract_failure"],
+        exclusions=[],
+        heat_max=None,
+        heat_premium_mult=0.06,
+    ),
+    "contract_full": PolicySpec(
+        id="contract_full",
+        family=PolicyFamily.CONTRACT_GUARANTEE,
+        name="Contract Guarantee — Full",
+        description="Strong contract protection for high-value obligations. "
+                    "Requires clean reputation and established trust.",
+        premium=120,
+        coverage_pct=0.75,
+        coverage_cap=600,
+        scope=PolicyScope.NAMED_CONTRACT,
+        covered_risks=["contract_failure"],
+        exclusions=[],
+        heat_max=3,
+        heat_premium_mult=0.15,
+    ),
+}
+
+
+def get_policy_spec(policy_id: str) -> PolicySpec | None:
+    """Get a policy spec by ID."""
+    return POLICY_CATALOG.get(policy_id)
+
+
+def available_policies(family: PolicyFamily | None = None) -> list[PolicySpec]:
+    """Get available policy specs, optionally filtered by family."""
+    specs = list(POLICY_CATALOG.values())
+    if family is not None:
+        specs = [s for s in specs if s.family == family]
+    return sorted(specs, key=lambda s: s.premium)

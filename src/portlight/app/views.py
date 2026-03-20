@@ -932,3 +932,109 @@ def licenses_view(infra: "InfrastructureState", rep: "ReputationState") -> Panel
         )
 
     return Panel(table, title="[bold]Licenses & Charters[/bold]", border_style="magenta")
+
+
+# ---------------------------------------------------------------------------
+# Insurance
+# ---------------------------------------------------------------------------
+
+def insurance_view(infra: "InfrastructureState", heat: int = 0) -> Panel:
+    """Show available policies, active policies, and recent claims."""
+    from portlight.content.infrastructure import available_policies
+    from portlight.engine.infrastructure import get_active_policies
+
+    parts = []
+
+    # Active policies
+    active = get_active_policies(infra)
+    if active:
+        active_table = Table(show_header=True, header_style="bold", expand=True)
+        active_table.add_column("Policy")
+        active_table.add_column("Coverage")
+        active_table.add_column("Cap")
+        active_table.add_column("Paid Out")
+        active_table.add_column("Scope")
+
+        for p in active:
+            from portlight.content.infrastructure import get_policy_spec
+            spec = get_policy_spec(p.spec_id)
+            name = spec.name if spec else p.spec_id
+            scope_desc = p.scope.value
+            if p.target_id:
+                scope_desc += f" ({p.target_id[:8]})"
+            elif p.voyage_destination:
+                scope_desc += f" → {p.voyage_destination}"
+            remaining = p.coverage_cap - p.total_paid_out
+            active_table.add_row(
+                f"[green]{name}[/green]",
+                f"{int(p.coverage_pct * 100)}%",
+                f"{fmt.silver(remaining)} left",
+                fmt.silver(p.total_paid_out),
+                scope_desc,
+            )
+        parts.append(active_table)
+    else:
+        parts.append(Text("[dim]No active policies.[/dim]\n"))
+
+    # Available policies
+    avail_table = Table(show_header=True, header_style="bold", expand=True)
+    avail_table.add_column("ID")
+    avail_table.add_column("Policy")
+    avail_table.add_column("Premium")
+    avail_table.add_column("Coverage")
+    avail_table.add_column("Cap")
+    avail_table.add_column("Scope")
+    avail_table.add_column("Exclusions")
+
+    for spec in available_policies():
+        # Compute heat-adjusted premium
+        heat_surcharge = max(0, heat) * spec.heat_premium_mult
+        adj_premium = int(spec.premium * (1.0 + heat_surcharge))
+        premium_str = fmt.silver(adj_premium)
+        if adj_premium > spec.premium:
+            premium_str += f" [dim]({fmt.silver(spec.premium)} base)[/dim]"
+
+        blocked = spec.heat_max is not None and heat > spec.heat_max
+        if blocked:
+            premium_str = "[red]Blocked (heat)[/red]"
+
+        excl = ", ".join(spec.exclusions) if spec.exclusions else "-"
+        avail_table.add_row(
+            f"[dim]{spec.id}[/dim]",
+            f"[cyan]{spec.name}[/cyan]",
+            premium_str,
+            f"{int(spec.coverage_pct * 100)}%",
+            fmt.silver(spec.coverage_cap),
+            spec.scope.value,
+            excl,
+        )
+    parts.append(avail_table)
+
+    # Recent claims
+    recent_claims = infra.claims[-5:] if infra.claims else []
+    if recent_claims:
+        claims_table = Table(show_header=True, header_style="bold", expand=True)
+        claims_table.add_column("Day")
+        claims_table.add_column("Incident")
+        claims_table.add_column("Loss")
+        claims_table.add_column("Payout")
+        claims_table.add_column("Status")
+
+        for c in reversed(recent_claims):
+            if c.denied:
+                status = f"[red]Denied: {c.denial_reason}[/red]"
+            elif c.payout > 0:
+                status = "[green]Paid[/green]"
+            else:
+                status = "[dim]No payout[/dim]"
+            claims_table.add_row(
+                str(c.day),
+                c.incident_type,
+                fmt.silver(c.loss_value),
+                fmt.silver(c.payout),
+                status,
+            )
+        parts.append(Text("\n[bold]Recent Claims[/bold]"))
+        parts.append(claims_table)
+
+    return Panel(Group(*parts), title="[bold]Insurance[/bold]", border_style="green")
