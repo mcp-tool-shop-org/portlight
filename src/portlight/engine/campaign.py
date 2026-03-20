@@ -141,20 +141,34 @@ class CareerProfile:
 # Victory path
 # ---------------------------------------------------------------------------
 
+class RequirementStatus(str, Enum):
+    MET = "met"
+    MISSING = "missing"
+    BLOCKED = "blocked"
+
+
 @dataclass
 class VictoryRequirement:
     """One requirement within a victory path."""
     description: str
-    met: bool
+    status: RequirementStatus
     detail: str = ""
+    action: str = ""      # human-readable next step when missing
+
+    @property
+    def met(self) -> bool:
+        return self.status == RequirementStatus.MET
 
 
 @dataclass
-class VictoryPathProgress:
-    """Progress toward one victory condition."""
+class VictoryPathStatus:
+    """Full diagnostic for one victory path."""
     path_id: str
     name: str
     requirements: list[VictoryRequirement] = field(default_factory=list)
+    candidate_strength: float = 0.0
+    completion_day: int = 0            # 0 = not yet completed
+    completion_summary: str = ""
 
     @property
     def met_count(self) -> int:
@@ -169,9 +183,25 @@ class VictoryPathProgress:
         return all(r.met for r in self.requirements)
 
     @property
+    def requirements_met(self) -> list[VictoryRequirement]:
+        return [r for r in self.requirements if r.status == RequirementStatus.MET]
+
+    @property
+    def requirements_missing(self) -> list[VictoryRequirement]:
+        return [r for r in self.requirements if r.status == RequirementStatus.MISSING]
+
+    @property
+    def requirements_blocked(self) -> list[VictoryRequirement]:
+        return [r for r in self.requirements if r.status == RequirementStatus.BLOCKED]
+
+    @property
     def is_active_candidate(self) -> bool:
         """At least half the requirements are met — this path is live."""
         return self.total_count > 0 and self.met_count >= self.total_count // 2
+
+
+# Keep legacy alias for backward compat in existing test imports
+VictoryPathProgress = VictoryPathStatus
 
 
 # ---------------------------------------------------------------------------
@@ -855,148 +885,347 @@ def compute_career_profile_legacy(snap: SessionSnapshot) -> list[ProfileScore]:
 
 
 # ---------------------------------------------------------------------------
-# Victory path evaluation
+# Victory path evaluation — per-path evaluators
 # ---------------------------------------------------------------------------
 
-def compute_victory_progress(snap: SessionSnapshot) -> list[VictoryPathProgress]:
-    """Evaluate all victory paths against current session state."""
-    paths: list[VictoryPathProgress] = []
+def _req(
+    description: str,
+    met: bool,
+    detail: str = "",
+    action: str = "",
+    blocker: bool = False,
+) -> VictoryRequirement:
+    """Helper to build a requirement with met/missing/blocked status."""
+    if met:
+        status = RequirementStatus.MET
+    elif blocker:
+        status = RequirementStatus.BLOCKED
+    else:
+        status = RequirementStatus.MISSING
+    return VictoryRequirement(description=description, status=status, detail=detail, action=action)
 
-    # --- Lawful Trade House ---
-    lawful = VictoryPathProgress(path_id="lawful_house", name="Lawful Trade House")
+
+def _discreet_completions(snap: SessionSnapshot) -> int:
+    """Count completed contracts with discreet/luxury keywords."""
+    count = 0
+    for o in snap.board.completed:
+        if o.outcome_type in ("completed", "completed_bonus"):
+            if "luxury" in o.summary.lower() or "discreet" in o.summary.lower():
+                count += 1
+    return count
+
+
+def _seizure_count(snap: SessionSnapshot) -> int:
+    return sum(
+        1 for i in snap.captain.standing.recent_incidents
+        if "seized" in i.description.lower()
+    )
+
+
+def _evaluate_lawful_trade_house(snap: SessionSnapshot) -> VictoryPathStatus:
+    from portlight.content.campaign import LAWFUL_THRESHOLDS as T, CANDIDATE_BOOSTS
+
     tier = _trust_tier(snap)
-    lawful.requirements = [
-        VictoryRequirement(
+    rank = _trust_rank(tier)
+    max_h = _max_heat(snap)
+    contracts = _total_completed_contracts(snap)
+    regions_15 = _regions_with_standing(snap, 15)
+    lic_count = len(_active_licenses(snap))
+
+    reqs = [
+        _req(
             "Trusted commercial standing",
-            _trust_rank(tier) >= 4,
+            rank >= T["trust_rank"],
             f"Currently: {tier}",
+            f"Reach trusted trust tier (currently {tier})",
         ),
-        VictoryRequirement(
+        _req(
             "High Reputation Commercial Charter",
             _has_license(snap, "high_rep_charter"),
+            action="Acquire the High Reputation Commercial Charter",
         ),
-        VictoryRequirement(
-            "Standing 15+ in 2 regions",
-            len(_regions_with_standing(snap, 15)) >= 2,
-            f"Regions at 15+: {', '.join(_regions_with_standing(snap, 15)) or 'none'}",
+        _req(
+            "Regional breadth (2+ licenses or standing 15+ in 2 regions)",
+            lic_count >= T["regional_licenses_or_standing"] or len(regions_15) >= T["regional_licenses_or_standing"],
+            f"Licenses: {lic_count}, regions at 15+: {', '.join(regions_15) or 'none'}",
+            f"Acquire {T['regional_licenses_or_standing'] - lic_count} more license(s) or build standing in another region"
+            if lic_count < T["regional_licenses_or_standing"] and len(regions_15) < T["regional_licenses_or_standing"]
+            else "",
         ),
-        VictoryRequirement(
-            "8+ contracts completed",
-            _total_completed_contracts(snap) >= 8,
-            f"Completed: {_total_completed_contracts(snap)}",
+        _req(
+            f"{T['contracts_completed']}+ contracts completed",
+            contracts >= T["contracts_completed"],
+            f"Completed: {contracts}",
+            f"Complete {T['contracts_completed'] - contracts} more contracts" if contracts < T["contracts_completed"] else "",
         ),
-        VictoryRequirement(
-            "Max heat ≤ 5",
-            _max_heat(snap) <= 5,
-            f"Max heat: {_max_heat(snap)}",
+        _req(
+            f"Max heat ≤ {T['max_heat_cap']}",
+            max_h <= T["max_heat_cap"],
+            f"Max heat: {max_h}",
+            f"Reduce customs heat from {max_h} to {T['max_heat_cap']} or below",
+            blocker=max_h > T["max_heat_cap"],
         ),
-        VictoryRequirement(
-            "2000+ silver",
-            snap.captain.silver >= 2000,
+        _req(
+            f"{T['silver_min']}+ silver",
+            snap.captain.silver >= T["silver_min"],
             f"Silver: {snap.captain.silver}",
+            f"Earn {T['silver_min'] - snap.captain.silver} more silver" if snap.captain.silver < T["silver_min"] else "",
         ),
     ]
-    paths.append(lawful)
 
-    # --- Shadow Network ---
-    shadow = VictoryPathProgress(path_id="shadow_network", name="Shadow Network")
-    shadow.requirements = [
-        VictoryRequirement(
-            "Net profit > 3000",
-            snap.ledger.net_profit > 3000,
-            f"Profit: {snap.ledger.net_profit}",
+    # Candidate strength
+    boosts = CANDIDATE_BOOSTS["lawful_house"]
+    base_ratio = sum(1 for r in reqs if r.met) / len(reqs) * 100
+    strength = base_ratio
+    strength += max(0, rank - 2) * boosts["trust_rank_bonus_per"]
+    if len(_regions_with_standing(snap, 10)) >= 2:
+        strength += boosts["standing_breadth_bonus"]
+    if max_h <= 3:
+        strength += boosts["low_heat_bonus"]
+    strength += _seizure_count(snap) * boosts["seizure_penalty"]
+    if max_h > T["max_heat_cap"]:
+        strength += (max_h - T["max_heat_cap"]) * boosts["high_heat_penalty_per"]
+    credit = snap.infra.credit
+    if credit and credit.defaults > 0:
+        strength += boosts["default_penalty"]
+
+    return VictoryPathStatus(
+        path_id="lawful_house",
+        name="Lawful Trade House",
+        requirements=reqs,
+        candidate_strength=max(0.0, round(strength, 1)),
+    )
+
+
+def _evaluate_shadow_network(snap: SessionSnapshot) -> VictoryPathStatus:
+    from portlight.content.campaign import SHADOW_THRESHOLDS as T, CANDIDATE_BOOSTS
+
+    max_h = _max_heat(snap)
+    profit = snap.ledger.net_profit
+    trades = _total_trades(snap)
+    discreet = _discreet_completions(snap)
+    seizures = _seizure_count(snap)
+
+    reqs = [
+        _req(
+            f"{T['discreet_completions']}+ discreet luxury completions",
+            discreet >= T["discreet_completions"],
+            f"Discreet completions: {discreet}",
+            f"Complete {T['discreet_completions'] - discreet} more discreet luxury deliveries" if discreet < T["discreet_completions"] else "",
         ),
-        VictoryRequirement(
-            "Sustained heat ≥ 15 in any region",
-            _max_heat(snap) >= 15,
-            f"Max heat: {_max_heat(snap)}",
+        _req(
+            f"Operated under meaningful heat (≥ {T['heat_floor']})",
+            max_h >= T["heat_floor"],
+            f"Max heat: {max_h}",
+            f"Shadow commerce requires operating under customs pressure (heat {max_h}, need {T['heat_floor']}+)",
+            blocker=max_h < T["heat_floor"] and profit > 1000,  # blocker if profitable but clean
         ),
-        VictoryRequirement(
-            "2000+ silver on hand",
-            snap.captain.silver >= 2000,
+        _req(
+            f"Heat manageable (≤ {T['heat_ceiling']})",
+            max_h <= T["heat_ceiling"],
+            f"Max heat: {max_h}",
+            f"Reduce heat from {max_h} — network collapses above {T['heat_ceiling']}",
+            blocker=max_h > T["heat_ceiling"],
+        ),
+        _req(
+            f"Profitable under pressure (profit > {T['profit_under_heat']})",
+            profit > T["profit_under_heat"] and max_h >= T["heat_floor"],
+            f"Profit: {profit}, heat: {max_h}",
+            "Build profitability while maintaining shadow operations",
+        ),
+        _req(
+            f"{T['silver_min']}+ silver on hand",
+            snap.captain.silver >= T["silver_min"],
             f"Silver: {snap.captain.silver}",
+            f"Accumulate {T['silver_min'] - snap.captain.silver} more silver" if snap.captain.silver < T["silver_min"] else "",
         ),
-        VictoryRequirement(
-            "5+ successful trades under heat",
-            _total_trades(snap) >= 10 and _max_heat(snap) >= 10,
-            f"Trades: {_total_trades(snap)}, max heat: {_max_heat(snap)}",
-        ),
-        VictoryRequirement(
-            "Operational resilience (survived seizure or maintained profitability)",
-            snap.ledger.net_profit > 2000 and _max_heat(snap) >= 10,
-            f"Profit: {snap.ledger.net_profit}",
+        _req(
+            f"Trade volume under heat ({T['trades_under_heat']}+ trades)",
+            trades >= T["trades_under_heat"] and max_h >= T["heat_floor"],
+            f"Trades: {trades}, max heat: {max_h}",
+            "Complete more trades while operating under customs pressure",
         ),
     ]
-    paths.append(shadow)
 
-    # --- Oceanic Reach ---
-    oceanic = VictoryPathProgress(path_id="oceanic_reach", name="Oceanic Reach")
-    oceanic.requirements = [
-        VictoryRequirement(
+    boosts = CANDIDATE_BOOSTS["shadow_network"]
+    base_ratio = sum(1 for r in reqs if r.met) / len(reqs) * 100
+    strength = base_ratio
+    strength += discreet * boosts["discreet_bonus_per"]
+    if profit > T["profit_under_heat"] and max_h >= T["heat_floor"]:
+        strength += boosts["heat_resilience_bonus"]
+    if seizures > 0 and snap.captain.silver >= 200:
+        strength += boosts["seizure_survival_bonus"]
+    if max_h < 3:
+        strength += boosts["zero_heat_penalty"]
+    if snap.captain.silver < 100:
+        strength += boosts["collapse_penalty"]
+
+    return VictoryPathStatus(
+        path_id="shadow_network",
+        name="Shadow Network",
+        requirements=reqs,
+        candidate_strength=max(0.0, round(strength, 1)),
+    )
+
+
+def _evaluate_oceanic_reach(snap: SessionSnapshot) -> VictoryPathStatus:
+    from portlight.content.campaign import OCEANIC_THRESHOLDS as T, CANDIDATE_BOOSTS
+
+    ei_standing = snap.captain.standing.regional_standing.get("East Indies", 0)
+    contracts = _total_completed_contracts(snap)
+    ship = _ship_class(snap)
+    has_ei_charter = _has_license(snap, "ei_access_charter")
+    ei_broker = "East Indies" in _regions_with_broker(snap)
+    ei_warehouse = "East Indies" in _regions_with_warehouse(snap)
+    has_ei_foothold = ei_broker or ei_warehouse
+
+    ship_ok = ship in ("galleon", "brigantine") if T["ship_class_min"] == "brigantine" else ship == "galleon"
+
+    reqs = [
+        _req(
             "East Indies Access Charter",
-            _has_license(snap, "ei_access_charter"),
+            has_ei_charter,
+            action="Acquire the East Indies Access Charter",
         ),
-        VictoryRequirement(
-            "East Indies broker office",
-            "East Indies" in _regions_with_broker(snap),
+        _req(
+            "East Indies commercial foothold (broker or warehouse)",
+            has_ei_foothold,
+            f"EI broker: {'yes' if ei_broker else 'no'}, EI warehouse: {'yes' if ei_warehouse else 'no'}",
+            "Open a broker office or warehouse in the East Indies",
         ),
-        VictoryRequirement(
-            "Galleon or Brigantine",
-            _ship_class(snap) in ("galleon", "brigantine"),
-            f"Ship: {_ship_class(snap)}",
+        _req(
+            f"East Indies standing ≥ {T['ei_standing']}",
+            ei_standing >= T["ei_standing"],
+            f"EI standing: {ei_standing}",
+            f"Build East Indies standing from {ei_standing} to {T['ei_standing']}",
         ),
-        VictoryRequirement(
-            "East Indies standing ≥ 15",
-            snap.captain.standing.regional_standing.get("East Indies", 0) >= 15,
-            f"EI standing: {snap.captain.standing.regional_standing.get('East Indies', 0)}",
+        _req(
+            "Long-haul ship capability (Brigantine or Galleon)",
+            ship_ok,
+            f"Ship: {ship}",
+            "Upgrade to a Brigantine or Galleon for long-haul routes",
         ),
-        VictoryRequirement(
-            "5+ contracts completed",
-            _total_completed_contracts(snap) >= 5,
-            f"Completed: {_total_completed_contracts(snap)}",
+        _req(
+            f"{T['contracts_completed']}+ contracts completed",
+            contracts >= T["contracts_completed"],
+            f"Completed: {contracts}",
+            f"Complete {T['contracts_completed'] - contracts} more contracts" if contracts < T["contracts_completed"] else "",
         ),
-        VictoryRequirement(
-            "2000+ silver",
-            snap.captain.silver >= 2000,
+        _req(
+            f"{T['silver_min']}+ silver",
+            snap.captain.silver >= T["silver_min"],
             f"Silver: {snap.captain.silver}",
+            f"Earn {T['silver_min'] - snap.captain.silver} more silver" if snap.captain.silver < T["silver_min"] else "",
         ),
     ]
-    paths.append(oceanic)
 
-    # --- Commercial Empire ---
-    empire = VictoryPathProgress(path_id="commercial_empire", name="Commercial Empire")
+    boosts = CANDIDATE_BOOSTS["oceanic_reach"]
+    base_ratio = sum(1 for r in reqs if r.met) / len(reqs) * 100
+    strength = base_ratio
+    strength += ei_standing * boosts["ei_standing_bonus_per"]
+    if ship == "galleon":
+        strength += boosts["galleon_bonus"]
+    if ei_broker and ei_warehouse:
+        strength += boosts["ei_infra_bonus"]
+    if ei_standing == 0 and not has_ei_charter:
+        strength += boosts["local_only_penalty"]
+
+    return VictoryPathStatus(
+        path_id="oceanic_reach",
+        name="Oceanic Reach",
+        requirements=reqs,
+        candidate_strength=max(0.0, round(strength, 1)),
+    )
+
+
+def _evaluate_commercial_empire(snap: SessionSnapshot) -> VictoryPathStatus:
+    from portlight.content.campaign import EMPIRE_THRESHOLDS as T, CANDIDATE_BOOSTS
+
+    tier = _trust_tier(snap)
+    rank = _trust_rank(tier)
     infra_regions = _regions_with_warehouse(snap) | _regions_with_broker(snap)
-    empire.requirements = [
-        VictoryRequirement(
-            "Infrastructure in 3 regions",
-            len(infra_regions) >= 3,
+    contracts = _total_completed_contracts(snap)
+    lic_count = len(_active_licenses(snap))
+    policies = _policies_purchased(snap)
+    credit = snap.infra.credit
+    credit_used = credit is not None and credit.total_borrowed > 0
+    insurance_used = policies >= 1
+    finance_ok = credit_used and insurance_used
+
+    reqs = [
+        _req(
+            f"Infrastructure in {T['infra_regions']} regions",
+            len(infra_regions) >= T["infra_regions"],
             f"Regions: {', '.join(sorted(infra_regions)) or 'none'}",
+            f"Expand infrastructure to {T['infra_regions'] - len(infra_regions)} more region(s)"
+            if len(infra_regions) < T["infra_regions"] else "",
         ),
-        VictoryRequirement(
+        _req(
             "Reliable+ trust",
-            _trust_rank(_trust_tier(snap)) >= 3,
-            f"Trust: {_trust_tier(snap)}",
+            rank >= T["trust_rank"],
+            f"Trust: {tier}",
+            f"Build trust to reliable tier (currently {tier})",
         ),
-        VictoryRequirement(
-            "Insurance and credit used",
-            _policies_purchased(snap) >= 1 and snap.infra.credit is not None and snap.infra.credit.total_borrowed > 0,
+        _req(
+            "Insurance and credit both used successfully",
+            finance_ok,
+            f"Insurance: {'yes' if insurance_used else 'no'}, Credit: {'yes' if credit_used else 'no'}",
+            ("Use insurance" if not insurance_used else "") +
+            (" and " if not insurance_used and not credit_used else "") +
+            ("Draw on credit" if not credit_used else ""),
         ),
-        VictoryRequirement(
-            "10+ contracts completed",
-            _total_completed_contracts(snap) >= 10,
-            f"Completed: {_total_completed_contracts(snap)}",
+        _req(
+            f"{T['contracts_completed']}+ contracts completed",
+            contracts >= T["contracts_completed"],
+            f"Completed: {contracts}",
+            f"Complete {T['contracts_completed'] - contracts} more contracts" if contracts < T["contracts_completed"] else "",
         ),
-        VictoryRequirement(
-            "3000+ silver",
-            snap.captain.silver >= 3000,
+        _req(
+            f"{T['silver_min']}+ silver",
+            snap.captain.silver >= T["silver_min"],
             f"Silver: {snap.captain.silver}",
+            f"Earn {T['silver_min'] - snap.captain.silver} more silver" if snap.captain.silver < T["silver_min"] else "",
         ),
-        VictoryRequirement(
-            "3+ active licenses",
-            len(_active_licenses(snap)) >= 3,
-            f"Active: {len(_active_licenses(snap))}",
+        _req(
+            f"{T['licenses_min']}+ active licenses",
+            lic_count >= T["licenses_min"],
+            f"Active: {lic_count}",
+            f"Acquire {T['licenses_min'] - lic_count} more license(s)" if lic_count < T["licenses_min"] else "",
         ),
     ]
-    paths.append(empire)
 
+    boosts = CANDIDATE_BOOSTS["commercial_empire"]
+    base_ratio = sum(1 for r in reqs if r.met) / len(reqs) * 100
+    strength = base_ratio
+    strength += len(infra_regions) * boosts["infra_breadth_bonus_per"]
+    if finance_ok:
+        strength += boosts["finance_maturity_bonus"]
+    if contracts >= 10:
+        strength += boosts["contract_breadth_bonus"]
+    if len(infra_regions) <= 1:
+        strength += boosts["narrow_penalty"]
+    if credit and credit.defaults > 0:
+        strength += boosts["default_penalty"]
+
+    return VictoryPathStatus(
+        path_id="commercial_empire",
+        name="Commercial Empire",
+        requirements=reqs,
+        candidate_strength=max(0.0, round(strength, 1)),
+    )
+
+
+def compute_victory_progress(snap: SessionSnapshot) -> list[VictoryPathStatus]:
+    """Evaluate all victory paths with diagnostics: met/missing/blocked,
+    candidate strength, and actionable missing-requirement text.
+
+    Returns paths sorted by candidate_strength descending.
+    """
+    paths = [
+        _evaluate_lawful_trade_house(snap),
+        _evaluate_shadow_network(snap),
+        _evaluate_oceanic_reach(snap),
+        _evaluate_commercial_empire(snap),
+    ]
+    paths.sort(key=lambda p: p.candidate_strength, reverse=True)
     return paths

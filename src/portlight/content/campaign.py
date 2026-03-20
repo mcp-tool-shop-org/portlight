@@ -280,3 +280,107 @@ SECONDARY_THRESHOLD: float = 15.0
 
 # Minimum recent_score for an emerging tag (must not already be primary).
 EMERGING_MIN_RECENT: float = 12.0
+
+
+# ---------------------------------------------------------------------------
+# Victory path thresholds
+# ---------------------------------------------------------------------------
+# Each path has tunable thresholds for its requirements.
+# Keeps calibration out of engine logic.
+
+LAWFUL_THRESHOLDS = {
+    "trust_rank": 4,                  # trusted tier
+    "high_rep_charter": True,
+    "regional_licenses_or_standing": 2,  # 2+ regional licenses or 2+ regions at standing 15+
+    "contracts_completed": 8,
+    "max_heat_cap": 5,
+    "silver_min": 2000,
+}
+
+SHADOW_THRESHOLDS = {
+    "discreet_completions": 2,        # luxury/discreet contract successes
+    "heat_floor": 10,                 # must have operated under meaningful heat
+    "heat_ceiling": 40,               # not catastrophic — still functioning
+    "profit_under_heat": 2000,        # net profit while sustaining heat
+    "silver_min": 1500,
+    "trades_under_heat": 8,           # trade volume with heat ≥ 10
+}
+
+OCEANIC_THRESHOLDS = {
+    "ei_access_charter": True,
+    "ei_foothold": True,              # broker or warehouse in East Indies
+    "ei_standing": 15,
+    "ship_class_min": "brigantine",   # brigantine or galleon
+    "contracts_completed": 5,
+    "silver_min": 2000,
+}
+
+EMPIRE_THRESHOLDS = {
+    "infra_regions": 3,               # infrastructure footprint breadth
+    "trust_rank": 3,                  # reliable+
+    "finance_used": True,             # both insurance and credit
+    "contracts_completed": 10,
+    "silver_min": 3000,
+    "licenses_min": 3,
+}
+
+# ---------------------------------------------------------------------------
+# Victory path completion summaries
+# ---------------------------------------------------------------------------
+
+COMPLETION_SUMMARIES: dict[str, str] = {
+    "lawful_house": (
+        "Your company earned trust across multiple regions, secured premium "
+        "charters, and scaled lawful commerce without surrendering discipline "
+        "to heat."
+    ),
+    "shadow_network": (
+        "Your operation survived scrutiny, moved sensitive luxury cargo "
+        "profitably, and built a resilient gray-market network under pressure."
+    ),
+    "oceanic_reach": (
+        "Your house established East Indies access, commercialized long-haul "
+        "routes, and proved that distant trade could be run at serious scale."
+    ),
+    "commercial_empire": (
+        "You built an integrated trade concern with infrastructure, access, "
+        "finance, and multi-region business power beyond a single ship or route."
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# Candidate-strength boost/penalty factors
+# ---------------------------------------------------------------------------
+# Each factor adds or subtracts from raw completion ratio.
+# Positive = behavioral coherence, negative = contradiction.
+
+CANDIDATE_BOOSTS: dict[str, dict[str, float]] = {
+    "lawful_house": {
+        "trust_rank_bonus_per": 5.0,       # per trust rank above 2
+        "standing_breadth_bonus": 8.0,     # 2+ regions with standing 10+
+        "low_heat_bonus": 10.0,            # max heat ≤ 3
+        "seizure_penalty": -15.0,          # per seizure
+        "high_heat_penalty_per": -3.0,     # per point of max heat above 5
+        "default_penalty": -20.0,          # any credit default
+    },
+    "shadow_network": {
+        "discreet_bonus_per": 6.0,         # per discreet completion
+        "heat_resilience_bonus": 10.0,     # profitable under heat
+        "seizure_survival_bonus": 8.0,     # survived seizure, still operating
+        "zero_heat_penalty": -20.0,        # never operated under pressure
+        "collapse_penalty": -25.0,         # silver < 100
+    },
+    "oceanic_reach": {
+        "ei_standing_bonus_per": 2.0,      # per point of EI standing
+        "galleon_bonus": 15.0,             # operating galleon
+        "ei_infra_bonus": 10.0,            # broker + warehouse in EI
+        "local_only_penalty": -15.0,       # no EI standing at all
+    },
+    "commercial_empire": {
+        "infra_breadth_bonus_per": 5.0,    # per infra region
+        "finance_maturity_bonus": 10.0,    # credit + insurance both used
+        "contract_breadth_bonus": 8.0,     # 10+ contracts
+        "narrow_penalty": -10.0,           # only 1 region with infra
+        "default_penalty": -15.0,          # credit defaults
+    },
+}

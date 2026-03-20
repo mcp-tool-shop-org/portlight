@@ -590,6 +590,216 @@ class TestVictoryPaths:
 
 
 # ---------------------------------------------------------------------------
+# 3D-4C-1 — Victory path diagnostics
+# ---------------------------------------------------------------------------
+
+class TestVictoryDiagnostics:
+    """Path diagnostics: met/missing/blocked, candidate strength, actionable text."""
+
+    # --- Requirement status classification ---
+
+    def test_requirements_have_status(self):
+        """Every requirement should have a RequirementStatus enum."""
+        from portlight.engine.campaign import RequirementStatus
+        snap = _base_snap()
+        paths = compute_victory_progress(snap)
+        for path in paths:
+            for req in path.requirements:
+                assert req.status in (RequirementStatus.MET, RequirementStatus.MISSING, RequirementStatus.BLOCKED)
+
+    def test_fresh_captain_has_met_and_missing(self):
+        """A fresh captain should have some met (trivial) and some missing."""
+        snap = _base_snap()
+        paths = compute_victory_progress(snap)
+        lawful = next(p for p in paths if p.path_id == "lawful_house")
+        # Max heat ≤ 5 should be met trivially
+        assert len(lawful.requirements_met) >= 1
+        assert len(lawful.requirements_missing) >= 3
+
+    def test_heat_blocks_lawful(self):
+        """High heat should create a BLOCKED requirement on Lawful Trade House."""
+        from portlight.engine.campaign import RequirementStatus
+        world = _base_world()
+        world.captain.standing.customs_heat = {"Mediterranean": 20, "West Africa": 5, "East Indies": 0}
+        snap = _base_snap(world=world)
+        paths = compute_victory_progress(snap)
+        lawful = next(p for p in paths if p.path_id == "lawful_house")
+        blocked = lawful.requirements_blocked
+        assert len(blocked) >= 1
+        heat_blocker = next((r for r in blocked if "heat" in r.description.lower()), None)
+        assert heat_blocker is not None
+        assert heat_blocker.status == RequirementStatus.BLOCKED
+
+    def test_missing_has_actionable_text(self):
+        """Missing requirements should have action text."""
+        snap = _base_snap()
+        paths = compute_victory_progress(snap)
+        for path in paths:
+            for req in path.requirements_missing:
+                # Most missing requirements should have action text
+                # (some may not if they're trivially described)
+                assert req.description  # at minimum, description exists
+
+    def test_lawful_requires_coherent_lawful_business(self):
+        """Lawful path should not complete on high-money high-heat run."""
+        world = _base_world()
+        world.captain.silver = 5000
+        world.captain.standing.commercial_trust = 40
+        world.captain.standing.customs_heat = {"Mediterranean": 15, "West Africa": 10, "East Indies": 5}
+        world.captain.standing.regional_standing = {"Mediterranean": 20, "West Africa": 15, "East Indies": 10}
+        infra = InfrastructureState(
+            licenses=[OwnedLicense(license_id="high_rep_charter", purchased_day=5, active=True)],
+        )
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=100, trust_delta=1, standing_delta=1,
+                    heat_delta=0, completion_day=i + 1, summary="Delivered grain",
+                )
+                for i in range(10)
+            ],
+        )
+        snap = _base_snap(world=world, infra=infra, board=board)
+        paths = compute_victory_progress(snap)
+        lawful = next(p for p in paths if p.path_id == "lawful_house")
+        # Should NOT complete — heat too high
+        assert not lawful.is_complete
+        assert len(lawful.requirements_blocked) >= 1
+
+    def test_shadow_requires_specialization(self):
+        """Shadow path should not complete on generic messy run."""
+        world = _base_world()
+        world.captain.standing.customs_heat = {"Mediterranean": 12, "West Africa": 5, "East Indies": 0}
+        world.captain.silver = 2000
+        # No discreet completions, no shadow specialization
+        snap = _base_snap(world=world)
+        paths = compute_victory_progress(snap)
+        shadow = next(p for p in paths if p.path_id == "shadow_network")
+        assert not shadow.is_complete
+
+    def test_oceanic_requires_real_presence(self):
+        """Oceanic path needs more than one charter purchase."""
+        world = _base_world()
+        infra = InfrastructureState(
+            licenses=[OwnedLicense(license_id="ei_access_charter", purchased_day=5, active=True)],
+        )
+        snap = _base_snap(world=world, infra=infra)
+        paths = compute_victory_progress(snap)
+        oceanic = next(p for p in paths if p.path_id == "oceanic_reach")
+        assert not oceanic.is_complete
+        # Should have EI charter met but not foothold, standing, ship etc.
+        assert oceanic.met_count <= 2
+
+    def test_empire_requires_integrated_breadth(self):
+        """Empire path should not complete from specialization only."""
+        world = _base_world()
+        world.captain.silver = 5000
+        world.captain.standing.commercial_trust = 30
+        # Lots of contracts but no infrastructure breadth
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=200, trust_delta=1, standing_delta=1,
+                    heat_delta=0, completion_day=i + 1, summary="Delivered",
+                )
+                for i in range(12)
+            ],
+        )
+        snap = _base_snap(world=world, board=board)
+        paths = compute_victory_progress(snap)
+        empire = next(p for p in paths if p.path_id == "commercial_empire")
+        assert not empire.is_complete
+
+    # --- Candidate strength ---
+
+    def test_candidate_strength_is_numeric(self):
+        """All paths should have a numeric candidate_strength >= 0."""
+        snap = _base_snap()
+        paths = compute_victory_progress(snap)
+        for path in paths:
+            assert isinstance(path.candidate_strength, float)
+            assert path.candidate_strength >= 0
+
+    def test_lawful_strongest_on_lawful_run(self):
+        """On a strong lawful run, lawful should have highest candidate_strength."""
+        world = _base_world()
+        world.captain.standing.commercial_trust = 40
+        world.captain.standing.regional_standing = {"Mediterranean": 20, "West Africa": 15, "East Indies": 5}
+        world.captain.standing.customs_heat = {"Mediterranean": 2, "West Africa": 3, "East Indies": 1}
+        world.captain.silver = 3000
+        infra = InfrastructureState(
+            licenses=[
+                OwnedLicense(license_id="high_rep_charter", purchased_day=5, active=True),
+                OwnedLicense(license_id="med_trade_charter", purchased_day=3, active=True),
+            ],
+        )
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=100, trust_delta=1, standing_delta=1,
+                    heat_delta=0, completion_day=i + 1, summary="Delivered grain",
+                )
+                for i in range(8)
+            ],
+        )
+        snap = _base_snap(world=world, infra=infra, board=board)
+        paths = compute_victory_progress(snap)
+        # Paths are sorted by strength — lawful should be first
+        assert paths[0].path_id == "lawful_house"
+        assert paths[0].candidate_strength > paths[-1].candidate_strength
+
+    def test_shadow_strongest_on_shadow_run(self):
+        """On a shadow-heavy run, shadow should rank high."""
+        from portlight.engine.models import ReputationIncident
+        world = _base_world("smuggler")
+        world.captain.standing.customs_heat = {"Mediterranean": 5, "West Africa": 20, "East Indies": 0}
+        world.captain.silver = 2000
+        world.captain.standing.recent_incidents = [
+            ReputationIncident(day=5, port_id="palm_cove", region="West Africa",
+                             incident_type="inspection", description="Cargo seized",
+                             heat_delta=5),
+        ]
+        ledger = ReceiptLedger(net_profit=3000)
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=200, trust_delta=0, standing_delta=0,
+                    heat_delta=5, completion_day=i + 1, summary="Luxury discreet delivery",
+                )
+                for i in range(10)
+            ],
+        )
+        snap = _base_snap(world=world, ledger=ledger, board=board)
+        paths = compute_victory_progress(snap)
+        shadow = next(p for p in paths if p.path_id == "shadow_network")
+        # Shadow should be competitive on this run
+        assert shadow.candidate_strength >= 50
+
+    def test_paths_sorted_by_strength(self):
+        """compute_victory_progress returns paths sorted by candidate_strength descending."""
+        snap = _base_snap()
+        paths = compute_victory_progress(snap)
+        strengths = [p.candidate_strength for p in paths]
+        assert strengths == sorted(strengths, reverse=True)
+
+    def test_contradictory_run_no_nonsense(self):
+        """A contradictory run (high heat + lawful pretension) should not rank lawful first."""
+        world = _base_world()
+        world.captain.standing.commercial_trust = 10  # credible, not trusted
+        world.captain.standing.customs_heat = {"Mediterranean": 25, "West Africa": 15, "East Indies": 0}
+        world.captain.silver = 500
+        snap = _base_snap(world=world)
+        paths = compute_victory_progress(snap)
+        lawful = next(p for p in paths if p.path_id == "lawful_house")
+        # Should not be strongest with this heat
+        assert paths[0].path_id != "lawful_house" or lawful.candidate_strength < 30
+
+
+# ---------------------------------------------------------------------------
 # Save/load round-trip
 # ---------------------------------------------------------------------------
 

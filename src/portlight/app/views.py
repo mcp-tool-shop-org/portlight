@@ -1227,20 +1227,54 @@ def milestones_view(
 
     # --- Victory progress ---
     victory = compute_victory_progress(snap)
-    active_paths = [p for p in victory if p.met_count > 0]
-    if active_paths:
-        parts.append(Text("[bold]Victory Progress[/bold]"))
-        for path in active_paths:
-            pct = int(path.met_count / path.total_count * 100) if path.total_count > 0 else 0
-            status = "[bold green]COMPLETE[/bold green]" if path.is_complete else f"{path.met_count}/{path.total_count}"
-            style = "green" if path.is_complete else ("yellow" if path.is_active_candidate else "dim")
-            parts.append(Text(f"  [{style}]{path.name}[/{style}] — {status} ({pct}%)"))
+    parts.append(Text("[bold]Victory Paths[/bold]"))
 
-            # Show missing requirements for active candidates
-            if path.is_active_candidate and not path.is_complete:
-                for req in path.requirements:
-                    if not req.met:
-                        detail = f" ({req.detail})" if req.detail else ""
-                        parts.append(Text(f"    [red]✗[/red] {req.description}{detail}"))
+    for i, path in enumerate(victory):
+        if path.is_complete:
+            label = "[bold green]VICTORY[/bold green]"
+            style = "green"
+        elif path.is_active_candidate:
+            label = f"[yellow]{path.met_count}/{path.total_count}[/yellow]"
+            style = "yellow"
+        elif path.met_count > 0:
+            label = f"[dim]{path.met_count}/{path.total_count}[/dim]"
+            style = "dim"
+        else:
+            label = f"[dim]0/{path.total_count}[/dim]"
+            style = "dim"
+
+        rank = "Strongest" if i == 0 and path.candidate_strength > 0 else (
+            "Secondary" if i == 1 and path.is_active_candidate else ""
+        )
+        rank_text = f"  ({rank})" if rank else ""
+        parts.append(Text(f"  [{style}]{path.name}[/{style}] — {label}  strength {path.candidate_strength:.0f}{rank_text}"))
+
+        # Completion summary
+        if path.is_complete and path.completion_summary:
+            parts.append(Text(f"    [green italic]{path.completion_summary}[/green italic]"))
+
+        # Show met requirements briefly
+        met = path.requirements_met
+        if met and not path.is_complete:
+            met_names = ", ".join(r.description for r in met[:3])
+            if len(met) > 3:
+                met_names += f" +{len(met) - 3} more"
+            parts.append(Text(f"    [green]Met:[/green] {met_names}"))
+
+        # Show blockers prominently
+        blocked = path.requirements_blocked
+        for req in blocked:
+            detail = f" ({req.detail})" if req.detail else ""
+            action = f" → {req.action}" if req.action else ""
+            parts.append(Text(f"    [bold red]Blocked:[/bold red] {req.description}{detail}{action}"))
+
+        # Show missing requirements with actions
+        missing = path.requirements_missing
+        for req in missing[:3]:
+            action = f" → {req.action}" if req.action else ""
+            detail = f" ({req.detail})" if req.detail else ""
+            parts.append(Text(f"    [red]Missing:[/red] {req.description}{detail}{action}"))
+        if len(missing) > 3:
+            parts.append(Text(f"    [dim]+{len(missing) - 3} more requirements[/dim]"))
 
     return Panel(Group(*parts), title="[bold]Merchant Career Ledger[/bold]", border_style="bright_blue")
