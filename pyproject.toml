@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [{ name = "mcp-tool-shop", email = "64996768+mcp-tool-shop@users.noreply.github.com" }]
-keywords = ["game", "trading", "maritime", "strategy", "cli"]
+keywords = ["game", "trading", "maritime", "strategy", "xrpl"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
@@ -26,6 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+xrpl = ["xrpl-py>=2.0"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0"]
 
 [project.scripts]
