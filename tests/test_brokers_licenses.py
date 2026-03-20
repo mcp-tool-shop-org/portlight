@@ -465,7 +465,7 @@ class TestSaveLoad:
         from portlight.receipts.models import ReceiptLedger
         from portlight.engine.contracts import ContractBoard
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
         assert len(loaded_infra.brokers) == 1
         b = loaded_infra.brokers[0]
         assert b.region == "Mediterranean"
@@ -483,7 +483,7 @@ class TestSaveLoad:
         from portlight.receipts.models import ReceiptLedger
         from portlight.engine.contracts import ContractBoard
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
         assert len(loaded_infra.licenses) == 1
         lic = loaded_infra.licenses[0]
         assert lic.license_id == "med_trade_charter"
@@ -498,7 +498,7 @@ class TestSaveLoad:
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
         # Simulate old save format without licenses key
         del d["infrastructure"]["licenses"]
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
         assert loaded_infra.licenses == []
 
 

@@ -711,6 +711,18 @@ def credit(
 
 
 # ---------------------------------------------------------------------------
+# Milestones / Campaign
+# ---------------------------------------------------------------------------
+
+@app.command()
+def milestones() -> None:
+    """Show merchant career ledger: milestones, profile, and victory progress."""
+    s = _session()
+    snap = s._build_snapshot()
+    console.print(views.milestones_view(s.campaign, snap))
+
+
+# ---------------------------------------------------------------------------
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------
 

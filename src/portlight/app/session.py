@@ -50,6 +50,7 @@ from portlight.engine.infrastructure import (
     tick_infrastructure,
     withdraw_cargo,
 )
+from portlight.engine.campaign import CampaignState, SessionSnapshot, evaluate_milestones
 from portlight.engine.save import load_game, save_game
 from portlight.engine.voyage import EventType, advance_day, arrive, depart
 from portlight.receipts.models import ReceiptLedger, TradeReceipt
@@ -64,6 +65,7 @@ class GameSession:
         self.ledger: ReceiptLedger = ReceiptLedger()
         self.board: ContractBoard = ContractBoard()
         self.infra: InfrastructureState = InfrastructureState()
+        self.campaign: CampaignState = CampaignState()
         self._trade_seq: int = 0
         self._rng: random.Random = random.Random()
 
@@ -120,6 +122,7 @@ class GameSession:
         self.ledger = ReceiptLedger(run_id=f"run-{self.world.seed}")
         self.board = ContractBoard()
         self.infra = InfrastructureState()
+        self.campaign = CampaignState()
         self._trade_seq = 0
         self._save()
 
@@ -128,7 +131,7 @@ class GameSession:
         result = load_game(self.base_path)
         if result is None:
             return False
-        self.world, self.ledger, self.board, self.infra = result
+        self.world, self.ledger, self.board, self.infra, self.campaign = result
         self._rng = random.Random(self.world.seed + self.world.day)
         self._trade_seq = len(self.ledger.receipts)
         return True
@@ -142,7 +145,7 @@ class GameSession:
     def _save(self) -> None:
         """Auto-save after every mutation."""
         if self.world:
-            save_game(self.world, self.ledger, self.board, self.infra, self.base_path)
+            save_game(self.world, self.ledger, self.board, self.infra, self.campaign, self.base_path)
 
     def _recalc(self, port) -> None:
         """Recalculate prices at a port with captain modifiers."""
@@ -287,6 +290,7 @@ class GameSession:
             self.world.captain.day += 1
             for port in self.world.ports.values():
                 self._recalc(port)
+            self._evaluate_campaign()
             self._save()
             return []
 
@@ -326,6 +330,9 @@ class GameSession:
         # Recalculate all markets (time passes)
         for port in self.world.ports.values():
             self._recalc(port)
+
+        # Evaluate campaign milestones
+        self._evaluate_campaign()
 
         self._save()
         return events
@@ -634,6 +641,28 @@ class GameSession:
 
         # Silver loss from fines/fees (not insurable for hull/cargo,
         # but inspection silver loss is effectively a fine — not covered separately)
+
+    # --- Campaign ---
+
+    def _build_snapshot(self) -> SessionSnapshot:
+        """Build a read-only snapshot for campaign evaluation."""
+        return SessionSnapshot(
+            captain=self.world.captain,
+            world=self.world,
+            board=self.board,
+            infra=self.infra,
+            ledger=self.ledger,
+            campaign=self.campaign,
+        )
+
+    def _evaluate_campaign(self) -> list:
+        """Evaluate milestones against current state. Returns newly completed."""
+        from portlight.content.campaign import MILESTONE_SPECS
+        snap = self._build_snapshot()
+        newly = evaluate_milestones(MILESTONE_SPECS, snap)
+        if newly:
+            self.campaign.completed.extend(newly)
+        return newly
 
     # --- Credit ---
 

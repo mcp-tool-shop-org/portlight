@@ -346,7 +346,7 @@ class TestSaveLoad:
         from portlight.receipts.models import ReceiptLedger
         from portlight.engine.contracts import ContractBoard
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
 
         assert len(loaded_infra.policies) == 1
         p = loaded_infra.policies[0]
@@ -364,7 +364,7 @@ class TestSaveLoad:
         from portlight.receipts.models import ReceiptLedger
         from portlight.engine.contracts import ContractBoard
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
 
         assert len(loaded_infra.claims) == 1
         c = loaded_infra.claims[0]
@@ -378,7 +378,7 @@ class TestSaveLoad:
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
         del d["infrastructure"]["policies"]
         del d["infrastructure"]["claims"]
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
         assert loaded_infra.policies == []
         assert loaded_infra.claims == []
 

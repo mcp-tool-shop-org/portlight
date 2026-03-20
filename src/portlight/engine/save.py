@@ -48,6 +48,7 @@ from portlight.engine.infrastructure import (
     WarehouseLease,
     WarehouseTier,
 )
+from portlight.engine.campaign import CampaignState, MilestoneCompletion
 from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
@@ -581,6 +582,34 @@ def _infra_from_dict(d: dict) -> InfrastructureState:
     )
 
 
+def _milestone_to_dict(m: MilestoneCompletion) -> dict:
+    return {
+        "milestone_id": m.milestone_id,
+        "completed_day": m.completed_day,
+        "evidence": m.evidence,
+    }
+
+
+def _milestone_from_dict(d: dict) -> MilestoneCompletion:
+    return MilestoneCompletion(
+        milestone_id=d["milestone_id"],
+        completed_day=d.get("completed_day", 0),
+        evidence=d.get("evidence", ""),
+    )
+
+
+def _campaign_to_dict(state: CampaignState) -> dict:
+    return {
+        "completed": [_milestone_to_dict(m) for m in state.completed],
+    }
+
+
+def _campaign_from_dict(d: dict) -> CampaignState:
+    return CampaignState(
+        completed=[_milestone_from_dict(m) for m in d.get("completed", [])],
+    )
+
+
 def _ledger_to_dict(ledger: ReceiptLedger) -> dict:
     return {
         "run_id": ledger.run_id,
@@ -607,9 +636,10 @@ def world_to_dict(
     ledger: ReceiptLedger | None = None,
     board: ContractBoard | None = None,
     infra: InfrastructureState | None = None,
+    campaign: CampaignState | None = None,
 ) -> dict:
     """Serialize full game state to a JSON-safe dict."""
-    return {
+    d = {
         "version": 1,
         "captain": _captain_to_dict(world.captain),
         "ports": {pid: _port_to_dict(p) for pid, p in world.ports.items()},
@@ -621,10 +651,13 @@ def world_to_dict(
         "contract_board": _board_to_dict(board) if board else None,
         "infrastructure": _infra_to_dict(infra) if infra else None,
     }
+    if campaign is not None:
+        d["campaign"] = _campaign_to_dict(campaign)
+    return d
 
 
-def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState]:
-    """Deserialize game state from dict. Returns (world, ledger, board, infra)."""
+def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState]:
+    """Deserialize game state from dict. Returns (world, ledger, board, infra, campaign)."""
     world = WorldState(
         captain=_captain_from_dict(d["captain"]),
         ports={pid: _port_from_dict(p) for pid, p in d["ports"].items()},
@@ -636,7 +669,8 @@ def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, 
     ledger = _ledger_from_dict(d["ledger"]) if d.get("ledger") else ReceiptLedger()
     board = _board_from_dict(d["contract_board"]) if d.get("contract_board") else ContractBoard()
     infra = _infra_from_dict(d["infrastructure"]) if d.get("infrastructure") else InfrastructureState()
-    return world, ledger, board, infra
+    campaign = _campaign_from_dict(d["campaign"]) if d.get("campaign") else CampaignState()
+    return world, ledger, board, infra, campaign
 
 
 def save_game(
@@ -644,6 +678,7 @@ def save_game(
     ledger: ReceiptLedger | None = None,
     board: ContractBoard | None = None,
     infra: InfrastructureState | None = None,
+    campaign: CampaignState | None = None,
     base_path: Path | None = None,
 ) -> Path:
     """Save game state to JSON file. Returns path written."""
@@ -651,12 +686,12 @@ def save_game(
     save_dir = base / SAVE_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / SAVE_FILE
-    data = world_to_dict(world, ledger, board, infra)
+    data = world_to_dict(world, ledger, board, infra, campaign)
     save_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return save_path
 
 
-def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState] | None:
+def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState] | None:
     """Load game state from JSON file. Returns None if no save exists or data is corrupt."""
     base = base_path or Path(".")
     save_path = base / SAVE_DIR / SAVE_FILE

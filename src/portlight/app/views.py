@@ -26,6 +26,7 @@ from portlight.content.goods import GOODS
 from portlight.content.ships import SHIPS
 
 if TYPE_CHECKING:
+    from portlight.engine.campaign import CampaignState, SessionSnapshot
     from portlight.engine.captain_identity import CaptainTemplate
     from portlight.engine.contracts import ContractBoard
     from portlight.engine.infrastructure import InfrastructureState
@@ -1118,3 +1119,113 @@ def credit_view(infra: "InfrastructureState", rep: "ReputationState") -> Panel:
     parts.append(tier_table)
 
     return Panel(Group(*parts), title="[bold]Credit[/bold]", border_style="yellow")
+
+
+# ---------------------------------------------------------------------------
+# Campaign milestones
+# ---------------------------------------------------------------------------
+
+def milestones_view(
+    campaign: "CampaignState",
+    snap: "SessionSnapshot",
+) -> Panel:
+    """Show completed milestones, career profile, and victory progress."""
+    from portlight.engine.campaign import (
+        CampaignState,
+        MilestoneFamily,
+        SessionSnapshot,
+        compute_career_profile,
+        compute_victory_progress,
+    )
+    from portlight.content.campaign import MILESTONE_SPECS, MILESTONE_BY_ID
+
+    parts = []
+
+    # --- Completed milestones by family ---
+    completed_ids = {c.milestone_id for c in campaign.completed}
+    completion_map = {c.milestone_id: c for c in campaign.completed}
+
+    families_with_completions = {}
+    for spec in MILESTONE_SPECS:
+        if spec.id in completed_ids:
+            families_with_completions.setdefault(spec.family, []).append(spec)
+
+    if families_with_completions:
+        ms_table = Table(show_header=True, header_style="bold", expand=True)
+        ms_table.add_column("Family")
+        ms_table.add_column("Milestone")
+        ms_table.add_column("Day")
+        ms_table.add_column("Evidence")
+
+        for family in MilestoneFamily:
+            specs = families_with_completions.get(family, [])
+            for spec in specs:
+                comp = completion_map.get(spec.id)
+                family_label = family.value.replace("_", " ").title()
+                ms_table.add_row(
+                    f"[dim]{family_label}[/dim]",
+                    f"[green]{spec.name}[/green]",
+                    str(comp.completed_day) if comp else "",
+                    comp.evidence if comp else "",
+                )
+
+        parts.append(ms_table)
+        parts.append(Text(f"\n[bold]{len(completed_ids)}[/bold] of {len(MILESTONE_SPECS)} milestones completed.\n"))
+    else:
+        parts.append(Text("[dim]No milestones completed yet.[/dim]\n"))
+
+    # --- In-progress milestones (not yet completed) ---
+    pending = [s for s in MILESTONE_SPECS if s.id not in completed_ids]
+    if pending and len(pending) < len(MILESTONE_SPECS):  # only show if some progress
+        parts.append(Text("[bold]Next milestones:[/bold]"))
+        # Show up to 5 from different families
+        shown_families: set[str] = set()
+        shown = 0
+        for spec in pending:
+            if shown >= 5:
+                break
+            if spec.family.value in shown_families:
+                continue
+            shown_families.add(spec.family.value)
+            family_label = spec.family.value.replace("_", " ").title()
+            parts.append(Text(f"  [dim]{family_label}:[/dim] {spec.name} — {spec.description}"))
+            shown += 1
+        parts.append(Text(""))
+
+    # --- Career profile ---
+    profile = compute_career_profile(snap)
+    if profile and profile[0].score > 0:
+        parts.append(Text("[bold]Career Profile[/bold]"))
+        for i, ps in enumerate(profile[:5]):
+            if ps.score <= 0:
+                break
+            bar_len = min(int(ps.score / 5), 20)
+            bar = "█" * bar_len
+            label = "[bold cyan]" if i == 0 else "[dim]"
+            close = "[/bold cyan]" if i == 0 else "[/dim]"
+            rank = "Primary" if i == 0 else ("Secondary" if i <= 2 and ps.score >= profile[0].score * 0.4 else "")
+            ev = ", ".join(ps.evidence[:3]) if ps.evidence else ""
+            parts.append(Text(f"  {label}{ps.tag}{close} {bar} {ps.score:.0f}"))
+            if rank:
+                parts.append(Text(f"    {rank}: {ev}"))
+        parts.append(Text(""))
+
+    # --- Victory progress ---
+    victory = compute_victory_progress(snap)
+    active_paths = [p for p in victory if p.met_count > 0]
+    if active_paths:
+        parts.append(Text("[bold]Victory Progress[/bold]"))
+        for path in active_paths:
+            pct = int(path.met_count / path.total_count * 100) if path.total_count > 0 else 0
+            status = "[bold green]COMPLETE[/bold green]" if path.is_complete else f"{path.met_count}/{path.total_count}"
+            style = "green" if path.is_complete else ("yellow" if path.is_active_candidate else "dim")
+            parts.append(Text(f"  [{style}]{path.name}[/{style}] — {status} ({pct}%)"))
+
+            # Show missing requirements for active candidates
+            if path.is_active_candidate and not path.is_complete:
+                for req in path.requirements:
+                    if not req.met:
+                        detail = f" ({req.detail})" if req.detail else ""
+                        parts.append(Text(f"    [red]✗[/red] {req.description}{detail}"))
+
+    return Panel(Group(*parts), title="[bold]Merchant Career Ledger[/bold]", border_style="bright_blue")

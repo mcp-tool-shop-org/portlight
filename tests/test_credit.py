@@ -336,7 +336,7 @@ class TestSaveLoad:
         from portlight.receipts.models import ReceiptLedger
         from portlight.engine.contracts import ContractBoard
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
 
         credit = loaded_infra.credit
         assert credit is not None
@@ -351,7 +351,7 @@ class TestSaveLoad:
         d = world_to_dict(world, ReceiptLedger(), ContractBoard(), infra)
         if "credit" in d["infrastructure"]:
             del d["infrastructure"]["credit"]
-        _, _, _, loaded_infra = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign = world_from_dict(d)
         assert loaded_infra.credit is None  # no credit data in old saves
 
 
