@@ -45,7 +45,7 @@ def new(
         raise typer.Exit(1)
     s = GameSession()
     s.new(name, captain_type=captain_type)
-    console.print(f"\n[bold green]A new voyage begins.[/bold green]\n")
+    console.print("\n[bold green]A new voyage begins.[/bold green]\n")
     console.print(views.captain_view(s.captain, s.captain_template))
     console.print(views.port_view(s.current_port, s.captain))
     console.print(views.status_view(s.world, s.ledger))
@@ -160,9 +160,8 @@ def sell(good: str, qty: int) -> None:
     if isinstance(result, str):
         console.print(f"[red]{result}[/red]")
         return
-    from portlight.app.formatting import silver, silver_delta
-    cost_basis = 0
-    # Estimate profit from receipt
+    from portlight.app.formatting import silver
+    # Show sale result
     console.print(f"\n[green]Sold {result.quantity}x {result.good_id} for {silver(result.total_price)}[/green]\n")
     console.print(views.market_view(s.current_port, s.captain))
     console.print(views.cargo_view(s.captain))
@@ -322,7 +321,7 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
         if err:
             console.print(f"[red]{err}[/red]")
         else:
-            console.print(f"\n[bold green]Ship purchased![/bold green]\n")
+            console.print("\n[bold green]Ship purchased![/bold green]\n")
             console.print(views.status_view(s.world, s.ledger))
     else:
         console.print(views.shipyard_view(s.captain))
@@ -636,6 +635,79 @@ def insure(
         return
 
     console.print(f"[red]Unknown insure action: {action}[/red]. Use: buy")
+
+
+# ---------------------------------------------------------------------------
+# Credit
+# ---------------------------------------------------------------------------
+
+@app.command()
+def credit(
+    action: str = typer.Argument(None, help="open, draw, repay, or omit to view"),
+    amount: int = typer.Argument(None, help="Amount to draw or repay"),
+) -> None:
+    """Manage credit line: view, open, draw, or repay."""
+    s = _session()
+
+    if action is None:
+        console.print(views.credit_view(s.infra, s.captain.standing))
+        return
+
+    if action == "open":
+        from portlight.content.infrastructure import available_credit_tiers
+        from portlight.engine.infrastructure import check_credit_eligibility
+        # Find the best tier the player qualifies for
+        tiers = available_credit_tiers()
+        best = None
+        for spec in reversed(tiers):  # try highest first
+            err = check_credit_eligibility(s.infra, spec, s.captain.standing)
+            if err is None:
+                best = spec
+                break
+        if best is None:
+            console.print("[red]No credit tier available. Build trust and standing first.[/red]")
+            console.print(views.credit_view(s.infra, s.captain.standing))
+            return
+        err = s.open_credit_cmd(best)
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+        console.print(f"\n[bold green]Credit line opened: {best.name}![/bold green]")
+        console.print(f"Limit: {best.credit_limit} | Rate: {int(best.interest_rate * 100)}% per {best.interest_period} days")
+        return
+
+    if action == "draw":
+        if amount is None:
+            console.print("[red]Usage: portlight credit draw <amount>[/red]")
+            return
+        err = s.draw_credit_cmd(amount)
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+        from portlight.engine.infrastructure import _ensure_credit
+        cred = _ensure_credit(s.infra)
+        from portlight.app.formatting import silver
+        console.print(f"[green]Drew {silver(amount)} on credit. Outstanding: {silver(cred.outstanding)}[/green]")
+        console.print(f"Silver: {silver(s.captain.silver)}")
+        return
+
+    if action == "repay":
+        if amount is None:
+            console.print("[red]Usage: portlight credit repay <amount>[/red]")
+            return
+        err = s.repay_credit_cmd(amount)
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+        from portlight.engine.infrastructure import _ensure_credit
+        cred = _ensure_credit(s.infra)
+        from portlight.app.formatting import silver
+        remaining = cred.outstanding + cred.interest_accrued
+        console.print(f"[green]Repaid {silver(amount)}. Remaining: {silver(remaining)}[/green]")
+        console.print(f"Silver: {silver(s.captain.silver)}")
+        return
+
+    console.print(f"[red]Unknown credit action: {action}[/red]. Use: open, draw, repay")
 
 
 # ---------------------------------------------------------------------------

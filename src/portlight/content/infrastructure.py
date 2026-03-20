@@ -22,6 +22,8 @@ Licenses (3D-2B):
 from portlight.engine.infrastructure import (
     BrokerOfficeSpec,
     BrokerTier,
+    CreditTier,
+    CreditTierSpec,
     LicenseSpec,
     PolicyFamily,
     PolicyScope,
@@ -381,3 +383,60 @@ def available_policies(family: PolicyFamily | None = None) -> list[PolicySpec]:
     if family is not None:
         specs = [s for s in specs if s.family == family]
     return sorted(specs, key=lambda s: s.premium)
+
+
+# ---------------------------------------------------------------------------
+# Credit tier specs
+# ---------------------------------------------------------------------------
+
+CREDIT_TIERS: dict[CreditTier, CreditTierSpec] = {
+    CreditTier.MERCHANT_LINE: CreditTierSpec(
+        tier=CreditTier.MERCHANT_LINE,
+        name="Merchant Line",
+        credit_limit=300,
+        interest_rate=0.08,            # 8% per period
+        interest_period=10,            # every 10 days
+        required_trust_tier="credible",
+        required_standing=5,
+        required_heat_max=None,
+        required_license=None,
+        description="Entry-level working capital. Enough to bridge one cargo purchase "
+                    "or provision a long voyage. Modest limit, moderate interest.",
+    ),
+    CreditTier.HOUSE_CREDIT: CreditTierSpec(
+        tier=CreditTier.HOUSE_CREDIT,
+        name="House Credit",
+        credit_limit=800,
+        interest_rate=0.06,            # 6% per period (better rate)
+        interest_period=10,
+        required_trust_tier="reliable",
+        required_standing=12,
+        required_heat_max=5,
+        required_license=None,
+        description="Serious working capital backed by commercial reputation. "
+                    "Fund larger cargo positions or infrastructure investments.",
+    ),
+    CreditTier.PREMIER_COMMERCIAL: CreditTierSpec(
+        tier=CreditTier.PREMIER_COMMERCIAL,
+        name="Premier Commercial Line",
+        credit_limit=2000,
+        interest_rate=0.04,            # 4% per period (best rate)
+        interest_period=10,
+        required_trust_tier="trusted",
+        required_standing=20,
+        required_heat_max=3,
+        required_license="high_rep_charter",  # must have elite charter
+        description="Top-tier leverage for established operators. "
+                    "Fund entire trade campaigns. Best rate, but default destroys reputation.",
+    ),
+}
+
+
+def get_credit_spec(tier: CreditTier) -> CreditTierSpec | None:
+    """Get the spec for a credit tier."""
+    return CREDIT_TIERS.get(tier)
+
+
+def available_credit_tiers() -> list[CreditTierSpec]:
+    """Get all credit tier specs, ordered by limit."""
+    return sorted(CREDIT_TIERS.values(), key=lambda s: s.credit_limit)

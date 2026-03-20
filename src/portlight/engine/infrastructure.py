@@ -167,6 +167,7 @@ class InfrastructureState:
     licenses: list[OwnedLicense] = field(default_factory=list)
     policies: list["ActivePolicy"] = field(default_factory=list)
     claims: list["InsuranceClaim"] = field(default_factory=list)
+    credit: CreditState | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -964,3 +965,257 @@ def expire_voyage_policies(state: InfrastructureState) -> list[str]:
 def get_active_policies(state: InfrastructureState) -> list[ActivePolicy]:
     """Get all active insurance policies."""
     return [p for p in state.policies if p.active]
+
+
+# ---------------------------------------------------------------------------
+# Credit — borrowed commercial momentum
+# ---------------------------------------------------------------------------
+
+class CreditTier(str, Enum):
+    NONE = "none"
+    MERCHANT_LINE = "merchant_line"          # entry leverage
+    HOUSE_CREDIT = "house_credit"            # serious working capital
+    PREMIER_COMMERCIAL = "premier_commercial"  # top-tier leverage
+
+
+@dataclass
+class CreditTierSpec:
+    """Static definition of a credit tier."""
+    tier: CreditTier
+    name: str
+    credit_limit: int                  # max outstanding debt
+    interest_rate: float               # per-period rate (per 10 days)
+    interest_period: int               # days between interest accrual
+    required_trust_tier: str
+    required_standing: int             # min standing in any region
+    required_heat_max: int | None      # max heat allowed
+    required_license: str | None       # must own this license (or None)
+    description: str
+
+
+@dataclass
+class CreditState:
+    """Player's credit account state."""
+    tier: CreditTier = CreditTier.NONE
+    credit_limit: int = 0
+    outstanding: int = 0              # current debt
+    interest_accrued: int = 0         # interest owed
+    last_interest_day: int = 0        # last day interest was calculated
+    next_due_day: int = 0             # next payment deadline
+    defaults: int = 0                 # number of past defaults
+    total_borrowed: int = 0           # lifetime draw total
+    total_repaid: int = 0             # lifetime repayment total
+    active: bool = False
+
+
+def _ensure_credit(state: InfrastructureState) -> CreditState:
+    """Ensure credit state is initialized."""
+    if state.credit is None:
+        state.credit = CreditState()
+    return state.credit
+
+
+def check_credit_eligibility(
+    state: InfrastructureState,
+    spec: CreditTierSpec,
+    rep: "ReputationState",
+) -> str | None:
+    """Check if the player qualifies for a credit tier. Returns error or None."""
+    from portlight.engine.reputation import get_trust_tier
+
+    # Trust check
+    trust_tier = get_trust_tier(rep)
+    trust_rank = {"unproven": 0, "new": 1, "credible": 2, "reliable": 3, "trusted": 4}
+    player_trust = trust_rank.get(trust_tier, 0)
+    required_trust = trust_rank.get(spec.required_trust_tier, 0)
+    if player_trust < required_trust:
+        return f"Requires {spec.required_trust_tier} trust (currently {trust_tier})"
+
+    # Standing check (best region)
+    if spec.required_standing > 0:
+        best_standing = max(rep.regional_standing.values()) if rep.regional_standing else 0
+        if best_standing < spec.required_standing:
+            return f"Requires {spec.required_standing} standing in any region (best: {best_standing})"
+
+    # Heat check (lowest heat)
+    if spec.required_heat_max is not None:
+        lowest_heat = min(rep.customs_heat.values()) if rep.customs_heat else 0
+        if lowest_heat > spec.required_heat_max:
+            return f"Heat too high (lowest: {lowest_heat}, max: {spec.required_heat_max})"
+
+    # License check
+    if spec.required_license is not None:
+        if not has_license(state, spec.required_license):
+            return f"Requires license: {spec.required_license}"
+
+    # Default history penalty
+    credit = _ensure_credit(state)
+    if credit.defaults >= 3:
+        return "Too many past defaults — credit locked"
+    if credit.defaults >= 1 and spec.tier == CreditTier.PREMIER_COMMERCIAL:
+        return "Premier credit unavailable with default history"
+
+    return None
+
+
+def open_credit_line(
+    state: InfrastructureState,
+    spec: CreditTierSpec,
+    rep: "ReputationState",
+    day: int,
+) -> str | None:
+    """Open or upgrade a credit line. Returns error or None."""
+    err = check_credit_eligibility(state, spec, rep)
+    if err:
+        return err
+
+    credit = _ensure_credit(state)
+
+    # Can't downgrade
+    tier_rank = {CreditTier.NONE: 0, CreditTier.MERCHANT_LINE: 1,
+                 CreditTier.HOUSE_CREDIT: 2, CreditTier.PREMIER_COMMERCIAL: 3}
+    if tier_rank.get(credit.tier, 0) >= tier_rank.get(spec.tier, 0) and credit.active:
+        return f"Already have {credit.tier.value} or better"
+
+    credit.tier = spec.tier
+    credit.credit_limit = spec.credit_limit
+    credit.active = True
+    if credit.last_interest_day == 0:
+        credit.last_interest_day = day
+    if credit.next_due_day == 0:
+        credit.next_due_day = day + spec.interest_period
+
+    return None
+
+
+def draw_credit(
+    state: InfrastructureState,
+    captain: "Captain",
+    amount: int,
+) -> str | None:
+    """Borrow from credit line. Returns error or None."""
+    credit = _ensure_credit(state)
+    if not credit.active:
+        return "No credit line established"
+    if amount <= 0:
+        return "Amount must be positive"
+
+    available = credit.credit_limit - credit.outstanding
+    if amount > available:
+        return f"Only {available} silver available on credit line (limit {credit.credit_limit}, outstanding {credit.outstanding})"
+
+    credit.outstanding += amount
+    credit.total_borrowed += amount
+    captain.silver += amount
+    return None
+
+
+def repay_credit(
+    state: InfrastructureState,
+    captain: "Captain",
+    amount: int,
+) -> str | None:
+    """Repay credit debt. Returns error or None."""
+    credit = _ensure_credit(state)
+    if not credit.active:
+        return "No credit line"
+    if amount <= 0:
+        return "Amount must be positive"
+
+    # Pay interest first, then principal
+    total_owed = credit.outstanding + credit.interest_accrued
+    if total_owed == 0:
+        return "No outstanding debt"
+    amount = min(amount, total_owed)
+    if amount > captain.silver:
+        return f"Need {amount} silver to repay, have {captain.silver}"
+
+    captain.silver -= amount
+    credit.total_repaid += amount
+
+    # Apply to interest first
+    if credit.interest_accrued > 0:
+        interest_payment = min(amount, credit.interest_accrued)
+        credit.interest_accrued -= interest_payment
+        amount -= interest_payment
+
+    # Then to principal
+    if amount > 0:
+        credit.outstanding -= amount
+
+    return None
+
+
+def tick_credit(
+    state: InfrastructureState,
+    captain: "Captain",
+    day: int,
+) -> list[str]:
+    """Daily credit tick — accrue interest, check due dates, enforce defaults.
+
+    Returns status messages.
+    """
+    credit = _ensure_credit(state)
+    messages: list[str] = []
+
+    if not credit.active or credit.outstanding == 0:
+        return messages
+
+    # Interest accrual
+    from portlight.content.infrastructure import get_credit_spec
+    spec = get_credit_spec(credit.tier)
+    if spec is None:
+        return messages
+
+    days_since = day - credit.last_interest_day
+    if days_since >= spec.interest_period:
+        periods = days_since // spec.interest_period
+        interest = int(credit.outstanding * spec.interest_rate * periods)
+        credit.interest_accrued += interest
+        credit.last_interest_day = day
+        if interest > 0:
+            messages.append(f"Interest accrued: {interest} silver on {credit.outstanding} debt")
+
+    # Due date enforcement — check against the due day set at open/last payment
+    total_owed = credit.outstanding + credit.interest_accrued
+    if day >= credit.next_due_day and credit.next_due_day > 0 and total_owed > 0:
+        # Minimum payment = interest + 10% of principal
+        min_payment = credit.interest_accrued + max(1, credit.outstanding // 10)
+
+        if captain.silver >= min_payment:
+            # Auto-pay minimum
+            captain.silver -= min_payment
+            credit.total_repaid += min_payment
+            # Apply to interest first
+            interest_part = min(min_payment, credit.interest_accrued)
+            credit.interest_accrued -= interest_part
+            remaining = min_payment - interest_part
+            credit.outstanding -= remaining
+            credit.next_due_day = day + spec.interest_period
+            messages.append(f"Credit payment due: {min_payment} silver auto-deducted")
+        else:
+            # Default!
+            credit.defaults += 1
+            messages.append(
+                f"CREDIT DEFAULT! Cannot pay {min_payment} silver. "
+                f"Default #{credit.defaults} recorded — trust damage applied."
+            )
+            # Deduct whatever is available
+            if captain.silver > 0:
+                partial = captain.silver
+                captain.silver = 0
+                credit.total_repaid += partial
+                if credit.interest_accrued > 0:
+                    interest_part = min(partial, credit.interest_accrued)
+                    credit.interest_accrued -= interest_part
+                    partial -= interest_part
+                credit.outstanding -= partial
+
+            credit.next_due_day = day + spec.interest_period
+
+            # After 3 defaults, line is frozen
+            if credit.defaults >= 3:
+                credit.active = False
+                messages.append("Credit line frozen after 3 defaults.")
+
+    return messages

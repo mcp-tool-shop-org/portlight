@@ -37,12 +37,16 @@ from portlight.engine.infrastructure import (
     InfrastructureState,
     compute_board_effects,
     deposit_cargo,
+    draw_credit,
     expire_voyage_policies,
     lease_warehouse,
     open_broker_office,
+    open_credit_line,
     purchase_license,
     purchase_policy,
+    repay_credit,
     resolve_claim,
+    tick_credit,
     tick_infrastructure,
     withdraw_cargo,
 )
@@ -266,6 +270,15 @@ class GameSession:
 
         # Daily infrastructure upkeep
         tick_infrastructure(self.infra, self.world.captain, self.world.day)
+
+        # Daily credit tick (interest, due dates, defaults)
+        credit_msgs = tick_credit(self.infra, self.world.captain, self.world.day)
+        # Credit default damages trust
+        for msg in credit_msgs:
+            if "DEFAULT" in msg:
+                self.world.captain.standing.commercial_trust = max(
+                    0, self.world.captain.standing.commercial_trust - 15,
+                )
 
         if not self.at_sea:
             # In port: tick markets forward
@@ -621,3 +634,37 @@ class GameSession:
 
         # Silver loss from fines/fees (not insurable for hull/cargo,
         # but inspection silver loss is effectively a fine — not covered separately)
+
+    # --- Credit ---
+
+    def open_credit_cmd(self, spec) -> str | None:
+        """Open or upgrade a credit line. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        result = open_credit_line(
+            self.infra, spec, self.world.captain.standing, self.world.day,
+        )
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None
+
+    def draw_credit_cmd(self, amount: int) -> str | None:
+        """Borrow from credit line. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        result = draw_credit(self.infra, self.world.captain, amount)
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None
+
+    def repay_credit_cmd(self, amount: int) -> str | None:
+        """Repay credit debt. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        result = repay_credit(self.infra, self.world.captain, amount)
+        if isinstance(result, str):
+            return result
+        self._save()
+        return None

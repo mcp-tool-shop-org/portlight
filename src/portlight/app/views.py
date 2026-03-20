@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from rich.columns import Columns
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
@@ -28,9 +27,9 @@ from portlight.content.ships import SHIPS
 
 if TYPE_CHECKING:
     from portlight.engine.captain_identity import CaptainTemplate
-    from portlight.engine.contracts import ActiveContract, ContractBoard, ContractOffer
-    from portlight.engine.infrastructure import InfrastructureState, WarehouseLease
-    from portlight.engine.models import Captain, Port, ReputationState, Route, Ship, WorldState
+    from portlight.engine.contracts import ContractBoard
+    from portlight.engine.infrastructure import InfrastructureState
+    from portlight.engine.models import Captain, Port, ReputationState, Route, Ship, ShipTemplate, WorldState
     from portlight.receipts.models import ReceiptLedger
 
 
@@ -1038,3 +1037,84 @@ def insurance_view(infra: "InfrastructureState", heat: int = 0) -> Panel:
         parts.append(claims_table)
 
     return Panel(Group(*parts), title="[bold]Insurance[/bold]", border_style="green")
+
+
+# ---------------------------------------------------------------------------
+# Credit
+# ---------------------------------------------------------------------------
+
+def credit_view(infra: "InfrastructureState", rep: "ReputationState") -> Panel:
+    """Show credit line status and available tiers."""
+    from portlight.engine.infrastructure import _ensure_credit
+    from portlight.content.infrastructure import CREDIT_TIERS, get_credit_spec
+    from portlight.engine.infrastructure import check_credit_eligibility
+
+    credit = _ensure_credit(infra)
+    parts = []
+
+    if credit.active:
+        spec = get_credit_spec(credit.tier)
+        tier_name = spec.name if spec else credit.tier.value
+
+        status_table = Table(show_header=False, expand=True, box=None)
+        status_table.add_column("Label", style="bold")
+        status_table.add_column("Value")
+
+        available = credit.credit_limit - credit.outstanding
+        total_owed = credit.outstanding + credit.interest_accrued
+
+        status_table.add_row("Credit Line", f"[cyan]{tier_name}[/cyan]")
+        status_table.add_row("Limit", fmt.silver(credit.credit_limit))
+        status_table.add_row("Available", f"[green]{fmt.silver(available)}[/green]")
+        status_table.add_row("Outstanding", fmt.silver(credit.outstanding) if credit.outstanding > 0 else "[dim]0[/dim]")
+        if credit.interest_accrued > 0:
+            status_table.add_row("Interest Owed", f"[yellow]{fmt.silver(credit.interest_accrued)}[/yellow]")
+        status_table.add_row("Total Owed", f"[bold]{fmt.silver(total_owed)}[/bold]" if total_owed > 0 else "[dim]0[/dim]")
+        if credit.next_due_day > 0 and total_owed > 0:
+            status_table.add_row("Next Due", f"Day {credit.next_due_day}")
+        if spec:
+            status_table.add_row("Interest Rate", f"{int(spec.interest_rate * 100)}% per {spec.interest_period} days")
+        if credit.defaults > 0:
+            status_table.add_row("Defaults", f"[red]{credit.defaults}[/red]")
+        status_table.add_row("Lifetime Borrowed", fmt.silver(credit.total_borrowed))
+        status_table.add_row("Lifetime Repaid", fmt.silver(credit.total_repaid))
+
+        parts.append(status_table)
+    else:
+        if credit.defaults >= 3:
+            parts.append(Text("[red]Credit line frozen — too many defaults.[/red]\n"))
+        else:
+            parts.append(Text("[dim]No credit line established.[/dim]\n"))
+
+    # Available tiers
+    tier_table = Table(show_header=True, header_style="bold", expand=True)
+    tier_table.add_column("Tier")
+    tier_table.add_column("Limit")
+    tier_table.add_column("Rate")
+    tier_table.add_column("Status")
+    tier_table.add_column("Description")
+
+    for spec in sorted(CREDIT_TIERS.values(), key=lambda s: s.credit_limit):
+        is_current = credit.active and credit.tier == spec.tier
+        if is_current:
+            status = "[bold green]ACTIVE[/bold green]"
+        else:
+            err = check_credit_eligibility(infra, spec, rep)
+            if err:
+                status = f"[red]{err}[/red]"
+            else:
+                status = "[yellow]Available[/yellow]"
+
+        rate_str = f"{int(spec.interest_rate * 100)}% / {spec.interest_period}d"
+        tier_table.add_row(
+            f"[cyan]{spec.name}[/cyan]",
+            fmt.silver(spec.credit_limit),
+            rate_str,
+            status,
+            spec.description[:60] + "..." if len(spec.description) > 60 else spec.description,
+        )
+
+    parts.append(Text("\n"))
+    parts.append(tier_table)
+
+    return Panel(Group(*parts), title="[bold]Credit[/bold]", border_style="yellow")

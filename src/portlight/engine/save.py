@@ -14,7 +14,6 @@ from pathlib import Path
 from portlight.engine.models import (
     Captain,
     CargoItem,
-    GoodCategory,
     MarketSlot,
     Port,
     PortFeature,
@@ -38,6 +37,8 @@ from portlight.engine.infrastructure import (
     ActivePolicy,
     BrokerOffice,
     BrokerTier,
+    CreditState,
+    CreditTier,
     InfrastructureState,
     InsuranceClaim,
     OwnedLicense,
@@ -525,23 +526,58 @@ def _claim_from_dict(d: dict) -> InsuranceClaim:
     return InsuranceClaim(**d)
 
 
-def _infra_to_dict(state: InfrastructureState) -> dict:
+def _credit_to_dict(c: CreditState) -> dict:
     return {
+        "tier": c.tier.value,
+        "credit_limit": c.credit_limit,
+        "outstanding": c.outstanding,
+        "interest_accrued": c.interest_accrued,
+        "last_interest_day": c.last_interest_day,
+        "next_due_day": c.next_due_day,
+        "defaults": c.defaults,
+        "total_borrowed": c.total_borrowed,
+        "total_repaid": c.total_repaid,
+        "active": c.active,
+    }
+
+
+def _credit_from_dict(d: dict) -> CreditState:
+    return CreditState(
+        tier=CreditTier(d.get("tier", "none")),
+        credit_limit=d.get("credit_limit", 0),
+        outstanding=d.get("outstanding", 0),
+        interest_accrued=d.get("interest_accrued", 0),
+        last_interest_day=d.get("last_interest_day", 0),
+        next_due_day=d.get("next_due_day", 0),
+        defaults=d.get("defaults", 0),
+        total_borrowed=d.get("total_borrowed", 0),
+        total_repaid=d.get("total_repaid", 0),
+        active=d.get("active", False),
+    )
+
+
+def _infra_to_dict(state: InfrastructureState) -> dict:
+    d = {
         "warehouses": [_warehouse_to_dict(w) for w in state.warehouses],
         "brokers": [_broker_to_dict(b) for b in state.brokers],
         "licenses": [_license_to_dict(lic) for lic in state.licenses],
         "policies": [_policy_to_dict(p) for p in state.policies],
         "claims": [_claim_to_dict(c) for c in state.claims],
     }
+    if state.credit is not None:
+        d["credit"] = _credit_to_dict(state.credit)
+    return d
 
 
 def _infra_from_dict(d: dict) -> InfrastructureState:
+    credit = _credit_from_dict(d["credit"]) if d.get("credit") else None
     return InfrastructureState(
         warehouses=[_warehouse_from_dict(w) for w in d.get("warehouses", [])],
         brokers=[_broker_from_dict(b) for b in d.get("brokers", [])],
         licenses=[_license_from_dict(lic) for lic in d.get("licenses", [])],
         policies=[_policy_from_dict(p) for p in d.get("policies", [])],
         claims=[_claim_from_dict(c) for c in d.get("claims", [])],
+        credit=credit,
     )
 
 
