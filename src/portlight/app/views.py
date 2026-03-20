@@ -1251,7 +1251,8 @@ def milestones_view(
 
         # Completion summary
         if path.is_complete and path.completion_summary:
-            parts.append(Text(f"    [green italic]{path.completion_summary}[/green italic]"))
+            day_text = f" (day {path.completion_day})" if path.completion_day > 0 else ""
+            parts.append(Text(f"    [green italic]{path.completion_summary}[/green italic]{day_text}"))
 
         # Show met requirements briefly
         met = path.requirements_met

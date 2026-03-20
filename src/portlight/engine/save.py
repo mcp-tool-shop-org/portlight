@@ -598,15 +598,36 @@ def _milestone_from_dict(d: dict) -> MilestoneCompletion:
     )
 
 
+def _victory_completion_to_dict(vc: "VictoryCompletion") -> dict:
+    return {
+        "path_id": vc.path_id,
+        "completion_day": vc.completion_day,
+        "summary": vc.summary,
+        "is_first": vc.is_first,
+    }
+
+
+def _victory_completion_from_dict(d: dict) -> "VictoryCompletion":
+    from portlight.engine.campaign import VictoryCompletion
+    return VictoryCompletion(
+        path_id=d["path_id"],
+        completion_day=d.get("completion_day", 0),
+        summary=d.get("summary", ""),
+        is_first=d.get("is_first", False),
+    )
+
+
 def _campaign_to_dict(state: CampaignState) -> dict:
     return {
         "completed": [_milestone_to_dict(m) for m in state.completed],
+        "completed_paths": [_victory_completion_to_dict(vc) for vc in state.completed_paths],
     }
 
 
 def _campaign_from_dict(d: dict) -> CampaignState:
     return CampaignState(
         completed=[_milestone_from_dict(m) for m in d.get("completed", [])],
+        completed_paths=[_victory_completion_from_dict(vc) for vc in d.get("completed_paths", [])],
     )
 
 

@@ -74,9 +74,19 @@ class MilestoneCompletion:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class VictoryCompletion:
+    """Record of a completed victory path."""
+    path_id: str
+    completion_day: int
+    summary: str
+    is_first: bool = False  # first path completed in this run
+
+
+@dataclass
 class CampaignState:
     """All campaign progress. Persisted in save file."""
     completed: list[MilestoneCompletion] = field(default_factory=list)
+    completed_paths: list[VictoryCompletion] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -1219,13 +1229,65 @@ def compute_victory_progress(snap: SessionSnapshot) -> list[VictoryPathStatus]:
     """Evaluate all victory paths with diagnostics: met/missing/blocked,
     candidate strength, and actionable missing-requirement text.
 
+    If a path was previously completed (in campaign state), its completion_day
+    and completion_summary are restored from the record.
+
     Returns paths sorted by candidate_strength descending.
     """
+    from portlight.content.campaign import COMPLETION_SUMMARIES
+
     paths = [
         _evaluate_lawful_trade_house(snap),
         _evaluate_shadow_network(snap),
         _evaluate_oceanic_reach(snap),
         _evaluate_commercial_empire(snap),
     ]
+
+    # Attach completion records from campaign state
+    completed_map = {vc.path_id: vc for vc in snap.campaign.completed_paths}
+    for path in paths:
+        vc = completed_map.get(path.path_id)
+        if vc:
+            path.completion_day = vc.completion_day
+            path.completion_summary = vc.summary
+
+        # For newly-complete paths not yet recorded, attach summary from content
+        if path.is_complete and not path.completion_summary:
+            path.completion_summary = COMPLETION_SUMMARIES.get(path.path_id, "")
+
     paths.sort(key=lambda p: p.candidate_strength, reverse=True)
     return paths
+
+
+def evaluate_victory_closure(snap: SessionSnapshot) -> list[VictoryCompletion]:
+    """Check if any victory path just completed. Returns newly completed paths.
+
+    Only returns paths not already in snap.campaign.completed_paths.
+    """
+    from portlight.content.campaign import COMPLETION_SUMMARIES
+
+    already = {vc.path_id for vc in snap.campaign.completed_paths}
+    is_first = len(already) == 0
+    newly: list[VictoryCompletion] = []
+
+    paths = [
+        _evaluate_lawful_trade_house(snap),
+        _evaluate_shadow_network(snap),
+        _evaluate_oceanic_reach(snap),
+        _evaluate_commercial_empire(snap),
+    ]
+
+    for path in paths:
+        if path.path_id in already:
+            continue
+        if path.is_complete:
+            summary = COMPLETION_SUMMARIES.get(path.path_id, "")
+            vc = VictoryCompletion(
+                path_id=path.path_id,
+                completion_day=snap.world.day,
+                summary=summary,
+                is_first=is_first and len(newly) == 0,
+            )
+            newly.append(vc)
+
+    return newly

@@ -656,12 +656,19 @@ class GameSession:
         )
 
     def _evaluate_campaign(self) -> list:
-        """Evaluate milestones against current state. Returns newly completed."""
+        """Evaluate milestones and victory closure. Returns newly completed milestones."""
         from portlight.content.campaign import MILESTONE_SPECS
+        from portlight.engine.campaign import evaluate_victory_closure
         snap = self._build_snapshot()
         newly = evaluate_milestones(MILESTONE_SPECS, snap)
         if newly:
             self.campaign.completed.extend(newly)
+            # Re-snapshot after milestone updates for victory evaluation
+            snap = self._build_snapshot()
+        # Check for victory path completion
+        victory_newly = evaluate_victory_closure(snap)
+        if victory_newly:
+            self.campaign.completed_paths.extend(victory_newly)
         return newly
 
     # --- Credit ---

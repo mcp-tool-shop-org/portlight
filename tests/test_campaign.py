@@ -23,11 +23,13 @@ from portlight.engine.campaign import (
     ProfileConfidence,
     ProfileScore,
     SessionSnapshot,
+    VictoryCompletion,
     VictoryPathProgress,
     compute_career_profile,
     compute_career_profile_legacy,
     compute_victory_progress,
     evaluate_milestones,
+    evaluate_victory_closure,
 )
 from portlight.content.campaign import MILESTONE_SPECS, MILESTONE_BY_ID
 from portlight.engine.models import (
@@ -1126,3 +1128,159 @@ class TestCareerProfileTruth:
         assert isinstance(legacy, list)
         assert all(isinstance(p, ProfileScore) for p in legacy)
         assert len(legacy) == 7
+
+
+# ---------------------------------------------------------------------------
+# 3D-4C-2 — Victory closure and completion summaries
+# ---------------------------------------------------------------------------
+
+class TestVictoryClosure:
+    """Victory path completion: summaries, closure tracking, first-path logic."""
+
+    def _lawful_complete_snap(self) -> SessionSnapshot:
+        """Build a snapshot where lawful trade house is complete."""
+        world = _base_world()
+        world.captain.standing.commercial_trust = 40
+        world.captain.standing.regional_standing = {"Mediterranean": 20, "West Africa": 15, "East Indies": 5}
+        world.captain.standing.customs_heat = {"Mediterranean": 2, "West Africa": 3, "East Indies": 1}
+        world.captain.silver = 3000
+        world.day = 50
+        infra = InfrastructureState(
+            licenses=[
+                OwnedLicense(license_id="high_rep_charter", purchased_day=5, active=True),
+                OwnedLicense(license_id="med_trade_charter", purchased_day=3, active=True),
+            ],
+        )
+        board = ContractBoard(
+            completed=[
+                ContractOutcome(
+                    contract_id=f"c{i}", outcome_type="completed",
+                    silver_delta=100, trust_delta=1, standing_delta=1,
+                    heat_delta=0, completion_day=i + 1, summary="Delivered grain",
+                )
+                for i in range(8)
+            ],
+        )
+        return _base_snap(world=world, infra=infra, board=board)
+
+    def test_closure_detects_newly_completed(self):
+        """evaluate_victory_closure returns VictoryCompletion for newly complete paths."""
+        snap = self._lawful_complete_snap()
+        newly = evaluate_victory_closure(snap)
+        assert len(newly) >= 1
+        lawful = next((vc for vc in newly if vc.path_id == "lawful_house"), None)
+        assert lawful is not None
+        assert lawful.completion_day == snap.world.day
+
+    def test_closure_has_summary(self):
+        """Completed paths should have a non-empty summary."""
+        snap = self._lawful_complete_snap()
+        newly = evaluate_victory_closure(snap)
+        lawful = next(vc for vc in newly if vc.path_id == "lawful_house")
+        assert len(lawful.summary) > 20
+        assert "trust" in lawful.summary.lower() or "charters" in lawful.summary.lower()
+
+    def test_first_path_flagged(self):
+        """First completed path should have is_first=True."""
+        snap = self._lawful_complete_snap()
+        newly = evaluate_victory_closure(snap)
+        lawful = next(vc for vc in newly if vc.path_id == "lawful_house")
+        assert lawful.is_first is True
+
+    def test_second_path_not_first(self):
+        """A path completed after another should have is_first=False."""
+        snap = self._lawful_complete_snap()
+        # Pre-record lawful as already completed
+        snap.campaign.completed_paths.append(VictoryCompletion(
+            path_id="lawful_house", completion_day=40, summary="Already done", is_first=True,
+        ))
+        # Now check for any new completions — lawful should not re-fire
+        newly = evaluate_victory_closure(snap)
+        for vc in newly:
+            assert vc.path_id != "lawful_house"
+            assert vc.is_first is False
+
+    def test_no_refire_completed_path(self):
+        """Already-completed paths should not fire again."""
+        snap = self._lawful_complete_snap()
+        snap.campaign.completed_paths.append(VictoryCompletion(
+            path_id="lawful_house", completion_day=40, summary="Done", is_first=True,
+        ))
+        newly = evaluate_victory_closure(snap)
+        assert all(vc.path_id != "lawful_house" for vc in newly)
+
+    def test_empty_run_no_closures(self):
+        """Empty run should produce no closures."""
+        snap = _base_snap()
+        newly = evaluate_victory_closure(snap)
+        assert len(newly) == 0
+
+    def test_completion_summary_per_path(self):
+        """Each of the 4 paths should have a distinct summary in content."""
+        from portlight.content.campaign import COMPLETION_SUMMARIES
+        assert len(COMPLETION_SUMMARIES) == 4
+        for path_id in ("lawful_house", "shadow_network", "oceanic_reach", "commercial_empire"):
+            assert path_id in COMPLETION_SUMMARIES
+            assert len(COMPLETION_SUMMARIES[path_id]) > 20
+
+    def test_victory_progress_attaches_summary(self):
+        """compute_victory_progress should attach summaries from completed paths."""
+        snap = self._lawful_complete_snap()
+        snap.campaign.completed_paths.append(VictoryCompletion(
+            path_id="lawful_house", completion_day=40, summary="Custom summary", is_first=True,
+        ))
+        paths = compute_victory_progress(snap)
+        lawful = next(p for p in paths if p.path_id == "lawful_house")
+        assert lawful.completion_summary == "Custom summary"
+        assert lawful.completion_day == 40
+
+    def test_completed_paths_save_load(self, tmp_path):
+        """completed_paths should survive save/load round-trip."""
+        from portlight.engine.save import save_game, load_game
+        from portlight.content.world import new_game
+        from portlight.engine.captain_identity import CaptainType
+
+        world = new_game("Trader", captain_type=CaptainType.MERCHANT)
+        ledger = ReceiptLedger(run_id="test-run")
+        board = ContractBoard()
+        infra = InfrastructureState()
+        campaign = CampaignState(
+            completed=[
+                MilestoneCompletion(milestone_id="foothold_first_warehouse", completed_day=5, evidence="Warehouse"),
+            ],
+            completed_paths=[
+                VictoryCompletion(path_id="lawful_house", completion_day=40, summary="A lawful house.", is_first=True),
+            ],
+        )
+
+        save_game(world, ledger, board, infra, campaign, tmp_path)
+        result = load_game(tmp_path)
+        assert result is not None
+        _, _, _, _, loaded = result
+        assert len(loaded.completed_paths) == 1
+        assert loaded.completed_paths[0].path_id == "lawful_house"
+        assert loaded.completed_paths[0].completion_day == 40
+        assert loaded.completed_paths[0].summary == "A lawful house."
+        assert loaded.completed_paths[0].is_first is True
+
+    def test_backward_compat_no_completed_paths(self, tmp_path):
+        """Old saves without completed_paths should load with empty list."""
+        import json
+        from portlight.engine.save import SAVE_DIR, SAVE_FILE, world_to_dict, load_game
+        from portlight.content.world import new_game
+        from portlight.engine.captain_identity import CaptainType
+
+        world = new_game("Trader", captain_type=CaptainType.MERCHANT)
+        data = world_to_dict(world)
+        # Simulate old save: campaign with completed but no completed_paths
+        data["campaign"] = {"completed": []}
+
+        save_dir = tmp_path / SAVE_DIR
+        save_dir.mkdir()
+        save_path = save_dir / SAVE_FILE
+        save_path.write_text(json.dumps(data), encoding="utf-8")
+
+        result = load_game(tmp_path)
+        assert result is not None
+        _, _, _, _, campaign = result
+        assert len(campaign.completed_paths) == 0
