@@ -1,0 +1,97 @@
+{
+  "total_scenarios": 9,
+  "total_failures": 0,
+  "failure_by_subsystem": {},
+  "scenarios": [
+    {
+      "scenario_id": "debt_spiral",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 42,
+      "final_silver": 0,
+      "final_ship_class": "coastal_sloop",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "warehouse_neglect",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 31,
+      "final_silver": 0,
+      "final_ship_class": "coastal_sloop",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "insured_luxury_loss",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 35,
+      "final_silver": 0,
+      "final_ship_class": "coastal_sloop",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "contract_expiry_under_pressure",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 32,
+      "final_silver": 0,
+      "final_ship_class": "coastal_sloop",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "heat_license_conflict",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 54,
+      "final_silver": 21738,
+      "final_ship_class": "coastal_sloop",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "legitimization_pivot",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 76,
+      "final_silver": 1,
+      "final_ship_class": "coastal_sloop",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "oceanic_overextension",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 77,
+      "final_silver": 0,
+      "final_ship_class": "coastal_sloop",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "victory_then_stress",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 96,
+      "final_silver": 15920,
+      "final_ship_class": "merchant_galleon",
+      "notes": "",
+      "violations": []
+    },
+    {
+      "scenario_id": "save_load_mid_crisis",
+      "passed": true,
+      "invariant_failures": 0,
+      "days_survived": 48,
+      "final_silver": 17667,
+      "final_ship_class": "merchant_galleon",
+      "notes": "",
+      "violations": []
+    }
+  ]
+}

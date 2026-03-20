@@ -1,0 +1,328 @@
+{
+  "scenario_id": "mixed_volatility",
+  "total_runs": 105,
+  "captain_aggregates": [
+    {
+      "captain_type": "merchant",
+      "run_count": 35,
+      "median_brigantine_day": 20,
+      "median_galleon_day": 28.0,
+      "median_net_worth_20": 12395.971428571429,
+      "median_net_worth_40": 12395.971428571429,
+      "median_net_worth_60": 12376.114285714286,
+      "mean_inspections": 1.9714285714285715,
+      "mean_seizures": 0,
+      "mean_defaults": 0.17142857142857143,
+      "mean_contracts_completed": 0,
+      "mean_contracts_failed": 9.028571428571428,
+      "avg_heat_med": 5.3428571428571425,
+      "avg_heat_wa": 0.34285714285714286,
+      "avg_heat_ei": 0.11428571428571428,
+      "strongest_path_freq": {
+        "shadow_network": 9,
+        "lawful_house": 25,
+        "oceanic_reach": 1
+      },
+      "completed_path_freq": {},
+      "median_first_warehouse": 2,
+      "median_first_broker": 2,
+      "median_first_license": -1,
+      "insurance_adoption_rate": 0.0,
+      "credit_adoption_rate": 0.14285714285714285
+    },
+    {
+      "captain_type": "navigator",
+      "run_count": 35,
+      "median_brigantine_day": 11,
+      "median_galleon_day": 40.0,
+      "median_net_worth_20": 8961.628571428571,
+      "median_net_worth_40": 8961.628571428571,
+      "median_net_worth_60": 8961.628571428571,
+      "mean_inspections": 1.9428571428571428,
+      "mean_seizures": 0,
+      "mean_defaults": 0,
+      "mean_contracts_completed": 0.02857142857142857,
+      "mean_contracts_failed": 9.028571428571428,
+      "avg_heat_med": 4.285714285714286,
+      "avg_heat_wa": 0.37142857142857144,
+      "avg_heat_ei": 0.0,
+      "strongest_path_freq": {
+        "lawful_house": 19,
+        "oceanic_reach": 10,
+        "shadow_network": 6
+      },
+      "completed_path_freq": {},
+      "median_first_warehouse": 2,
+      "median_first_broker": 2,
+      "median_first_license": -1,
+      "insurance_adoption_rate": 0.0,
+      "credit_adoption_rate": 0.0
+    },
+    {
+      "captain_type": "smuggler",
+      "run_count": 35,
+      "median_brigantine_day": -1,
+      "median_galleon_day": -1,
+      "median_net_worth_20": 13985.342857142858,
+      "median_net_worth_40": 13985.342857142858,
+      "median_net_worth_60": 13985.342857142858,
+      "mean_inspections": 3.257142857142857,
+      "mean_seizures": 0.37142857142857144,
+      "mean_defaults": 0,
+      "mean_contracts_completed": 0,
+      "mean_contracts_failed": 8.485714285714286,
+      "avg_heat_med": 4.0,
+      "avg_heat_wa": 8.4,
+      "avg_heat_ei": 4.0,
+      "strongest_path_freq": {
+        "lawful_house": 21,
+        "shadow_network": 14
+      },
+      "completed_path_freq": {},
+      "median_first_warehouse": 2,
+      "median_first_broker": 2,
+      "median_first_license": -1,
+      "insurance_adoption_rate": 0.0,
+      "credit_adoption_rate": 0.0
+    }
+  ],
+  "route_aggregates": [
+    {
+      "route_key": "silva_bay->porto_novo",
+      "total_uses": 432,
+      "total_profit": 711156,
+      "avg_profit_per_use": 1646.1944444444443,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 272,
+        "navigator": 160
+      }
+    },
+    {
+      "route_key": "porto_novo->silva_bay",
+      "total_uses": 420,
+      "total_profit": 405697,
+      "avg_profit_per_use": 965.9452380952381,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 241,
+        "navigator": 179
+      }
+    },
+    {
+      "route_key": "sun_harbor->iron_point",
+      "total_uses": 105,
+      "total_profit": 135939,
+      "avg_profit_per_use": 1294.6571428571428,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "smuggler": 105
+      }
+    },
+    {
+      "route_key": "iron_point->sun_harbor",
+      "total_uses": 101,
+      "total_profit": 290293,
+      "avg_profit_per_use": 2874.1881188118814,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 1,
+        "smuggler": 100
+      }
+    },
+    {
+      "route_key": "palm_cove->iron_point",
+      "total_uses": 71,
+      "total_profit": 51723,
+      "avg_profit_per_use": 728.4929577464789,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 1,
+        "smuggler": 70
+      }
+    },
+    {
+      "route_key": "sun_harbor->palm_cove",
+      "total_uses": 67,
+      "total_profit": 56866,
+      "avg_profit_per_use": 848.7462686567164,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 1,
+        "smuggler": 66
+      }
+    },
+    {
+      "route_key": "iron_point->palm_cove",
+      "total_uses": 53,
+      "total_profit": 41120,
+      "avg_profit_per_use": 775.8490566037735,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "smuggler": 53
+      }
+    },
+    {
+      "route_key": "palm_cove->sun_harbor",
+      "total_uses": 43,
+      "total_profit": 114549,
+      "avg_profit_per_use": 2663.9302325581393,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "smuggler": 43
+      }
+    },
+    {
+      "route_key": "al_manar->porto_novo",
+      "total_uses": 23,
+      "total_profit": 54281,
+      "avg_profit_per_use": 2360.0434782608695,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 5,
+        "navigator": 18
+      }
+    },
+    {
+      "route_key": "al_manar->silva_bay",
+      "total_uses": 22,
+      "total_profit": 26952,
+      "avg_profit_per_use": 1225.090909090909,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 15,
+        "navigator": 7
+      }
+    },
+    {
+      "route_key": "porto_novo->al_manar",
+      "total_uses": 18,
+      "total_profit": 50934,
+      "avg_profit_per_use": 2829.6666666666665,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "navigator": 18
+      }
+    },
+    {
+      "route_key": "silva_bay->al_manar",
+      "total_uses": 15,
+      "total_profit": 41347,
+      "avg_profit_per_use": 2756.4666666666667,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 15
+      }
+    },
+    {
+      "route_key": "silva_bay->palm_cove",
+      "total_uses": 10,
+      "total_profit": 1270,
+      "avg_profit_per_use": 127.0,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 5,
+        "navigator": 5
+      }
+    },
+    {
+      "route_key": "porto_novo->sun_harbor",
+      "total_uses": 8,
+      "total_profit": 33050,
+      "avg_profit_per_use": 4131.25,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 1,
+        "navigator": 7
+      }
+    },
+    {
+      "route_key": "sun_harbor->porto_novo",
+      "total_uses": 8,
+      "total_profit": 33872,
+      "avg_profit_per_use": 4234.0,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "navigator": 8
+      }
+    },
+    {
+      "route_key": "palm_cove->silva_bay",
+      "total_uses": 6,
+      "total_profit": 6691,
+      "avg_profit_per_use": 1115.1666666666667,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 2,
+        "navigator": 4
+      }
+    },
+    {
+      "route_key": "sun_harbor->al_manar",
+      "total_uses": 2,
+      "total_profit": 732,
+      "avg_profit_per_use": 366.0,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 1,
+        "navigator": 1
+      }
+    },
+    {
+      "route_key": "al_manar->monsoon_reach",
+      "total_uses": 2,
+      "total_profit": 7606,
+      "avg_profit_per_use": 3803.0,
+      "loss_rate": 0,
+      "captain_breakdown": {
+        "merchant": 2
+      }
+    }
+  ],
+  "victory_aggregates": [
+    {
+      "path_id": "lawful_trade_house",
+      "candidacy_count": 0,
+      "completion_count": 0,
+      "candidacy_rate": 0.0,
+      "completion_rate": 0.0,
+      "captain_skew": {},
+      "median_first_candidate_day": -1
+    },
+    {
+      "path_id": "shadow_network",
+      "candidacy_count": 29,
+      "completion_count": 0,
+      "candidacy_rate": 0.2761904761904762,
+      "completion_rate": 0.0,
+      "captain_skew": {
+        "merchant": 9,
+        "smuggler": 14,
+        "navigator": 6
+      },
+      "median_first_candidate_day": -1
+    },
+    {
+      "path_id": "oceanic_reach",
+      "candidacy_count": 11,
+      "completion_count": 0,
+      "candidacy_rate": 0.10476190476190476,
+      "completion_rate": 0.0,
+      "captain_skew": {
+        "merchant": 1,
+        "navigator": 10
+      },
+      "median_first_candidate_day": -1
+    },
+    {
+      "path_id": "commercial_empire",
+      "candidacy_count": 0,
+      "completion_count": 0,
+      "candidacy_rate": 0.0,
+      "completion_rate": 0.0,
+      "captain_skew": {},
+      "median_first_candidate_day": -1
+    }
+  ],
+  "notes": ""
+}

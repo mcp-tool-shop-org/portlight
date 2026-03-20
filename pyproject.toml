@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "portlight"
-version = "1.0.0"
-description = "Trade-first maritime strategy game with living port economy, ship progression, and verifiable trade receipts"
+version = "0.1.0-alpha"
+description = "Trade-first maritime strategy CLI — route arbitrage, contracts, infrastructure, finance, and commercial reputation across a living regional economy"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [{ name = "mcp-tool-shop", email = "64996768+mcp-tool-shop@users.noreply.github.com" }]
 keywords = ["game", "trading", "maritime", "strategy", "xrpl"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",

@@ -24,7 +24,7 @@ def _session() -> GameSession:
     """Load or fail with helpful message."""
     s = GameSession()
     if not s.load():
-        console.print("[red]No saved game found.[/red] Start one with: [bold]portlight new[/bold]")
+        console.print("[red]No saved game found.[/red] Start a new game with: [bold]portlight new YourName --type merchant[/bold]")
         raise typer.Exit(1)
     return s
 
@@ -46,9 +46,7 @@ def new(
     s = GameSession()
     s.new(name, captain_type=captain_type)
     console.print("\n[bold green]A new voyage begins.[/bold green]\n")
-    console.print(views.captain_view(s.captain, s.captain_template))
-    console.print(views.port_view(s.current_port, s.captain))
-    console.print(views.status_view(s.world, s.ledger))
+    console.print(views.welcome_view(s.captain, s.captain_template, s.world, s.infra))
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +83,7 @@ def reputation() -> None:
 def status() -> None:
     """Show captain status."""
     s = _session()
-    console.print(views.status_view(s.world, s.ledger))
+    console.print(views.status_view(s.world, s.ledger, s.infra))
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +282,7 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
             port = s.current_port
             console.print(f"\n[bold green]Arrived at {port.name}![/bold green]\n")
             console.print(views.port_view(port, s.captain))
-            console.print(views.status_view(s.world, s.ledger))
+            console.print(views.status_view(s.world, s.ledger, s.infra))
             break
 
         # Check if ship sank
@@ -322,7 +320,7 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
             console.print(f"[red]{err}[/red]")
         else:
             console.print("\n[bold green]Ship purchased![/bold green]\n")
-            console.print(views.status_view(s.world, s.ledger))
+            console.print(views.status_view(s.world, s.ledger, s.infra))
     else:
         console.print(views.shipyard_view(s.captain))
 
@@ -349,7 +347,7 @@ def contracts() -> None:
 def obligations() -> None:
     """Show active contract obligations."""
     s = _session()
-    console.print(views.obligations_view(s.board, s.world.day))
+    console.print(views.obligations_view(s.board, s.world.day, s.world))
 
 
 @app.command()
@@ -723,6 +721,68 @@ def milestones() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Guide - grouped command reference
+# ---------------------------------------------------------------------------
+
+@app.command()
+def guide() -> None:
+    """Show grouped command reference for all game actions."""
+    from rich.panel import Panel
+    lines: list[str] = []
+
+    lines.append("[bold]Trading[/bold]")
+    lines.append("  market          — view prices, stock, and what you can afford")
+    lines.append("  buy <good> <n>  — buy goods from port market")
+    lines.append("  sell <good> <n> — sell goods to port market")
+    lines.append("  cargo           — view cargo hold contents")
+    lines.append("")
+
+    lines.append("[bold]Navigation[/bold]")
+    lines.append("  routes          — list available routes from current port")
+    lines.append("  sail <dest>     — depart for a destination port")
+    lines.append("  advance [days]  — advance time (sail or wait)")
+    lines.append("  port            — view current port info")
+    lines.append("  provision [n]   — buy provisions")
+    lines.append("  repair [n]      — repair hull")
+    lines.append("  hire [n]        — hire crew")
+    lines.append("")
+
+    lines.append("[bold]Contracts[/bold]")
+    lines.append("  contracts       — view contract board offers")
+    lines.append("  accept <id>     — accept a contract offer")
+    lines.append("  obligations     — view active contract obligations")
+    lines.append("  abandon <id>    — abandon a contract (reputation cost)")
+    lines.append("")
+
+    lines.append("[bold]Infrastructure[/bold]")
+    lines.append("  warehouse [action] — manage warehouses (lease, deposit, withdraw)")
+    lines.append("  office [action]    — manage broker offices (open, upgrade)")
+    lines.append("  license [buy <id>] — view or purchase licenses")
+    lines.append("")
+
+    lines.append("[bold]Finance[/bold]")
+    lines.append("  insure [buy <id>]  — view or purchase insurance")
+    lines.append("  credit [action]    — manage credit (open, draw, repay)")
+    lines.append("")
+
+    lines.append("[bold]Career[/bold]")
+    lines.append("  captain         — view captain identity and advantages")
+    lines.append("  reputation      — view standing, heat, and trust")
+    lines.append("  milestones      — view career milestones and victory progress")
+    lines.append("  status          — view captain overview")
+    lines.append("  ledger          — view trade receipt history")
+    lines.append("  shipyard [buy]  — view or buy ships")
+    lines.append("")
+
+    lines.append("[bold]System[/bold]")
+    lines.append("  save            — explicitly save the game")
+    lines.append("  load            — load a saved game")
+    lines.append("  guide           — show this reference")
+
+    console.print(Panel("\n".join(lines), title="[bold]Portlight Command Guide[/bold]", border_style="blue"))
+
+
+# ---------------------------------------------------------------------------
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------
 
@@ -740,7 +800,7 @@ def load() -> None:
     s = GameSession()
     if s.load():
         console.print("[green]Game loaded.[/green]")
-        console.print(views.status_view(s.world, s.ledger))
+        console.print(views.status_view(s.world, s.ledger, s.infra))
     else:
         console.print("[red]No saved game found.[/red]")
 

@@ -14,3 +14,7 @@ venv/
 *.swo
 .DS_Store
 saves/
+site/.astro/
+site/dist/
+site/node_modules/
+.polyglot-cache.json

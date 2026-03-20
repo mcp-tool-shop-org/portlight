@@ -161,8 +161,8 @@ def reputation_view(standing: "ReputationState", captain: "Captain") -> Panel:
 # Status view - the captain's dashboard
 # ---------------------------------------------------------------------------
 
-def status_view(world: "WorldState", ledger: "ReceiptLedger") -> Panel:
-    """Captain overview: silver, ship, cargo, provisions, position, upgrade distance."""
+def status_view(world: "WorldState", ledger: "ReceiptLedger", infra: "InfrastructureState | None" = None) -> Panel:
+    """Captain overview: silver, ship, cargo, provisions, position, upgrade distance, upkeep."""
     captain = world.captain
     ship = captain.ship
 
@@ -199,7 +199,146 @@ def status_view(world: "WorldState", ledger: "ReceiptLedger") -> Panel:
     if ledger.receipts:
         lines.append(f"Net P&L: {fmt.silver_delta(ledger.net_profit)} ({len(ledger.receipts)} trades)")
 
+    # Daily upkeep burn (if infrastructure exists)
+    upkeep = _daily_upkeep(infra) if infra else 0
+    if upkeep > 0:
+        lines.append(f"Daily upkeep: [yellow]{upkeep}[/yellow] silver/day")
+
+    # Infrastructure summary
+    if infra:
+        parts: list[str] = []
+        active_wh = sum(1 for w in infra.warehouses if w.active)
+        active_br = sum(1 for b in infra.brokers if b.active and b.tier.value != "none")
+        active_lic = sum(1 for lic in infra.licenses if lic.active)
+        if active_wh:
+            parts.append(f"{active_wh} warehouse{'s' if active_wh > 1 else ''}")
+        if active_br:
+            parts.append(f"{active_br} broker{'s' if active_br > 1 else ''}")
+        if active_lic:
+            parts.append(f"{active_lic} license{'s' if active_lic > 1 else ''}")
+        if parts:
+            lines.append(f"Active: {', '.join(parts)}")
+
     return Panel("\n".join(lines), title="[bold]Captain Status[/bold]", border_style="blue")
+
+
+def _daily_upkeep(infra: "InfrastructureState") -> int:
+    """Compute total daily upkeep across all active infrastructure."""
+    from portlight.content.infrastructure import LICENSE_CATALOG
+    total = 0
+    for w in infra.warehouses:
+        if w.active:
+            total += w.upkeep_per_day
+    for b in infra.brokers:
+        if b.active and b.tier.value != "none":
+            from portlight.content.infrastructure import available_broker_tiers
+            specs = available_broker_tiers(b.region)
+            spec = next((s for s in specs if s.tier == b.tier), None)
+            if spec:
+                total += spec.upkeep_per_day
+    for lic in infra.licenses:
+        if lic.active:
+            spec = LICENSE_CATALOG.get(lic.license_id)
+            if spec:
+                total += spec.upkeep_per_day
+    if infra.credit and infra.credit.active:
+        # Interest is periodic not daily, but show effective daily rate
+        from portlight.content.infrastructure import available_credit_tiers
+        tiers = available_credit_tiers()
+        cred = infra.credit
+        if cred.outstanding > 0:
+            tier_spec = next((t for t in tiers if t.tier.value == cred.tier), None)
+            if tier_spec and tier_spec.interest_period > 0:
+                daily_interest = int(cred.outstanding * tier_spec.interest_rate / tier_spec.interest_period)
+                total += daily_interest
+    return total
+
+
+# ---------------------------------------------------------------------------
+# Welcome view - new game first screen
+# ---------------------------------------------------------------------------
+
+def welcome_view(
+    captain: "Captain",
+    template: "CaptainTemplate",
+    world: "WorldState",
+    infra: "InfrastructureState",
+) -> Panel:
+    """First-run welcome screen with captain identity and suggested first moves."""
+    lines: list[str] = []
+    lines.append(f"[bold]{captain.name}[/bold] — {template.title}")
+    lines.append(f"[italic]{template.description}[/italic]")
+    lines.append("")
+
+    # Current port highlights
+    port = None
+    if world.voyage:
+        from portlight.engine.models import VoyageStatus
+        if world.voyage.status == VoyageStatus.IN_PORT:
+            port = world.ports.get(world.voyage.destination_id)
+
+    if port:
+        cheap = []
+        expensive = []
+        for slot in port.market:
+            good = GOODS.get(slot.good_id)
+            if not good:
+                continue
+            ratio = slot.stock_current / max(slot.stock_target, 1)
+            if ratio > 1.3:
+                cheap.append(good.name)
+            elif ratio < 0.5:
+                expensive.append(good.name)
+        if cheap:
+            lines.append(f"Cheap at {port.name}: [green]{', '.join(cheap)}[/green]")
+        if expensive:
+            lines.append(f"Pricey at {port.name}: [red]{', '.join(expensive)}[/red]")
+        lines.append("")
+
+    # Suggested first moves
+    lines.append("[bold]Suggested first moves:[/bold]")
+    lines.append("  [cyan]market[/cyan]      — see what's cheap and what sells")
+    lines.append("  [cyan]buy grain 10[/cyan] — buy goods to trade at another port")
+    lines.append("  [cyan]routes[/cyan]       — see where you can sail")
+    lines.append("  [cyan]contracts[/cyan]    — pick up a delivery contract for bonus silver")
+    lines.append("")
+    lines.append("[dim]As you grow, unlock warehouses, broker offices, licenses, and more.[/dim]")
+
+    return Panel("\n".join(lines), title="[bold]Welcome to Portlight[/bold]", border_style="green")
+
+
+def hint_line(
+    world: "WorldState",
+    infra: "InfrastructureState",
+    board: "ContractBoard",
+) -> str | None:
+    """Return one contextual hint based on current game state, or None."""
+    captain = world.captain
+
+    # Low provisions warning
+    if captain.provisions < 5:
+        return "[yellow]Low provisions![/yellow] Buy more before sailing: [cyan]portlight provision 15[/cyan]"
+
+    # Ship upgrade close
+    ship = captain.ship
+    if ship:
+        next_ship = _next_upgrade(ship, captain.silver)
+        if next_ship:
+            gap = next_ship.price - captain.silver
+            if 0 < gap <= 200:
+                return f"[yellow]{gap} silver[/yellow] from upgrading to {next_ship.name}. A few good trades away."
+
+    # No warehouse yet and have done some trades
+    if not any(w.active for w in infra.warehouses):
+        cargo_used = sum(c.quantity for c in captain.cargo)
+        if ship and cargo_used > ship.cargo_capacity * 0.5:
+            return "Hold getting full? Lease a warehouse to stage cargo: [cyan]portlight warehouse lease depot[/cyan]"
+
+    # Available contracts
+    if board.offers and not board.active:
+        return "Contracts available at the board. Accept one for bonus silver: [cyan]portlight contracts[/cyan]"
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +399,7 @@ def market_view(port: "Port", captain: "Captain") -> Panel:
     table.add_column("You Hold", justify="right")
     table.add_column("Can Buy", justify="right")
 
+    has_flood = False
     for slot in port.market:
         good = GOODS.get(slot.good_id)
         if not good:
@@ -273,10 +413,12 @@ def market_view(port: "Port", captain: "Captain") -> Panel:
             space = ship.cargo_capacity - int(cargo_used)
             affordable = min(affordable, slot.stock_current, max(0, space))
 
-        # Show flood penalty as sell price warning
+        # Show flood penalty as sell price warning with percentage
         sell_str = str(slot.sell_price)
         if slot.flood_penalty > 0.1:
-            sell_str = f"[red]{slot.sell_price}[/red] (flooded)"
+            flood_pct = int(slot.flood_penalty * 100)
+            sell_str = f"[red]{slot.sell_price}[/red] (flooded: -{flood_pct}%)"
+            has_flood = True
         elif slot.flood_penalty > 0:
             sell_str = f"[yellow]{slot.sell_price}[/yellow]"
 
@@ -290,7 +432,11 @@ def market_view(port: "Port", captain: "Captain") -> Panel:
             str(affordable) if affordable > 0 else "[dim]-[/dim]",
         )
 
-    return Panel(table, border_style="green")
+    footer = ""
+    if has_flood:
+        footer = "\n[dim]Flooded goods sell for less. Trade elsewhere or wait for recovery.[/dim]"
+
+    return Panel(Group(table, Text.from_markup(footer) if footer else Text("")), border_style="green")
 
 
 # ---------------------------------------------------------------------------
@@ -620,12 +766,35 @@ def contracts_view(board: "ContractBoard", day: int) -> Panel:
                  title="[bold]Contract Board[/bold]", border_style="yellow")
 
 
+def _estimate_sail_days(world: "WorldState | None", dest_port_id: str) -> int | None:
+    """Estimate sail days from current position to destination, or None if unknown."""
+    if not world or not world.voyage:
+        return None
+    from portlight.engine.models import VoyageStatus
+    if world.voyage.status != VoyageStatus.IN_PORT:
+        return None  # already at sea, not useful
+    current_port_id = world.voyage.destination_id
+    if current_port_id == dest_port_id:
+        return 0  # already there
+    # Find route distance
+    speed = world.captain.ship.speed if world.captain.ship else 6
+    for route in world.routes:
+        if (route.port_a == current_port_id and route.port_b == dest_port_id) or \
+           (route.port_b == current_port_id and route.port_a == dest_port_id):
+            return max(1, round(route.distance / speed))
+    return None  # no direct route
+
+
 # ---------------------------------------------------------------------------
 # Obligations view - active contracts
 # ---------------------------------------------------------------------------
 
-def obligations_view(board: "ContractBoard", day: int) -> Panel:
-    """Active contract obligations: progress, deadlines, rewards."""
+def obligations_view(
+    board: "ContractBoard",
+    day: int,
+    world: "WorldState | None" = None,
+) -> Panel:
+    """Active contract obligations: progress, deadlines, rewards, sail-time context."""
     if not board.active:
         return Panel("[dim]No active contracts. Accept offers from the contract board.[/dim]",
                      title="[bold]Obligations[/bold]", border_style="magenta")
@@ -660,13 +829,21 @@ def obligations_view(board: "ContractBoard", day: int) -> Panel:
         if contract.source_port:
             source = f"from {contract.source_port}"
 
+        # Deadline with sail-time context
+        deadline_str = f"[{deadline_style}]{days_left}d left[/{deadline_style}]"
+        sail_days = _estimate_sail_days(world, contract.destination_port_id)
+        if sail_days is not None:
+            dest = world.ports.get(contract.destination_port_id) if world else None
+            dest_name = dest.name if dest else contract.destination_port_id
+            deadline_str += f" [dim](~{sail_days}d sail to {dest_name})[/dim]"
+
         table.add_row(
             contract.offer_id[:8],
             contract.title,
             good_name,
             bar,
             reward_str,
-            f"[{deadline_style}]{days_left}d[/{deadline_style}]",
+            deadline_str,
             source if source else "[dim]-[/dim]",
         )
 
