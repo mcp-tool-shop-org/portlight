@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import random
 
-import pytest
 
 from portlight.engine.weapon_quality import (
     MELEE_DEGRADE_USES,
-    QUALITY_EFFECTS,
     QUALITY_TIERS,
     UPGRADE_COST,
     assign_loot_quality,

@@ -379,6 +379,24 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
                     f"{pd.captain_name}'s Ship",
                     captain_data.encounter_text if captain_data else "",
                 ))
+                # Check weapon recognition
+                gear = s.captain.combat_gear
+                if gear.melee_weapon and gear.weapon_provenance.get(gear.melee_weapon):
+                    from portlight.engine.weapon_provenance import WeaponProvenance, check_recognition
+                    prov = gear.weapon_provenance[gear.melee_weapon]
+                    if isinstance(prov, WeaponProvenance):
+                        from portlight.engine.captain_memory import get_or_create_memory
+                        cap_mem = get_or_create_memory(s.world.pirates.captain_memories, pd.captain_id)
+                        recog = check_recognition(
+                            prov, gear.melee_weapon.replace("_", " ").title(),
+                            pd.captain_id, cap_mem.relationship.familiarity, s._rng,
+                        )
+                        if recog.recognized:
+                            console.print(f"\n[bold]{recog.flavor}[/bold]")
+                            # Apply fear/respect bonus to captain memory
+                            cap_mem.relationship.fear = min(100, cap_mem.relationship.fear + recog.fear_bonus)
+                            cap_mem.relationship.respect = min(100, cap_mem.relationship.respect + recog.respect_bonus)
+
                 console.print("\n[bold]Use [cyan]portlight encounter <negotiate|flee|fight>[/cyan][/bold]")
                 break  # stop advancing — player must respond to encounter
             else:
@@ -454,7 +472,7 @@ def duel(
     if result.player_won:
         console.print(f"\n[bold green]VICTORY![/bold green] You defeated {pending.captain_name}.")
     elif result.draw:
-        console.print(f"\n[bold yellow]DRAW.[/bold yellow] Neither captain falls.")
+        console.print("\n[bold yellow]DRAW.[/bold yellow] Neither captain falls.")
     else:
         console.print(f"\n[bold red]DEFEAT.[/bold red] {pending.captain_name} bests you.")
 
@@ -1305,9 +1323,9 @@ def load() -> None:
 # ---------------------------------------------------------------------------
 
 # Active encounter + combatant state held in module-level for interactive turns
-_active_encounter: "EncounterState | None" = None
-_player_combatant: "CombatantState | None" = None
-_opponent_combatant: "CombatantState | None" = None
+_active_encounter = None
+_player_combatant = None
+_opponent_combatant = None
 
 
 @app.command()
@@ -1435,7 +1453,7 @@ def naval(
             enc.phase = "capture_available"
             console.print("\n[bold yellow]You can capture this ship as a prize![/bold yellow]")
             console.print(f"  Enemy ship: {enc.enemy_captain_name}'s vessel")
-            console.print(f"  Use: [cyan]portlight capture <crew_to_assign>[/cyan]")
+            console.print("  Use: [cyan]portlight capture <crew_to_assign>[/cyan]")
         else:
             console.print(f"\n[dim]Cannot capture: {reason}[/dim]")
             _active_encounter = None
@@ -1639,6 +1657,27 @@ def fight(
             crew_killed=max(0, enc.enemy_ship_crew_max - enc.enemy_ship_crew),
         )
 
+        # Record weapon provenance (kill tracking + relic growth)
+        if player_won and gear.melee_weapon:
+            from portlight.engine.weapon_provenance import (
+                RELIC_COLORS,
+                RELIC_LABELS,
+                WeaponProvenance,
+                create_provenance,
+                record_kill,
+            )
+            prov = gear.weapon_provenance.get(gear.melee_weapon)
+            if not isinstance(prov, WeaponProvenance):
+                prov = create_provenance(gear.melee_weapon)
+                gear.weapon_provenance[gear.melee_weapon] = prov
+            tier_change, new_epithet = record_kill(prov, enc.enemy_captain_id, enc.enemy_captain_name)
+            if new_epithet:
+                console.print(f"\n[bold magenta]Your weapon is now known as \"{new_epithet}\"![/bold magenta]")
+            if tier_change:
+                label = RELIC_LABELS.get(tier_change, tier_change)
+                color = RELIC_COLORS.get(tier_change, "white")
+                console.print(f"[{color}]Your weapon has reached {label} status — {prov.kills} kills.[/{color}]")
+
         # Roll loot on victory
         if player_won:
             try:
@@ -1765,7 +1804,7 @@ def equip_style(
     from portlight.engine.training import check_style_usable
     injured_parts = get_injured_body_parts([inj.injury_id for inj in s.captain.injuries])
     if not check_style_usable(style_id, injured_parts):
-        console.print(f"[red]Your injuries prevent using this style.[/red]")
+        console.print("[red]Your injuries prevent using this style.[/red]")
         return
 
     s.captain.active_style = style_id
@@ -1792,7 +1831,7 @@ def armory(
 
     if buy is None:
         weapons = get_weapons_for_region(port.region)
-        ammo = get_ammo_for_region(port.region)
+        _ammo = get_ammo_for_region(port.region)
         console.print(combat_views.armory_view(
             [{"id": w.id, "name": w.name, "type": w.weapon_type, "damage": f"{w.damage_min}-{w.damage_max}",
               "accuracy": f"{w.accuracy:.0%}", "cost": w.silver_cost, "reload": w.reload_turns}

@@ -308,6 +308,7 @@ class CombatGear:
     weapon_quality: dict[str, str] = field(default_factory=dict)  # e.g. {"cutlass": "standard"}
     # Usage counters for degradation: weapon_id → uses since last maintenance
     weapon_usage: dict[str, int] = field(default_factory=dict)  # e.g. {"cutlass": 7}
+    weapon_provenance: dict = field(default_factory=dict)  # weapon_id → WeaponProvenance (serialized)
 
 
 @dataclass

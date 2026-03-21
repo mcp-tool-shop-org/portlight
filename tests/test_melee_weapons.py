@@ -2,9 +2,8 @@
 
 import random
 
-from portlight.content.melee_weapons import MELEE_WEAPONS, MeleeWeaponDef, get_melee_weapons_for_region
+from portlight.content.melee_weapons import MELEE_WEAPONS, get_melee_weapons_for_region
 from portlight.engine.combat import (
-    CombatantState,
     _calc_melee_damage,
     create_player_combatant,
 )

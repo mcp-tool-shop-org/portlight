@@ -110,7 +110,7 @@ def encounter_view(
     """Pirate encounter screen: who they are, how dangerous, your options."""
     lines: list[str] = []
 
-    lines.append(f"[bold red]⚓ Sails on the horizon![/bold red]")
+    lines.append("[bold red]⚓ Sails on the horizon![/bold red]")
     lines.append("")
     lines.append(f"  Captain:   [bold]{captain_name}[/bold]")
     lines.append(f"  Faction:   {faction_name}")

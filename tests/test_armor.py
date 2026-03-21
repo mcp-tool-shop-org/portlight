@@ -2,12 +2,11 @@
 
 import random
 
-from portlight.content.armor import ARMOR, ArmorDef, get_armor_for_region
+from portlight.content.armor import ARMOR, get_armor_for_region
 from portlight.engine.combat import (
     CombatantState,
     create_player_combatant,
     resolve_combat_round,
-    STAMINA_COSTS,
 )
 
 

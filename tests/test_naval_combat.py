@@ -363,12 +363,12 @@ class TestEnemyAI:
 class TestBoarding:
     def test_overwhelming_advantage_low_losses(self):
         losses = [resolve_boarding(30, 5, random.Random(s)) for s in range(50)]
-        avg_player_lost = sum(l[0] for l in losses) / 50
+        avg_player_lost = sum(loss[0] for loss in losses) / 50
         assert avg_player_lost < 2
 
     def test_even_fight_significant_losses(self):
         losses = [resolve_boarding(15, 15, random.Random(s)) for s in range(50)]
-        avg_player_lost = sum(l[0] for l in losses) / 50
+        avg_player_lost = sum(loss[0] for loss in losses) / 50
         assert avg_player_lost > 1
 
     def test_disadvantaged_player_takes_more(self):

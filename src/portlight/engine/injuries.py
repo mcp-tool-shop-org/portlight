@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import random
 
-from portlight.content.injuries import INJURIES, InjuryDef, get_injury_pool
+from portlight.content.injuries import INJURIES, get_injury_pool
 from portlight.engine.models import ActiveInjury
 
 

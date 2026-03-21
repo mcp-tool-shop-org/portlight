@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import random
 
-import pytest
 
 from portlight.content.injuries import (
     INJURIES,

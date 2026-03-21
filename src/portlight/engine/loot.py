@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 
 from portlight.content.loot_tables import (
     CAPTAIN_LOOT_OVERRIDES,
-    LootTable,
     get_loot_table_for_strength,
 )
 

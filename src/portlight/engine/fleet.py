@@ -14,7 +14,6 @@ from portlight.engine.models import (
     CargoItem,
     OwnedShip,
     Ship,
-    max_fleet_size,
 )
 
 

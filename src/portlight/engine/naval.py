@@ -23,7 +23,6 @@ import random
 
 from portlight.engine.models import (
     EnemyShip,
-    NavalResult,
     NavalRound,
     Ship,
 )

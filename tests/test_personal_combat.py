@@ -12,8 +12,6 @@ import random
 import pytest
 
 from portlight.engine.combat import (
-    ALL_BASE_ACTIONS,
-    BASE_OPPONENT_HP,
     BASE_PLAYER_HP,
     BASE_PLAYER_STAMINA,
     CORE_ACTIONS,
@@ -154,7 +152,7 @@ class TestMeleeTriangle:
             assert result.damage_to_opponent > 0
 
     def test_slash_beats_parry(self):
-        p, o = _player(), _opponent()
+        p, _o = _player(), _opponent()
         # Force opponent to parry by using defensive personality
         results = []
         for seed in range(50):
@@ -164,7 +162,7 @@ class TestMeleeTriangle:
         assert any(r.damage_to_opponent > 0 for r in results)
 
     def test_parry_beats_thrust(self):
-        p, o = _player(), _opponent()
+        p, _o = _player(), _opponent()
         results = []
         for seed in range(50):
             r = resolve_combat_round("parry", p, _opponent(), "aggressive", _rng(seed))

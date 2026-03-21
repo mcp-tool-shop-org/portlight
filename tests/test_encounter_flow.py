@@ -19,7 +19,6 @@ from portlight.engine.encounter import (
     resolve_negotiate,
 )
 from portlight.engine.models import (
-    EncounterState,
     Port,
     PortFeature,
     Ship,
@@ -115,7 +114,7 @@ class TestNegotiate:
 
 class TestFlee:
     def test_fast_ship_can_escape(self):
-        enc = create_encounter(_test_ports(), "porto_novo", _rng())
+        _enc = create_encounter(_test_ports(), "porto_novo", _rng())
         ship = _make_ship(speed=9.0, maneuver=0.8)
         escapes = 0
         for seed in range(50):
@@ -133,7 +132,7 @@ class TestFlee:
         assert msg
 
     def test_successful_flee_resolves_encounter(self):
-        enc = create_encounter(_test_ports(), "porto_novo", _rng())
+        _enc = create_encounter(_test_ports(), "porto_novo", _rng())
         ship = _make_ship(speed=15.0, maneuver=0.95)  # very fast
         for seed in range(50):
             enc2 = create_encounter(_test_ports(), "porto_novo", _rng(seed))
@@ -172,8 +171,8 @@ class TestNavalCombat:
         enc = create_encounter(_test_ports(), "porto_novo", _rng())
         ship = _make_ship(cannons=6)
         begin_fight(enc, ship)
-        initial_hull = enc.enemy_ship_hull
-        result = resolve_naval_turn(enc, "broadside", ship, _rng())
+        _initial_hull = enc.enemy_ship_hull
+        _result = resolve_naval_turn(enc, "broadside", ship, _rng())
         # Broadside should do some damage across many runs
         total_dmg = 0
         for seed in range(20):
@@ -320,7 +319,7 @@ class TestEndToEnd:
             resolve_naval_turn(enc, "close", ship, _rng(i + 100))
 
         if enc.phase == "boarding":
-            result = resolve_boarding_phase(enc, player_crew=15, rng=_rng())
+            _result = resolve_boarding_phase(enc, player_crew=15, rng=_rng())
             assert enc.phase == "duel"
 
             # Duel: fight until resolved
@@ -383,7 +382,7 @@ class TestSaveLoadCompat:
 
     def test_old_save_without_combat_fields(self):
         """Old saves missing combat fields should load with defaults."""
-        from portlight.engine.save import _captain_from_dict, _ship_from_dict
+        from portlight.engine.save import _captain_from_dict
 
         old_captain_data = {
             "name": "Old Captain", "silver": 1000, "provisions": 20, "day": 50,

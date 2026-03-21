@@ -14,12 +14,15 @@ Pure functions — callers decide what to mutate.
 from __future__ import annotations
 
 import random
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from portlight.engine.models import Captain, OwnedShip
 
 from portlight.content.factions import FACTIONS, get_captains_for_faction, get_faction_for_region
 from portlight.engine.models import (
     EnemyShip,
     EncounterState,
-    PendingDuel,
     Ship,
 )
 from portlight.engine.naval import (
@@ -33,7 +36,6 @@ from portlight.engine.naval import (
 )
 from portlight.engine.combat import (
     CombatantState,
-    CombatResult,
     CombatRound,
     apply_round_to_states,
     create_opponent_combatant,
@@ -41,7 +43,7 @@ from portlight.engine.combat import (
     get_available_actions as get_combat_actions,
     resolve_combat_round,
 )
-from portlight.engine.underworld import get_faction_hostility, THRESHOLD_TRADE
+from portlight.engine.underworld import get_faction_hostility
 
 
 # ---------------------------------------------------------------------------
@@ -379,7 +381,6 @@ def can_capture_prize(
     - Fleet must have space
     - Captain must have enough crew to man both ships
     """
-    from portlight.engine.models import Captain  # noqa: F811
 
     fleet_count = len(captain.fleet) + 1  # +1 for flagship
     if fleet_count >= fleet_size_limit:

@@ -21,6 +21,7 @@ Pure functions — callers decide what to mutate.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 
 
@@ -243,7 +244,6 @@ def assign_loot_quality(
     Strong opponents: standard/fine possible
     Boss-tier: fine/masterwork possible
     """
-    import random as _  # type hint only
     roll = rng.random()
 
     if opponent_strength <= 3:

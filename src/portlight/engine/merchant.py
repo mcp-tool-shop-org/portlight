@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from portlight.content.armor import ARMOR, get_armor_for_region
-from portlight.content.melee_weapons import MELEE_WEAPONS, get_melee_weapons_for_region
+from portlight.content.armor import get_armor_for_region
+from portlight.content.melee_weapons import get_melee_weapons_for_region
 from portlight.content.merchants import MerchantDef, get_merchant
 from portlight.content.ranged_weapons import (
     AMMO,

@@ -7,9 +7,6 @@ import pytest
 from portlight.content.fighting_styles import (
     FIGHTING_STYLES,
     STYLE_MASTERS,
-    FightingStyle,
-    StyleAction,
-    StyleMaster,
 )
 from portlight.engine.training import (
     can_learn_style,

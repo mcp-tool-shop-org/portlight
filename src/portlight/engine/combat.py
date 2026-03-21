@@ -27,7 +27,6 @@ import random
 from dataclasses import dataclass, field
 
 from portlight.content.fighting_styles import FIGHTING_STYLES, FightingStyle
-from portlight.content.injuries import INJURIES
 from portlight.content.ranged_weapons import RANGED_WEAPONS
 from portlight.engine.injuries import get_injury_effects, roll_injury
 

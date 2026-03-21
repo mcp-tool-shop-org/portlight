@@ -105,8 +105,8 @@ def main() -> None:
 
     if not args.quiet:
         print(f"\nReports written to {out_dir}/")
-        print(f"  balance-report.json")
-        print(f"  balance-report.md")
+        print("  balance-report.json")
+        print("  balance-report.md")
 
         # Quick summary
         for ca in report.captain_aggregates:

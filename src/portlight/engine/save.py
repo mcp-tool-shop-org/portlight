@@ -19,7 +19,6 @@ from portlight.engine.models import (
     CombatGear,
     CrewRoster,
     CulturalState,
-    EncounterState,
     InstalledUpgrade,
     MarketSlot,
     OwnedShip,
@@ -364,7 +363,49 @@ def _combat_gear_to_dict(gear: CombatGear) -> dict:
         "weapon_upgrades": gear.weapon_upgrades,
         "weapon_quality": gear.weapon_quality,
         "weapon_usage": gear.weapon_usage,
+        "weapon_provenance": _provenance_dict_to_save(gear.weapon_provenance),
     }
+
+
+def _provenance_dict_to_save(prov_dict: dict) -> dict:
+    """Serialize weapon provenance dict for save."""
+    from portlight.engine.weapon_provenance import WeaponProvenance
+    result = {}
+    for wid, prov in prov_dict.items():
+        if isinstance(prov, WeaponProvenance):
+            result[wid] = {
+                "weapon_id": prov.weapon_id,
+                "acquired_port": prov.acquired_port,
+                "acquired_day": prov.acquired_day,
+                "acquired_region": prov.acquired_region,
+                "kills": prov.kills,
+                "named_kills": prov.named_kills,
+                "epithet": prov.epithet,
+                "custom_name": prov.custom_name,
+                "times_recognized": prov.times_recognized,
+            }
+        else:
+            result[wid] = prov  # already a dict
+    return result
+
+
+def _provenance_dict_from_save(data: dict) -> dict:
+    """Deserialize weapon provenance from save."""
+    from portlight.engine.weapon_provenance import WeaponProvenance
+    result = {}
+    for wid, pd in data.items():
+        result[wid] = WeaponProvenance(
+            weapon_id=pd.get("weapon_id", wid),
+            acquired_port=pd.get("acquired_port", ""),
+            acquired_day=pd.get("acquired_day", 0),
+            acquired_region=pd.get("acquired_region", ""),
+            kills=pd.get("kills", 0),
+            named_kills=pd.get("named_kills", []),
+            epithet=pd.get("epithet"),
+            custom_name=pd.get("custom_name"),
+            times_recognized=pd.get("times_recognized", 0),
+        )
+    return result
 
 
 def _combat_gear_from_dict(d: dict) -> CombatGear:
@@ -379,6 +420,7 @@ def _combat_gear_from_dict(d: dict) -> CombatGear:
         weapon_upgrades=d.get("weapon_upgrades", {}),
         weapon_quality=d.get("weapon_quality", {}),
         weapon_usage=d.get("weapon_usage", {}),
+        weapon_provenance=_provenance_dict_from_save(d.get("weapon_provenance", {})),
     )
 
 
@@ -1003,7 +1045,7 @@ def _pirate_state_to_dict(state: PirateState) -> dict:
         }
     # Captain memories — serialize the CaptainMemory objects
     if state.captain_memories:
-        from portlight.engine.captain_memory import CaptainMemory, CaptainRelationship, EncounterMemory
+        from portlight.engine.captain_memory import CaptainMemory
         memories_dict = {}
         for cid, mem in state.captain_memories.items():
             if isinstance(mem, CaptainMemory):

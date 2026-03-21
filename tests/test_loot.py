@@ -146,7 +146,7 @@ class TestApplyLoot:
 
     def test_apply_cargo(self):
         captain = _make_captain()
-        msgs = apply_loot(captain, [{"item_type": "cargo", "item_id": "spice", "quantity": 3}])
+        _msgs = apply_loot(captain, [{"item_type": "cargo", "item_id": "spice", "quantity": 3}])
         assert any(c.good_id == "spice" and c.quantity == 3 for c in captain.cargo)
 
     def test_apply_cargo_merges(self):
