@@ -1,9 +1,7 @@
 """Tests for convoy mechanics — fleet ships sailing together."""
 
 from portlight.engine.models import (
-    CargoItem,
     OwnedShip,
-    Ship,
     VoyageStatus,
 )
 from portlight.content.ships import SHIPS, create_ship_from_template
@@ -66,7 +64,7 @@ class TestConvoySpeed:
 
         # Track progress with convoy vs without
         rng = random.Random(42)
-        events = advance_day(world, rng)
+        advance_day(world, rng)
         # Progress should be limited by galleon speed (4) not sloop speed (8)
         # Can't assert exact value due to events, but progress should be small
         assert world.voyage.progress <= 6  # galleon speed 4 + navigator bonus at most
@@ -76,7 +74,6 @@ class TestConvoyDamage:
     def test_convoy_ships_take_storm_damage(self):
         world = new_game("Admiral")
         escort = _make_fleet_ship(port_id="porto_novo")
-        initial_hull = escort.ship.hull
         world.captain.fleet = [escort]
         depart(world, "al_manar")
 
@@ -87,7 +84,7 @@ class TestConvoyDamage:
             e2 = _make_fleet_ship(port_id="porto_novo")
             world2.captain.fleet = [e2]
             depart(world2, "al_manar")
-            events = advance_day(world2, random.Random(seed))
+            advance_day(world2, random.Random(seed))
             if e2.ship.hull < e2.ship.hull_max:
                 damaged = True
                 break

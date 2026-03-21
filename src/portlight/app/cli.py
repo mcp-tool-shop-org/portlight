@@ -366,19 +366,24 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
                 _active_encounter = enc
                 _player_combatant = None
                 _opponent_combatant = None
-                s.world.pirates.pending_duel = None  # clear old-style pending
+                # Keep pending_duel set so encounter persists across CLI invocations
+                # It will be cleared when the encounter resolves
 
                 from portlight.app import combat_views
                 from portlight.content.factions import FACTIONS, PIRATE_CAPTAINS
                 faction = FACTIONS.get(pd.faction_id)
                 captain_data = PIRATE_CAPTAINS.get(pd.captain_id)
-                console.print(combat_views.encounter_view(
-                    pd.captain_name,
-                    faction.name if faction else "Unknown",
-                    pd.personality, pd.strength,
-                    f"{pd.captain_name}'s Ship",
-                    captain_data.encounter_text if captain_data else "",
-                ))
+                try:
+                    console.print(combat_views.encounter_view(
+                        pd.captain_name,
+                        faction.name if faction else "Unknown",
+                        pd.personality, pd.strength,
+                        f"{pd.captain_name}'s Ship",
+                        captain_data.encounter_text if captain_data else "",
+                    ))
+                except Exception as e:
+                    console.print(f"\n[bold red]Pirate encounter: {pd.captain_name} ({pd.personality}, str {pd.strength})[/bold red]")
+                    console.print(f"[dim]View error: {e}[/dim]")
                 # Check weapon recognition
                 gear = s.captain.combat_gear
                 if gear.melee_weapon and gear.weapon_provenance.get(gear.melee_weapon):
@@ -1356,6 +1361,55 @@ def load() -> None:
 _active_encounter = None
 _player_combatant = None
 _opponent_combatant = None
+_pending_victory = False  # True when player won and must choose spare/take-all
+
+
+def _sync_encounter_phase(s) -> None:
+    """Persist the current encounter phase to save data."""
+    if _active_encounter and s and s.world:
+        s.world.pirates.encounter_phase = _active_encounter.phase
+    elif s and s.world:
+        s.world.pirates.encounter_phase = ""
+
+
+def _clear_encounter(s) -> None:
+    """Clear active encounter and pending_duel from save."""
+    global _active_encounter, _player_combatant, _opponent_combatant, _pending_victory
+    _active_encounter = None
+    _player_combatant = None
+    _opponent_combatant = None
+    _pending_victory = False
+    if s and s.world:
+        s.world.pirates.pending_duel = None
+        s.world.pirates.encounter_phase = ""
+
+
+def _restore_encounter(s) -> None:
+    """Restore encounter from pending_duel if module state was lost (new process)."""
+    global _active_encounter
+    if _active_encounter is not None:
+        return  # already have one
+    pd = s.world.pirates.pending_duel
+    if pd is None:
+        return
+    from portlight.engine.encounter import create_encounter
+    enc = create_encounter(
+        s.world.ports,
+        s.world.voyage.destination_id if s.world.voyage else "porto_novo",
+        s._rng,
+    )
+    if enc:
+        enc.enemy_captain_id = pd.captain_id
+        enc.enemy_captain_name = pd.captain_name
+        enc.enemy_faction_id = pd.faction_id
+        enc.enemy_personality = pd.personality
+        enc.enemy_strength = pd.strength
+        enc.enemy_region = pd.region
+        # Restore persisted phase
+        phase = s.world.pirates.encounter_phase
+        if phase and phase in ("approach", "naval", "boarding", "duel"):
+            enc.phase = phase
+        _active_encounter = enc
 
 
 @app.command()
@@ -1372,6 +1426,7 @@ def encounter(
     )
 
     s = _session()
+    _restore_encounter(s)
     if _active_encounter is None or _active_encounter.phase != "approach":
         console.print("[yellow]No active encounter. Encounters happen during pirate events at sea.[/yellow]")
         return
@@ -1446,6 +1501,7 @@ def naval(
     )
 
     s = _session()
+    _restore_encounter(s)
     if _active_encounter is None or _active_encounter.phase != "naval":
         console.print("[yellow]Not in naval combat.[/yellow]")
         return
@@ -1576,6 +1632,7 @@ def fight(
     from portlight.engine.injuries import create_injury
 
     s = _session()
+    _restore_encounter(s)
     enc = _active_encounter
     if enc is None or enc.phase != "duel":
         console.print("[yellow]Not in personal combat.[/yellow]")
@@ -1653,21 +1710,7 @@ def fight(
         player_won = o.hp <= 0 and p.hp > 0
         draw = p.hp <= 0 and o.hp <= 0
 
-        if player_won:
-            silver_gain = 20 + enc.enemy_strength * 5
-            s.captain.silver += silver_gain
-            s.world.pirates.duels_won += 1
-            console.print(f"\n[bold green]Victory! +{silver_gain} silver, +5 standing[/bold green]")
-        elif draw:
-            s.world.pirates.duels_won += 1  # mutual respect
-            console.print("\n[bold yellow]Draw! Mutual respect earned.[/bold yellow]")
-        else:
-            silver_loss = 15 + enc.enemy_strength * 3
-            s.captain.silver = max(0, s.captain.silver - silver_loss)
-            s.world.pirates.duels_lost += 1
-            console.print(f"\n[bold red]Defeated. -{silver_loss} silver.[/bold red]")
-
-        # Apply injuries to captain
+        # Apply injuries regardless of outcome
         if result.injury_inflicted:
             new_injury = create_injury(result.injury_inflicted, s.world.day)
             s.captain.injuries.append(new_injury)
@@ -1675,49 +1718,6 @@ def fight(
             inj_def = INJURIES.get(result.injury_inflicted)
             if inj_def:
                 console.print(f"\n[bold red]Injury: {inj_def.name} — {inj_def.description}[/bold red]")
-
-        # Record encounter in captain memory
-        from portlight.engine.captain_memory import get_or_create_memory, record_encounter
-        memory = get_or_create_memory(s.world.pirates.captain_memories, enc.enemy_captain_id)
-        outcome = "player_won" if player_won else ("player_lost" if not draw else "player_won")
-        record_encounter(
-            memory, s.world.day, enc.enemy_region, outcome,
-            player_spared=False,  # sparing handled by separate command
-            player_used_firearm=any(r.player_action == "shoot" for r in [result]),
-            crew_killed=max(0, enc.enemy_ship_crew_max - enc.enemy_ship_crew),
-        )
-
-        # Record weapon provenance (kill tracking + relic growth)
-        if player_won and gear.melee_weapon:
-            from portlight.engine.weapon_provenance import (
-                RELIC_COLORS,
-                RELIC_LABELS,
-                WeaponProvenance,
-                create_provenance,
-                record_kill,
-            )
-            prov = gear.weapon_provenance.get(gear.melee_weapon)
-            if not isinstance(prov, WeaponProvenance):
-                prov = create_provenance(gear.melee_weapon)
-                gear.weapon_provenance[gear.melee_weapon] = prov
-            tier_change, new_epithet = record_kill(prov, enc.enemy_captain_id, enc.enemy_captain_name)
-            if new_epithet:
-                console.print(f"\n[bold magenta]Your weapon is now known as \"{new_epithet}\"![/bold magenta]")
-            if tier_change:
-                label = RELIC_LABELS.get(tier_change, tier_change)
-                color = RELIC_COLORS.get(tier_change, "white")
-                console.print(f"[{color}]Your weapon has reached {label} status — {prov.kills} kills.[/{color}]")
-
-        # Roll loot on victory
-        if player_won:
-            try:
-                from portlight.engine.loot import roll_loot, apply_loot
-                loot = roll_loot(enc.enemy_captain_id, enc.enemy_strength, s._rng)
-                if loot:
-                    apply_loot(loot, s.captain)
-                    console.print(combat_views.loot_view(loot) if hasattr(combat_views, 'loot_view') else f"[green]Loot: {loot}[/green]")
-            except (ImportError, Exception):
-                pass  # loot system may not be fully wired yet
 
         # Tick weapon degradation
         from portlight.engine.skill_engine import get_degrade_threshold_bonus, get_skill_level
@@ -1736,7 +1736,6 @@ def fight(
         # Sync ammo back to captain
         gear.firearm_ammo = p.ammo
         gear.mechanical_ammo = p.mechanical_ammo
-        # Rough sync for throwing weapons
         if gear.throwing_weapons:
             total_before = sum(gear.throwing_weapons.values())
             spent = total_before - p.throwing_weapons
@@ -1746,6 +1745,36 @@ def fight(
                 can_take = min(spent, gear.throwing_weapons[wid])
                 gear.throwing_weapons[wid] -= can_take
                 spent -= can_take
+
+        if player_won:
+            # VICTORY — pause for spare/take-all choice
+            _pending_victory = True
+            console.print(f"\n[bold green]Victory over {enc.enemy_captain_name}![/bold green]")
+            console.print(f"\n{enc.enemy_captain_name} lies defeated at your feet.")
+            console.print("\n[bold]Choose:[/bold]")
+            console.print("  [cyan]portlight spare[/cyan]     — Show mercy. (+25 respect, -10 grudge, +5 underworld standing)")
+            console.print("  [cyan]portlight take-all[/cyan]  — Take everything. (+5 fear, +10 grudge, more silver)")
+            s._save()
+            return  # DON'T clear encounter yet — spare/take-all commands will finalize
+
+        elif draw:
+            s.world.pirates.duels_won += 1
+            console.print("\n[bold yellow]Draw! Mutual respect earned.[/bold yellow]")
+            # Record encounter
+            from portlight.engine.captain_memory import get_or_create_memory, record_encounter
+            memory = get_or_create_memory(s.world.pirates.captain_memories, enc.enemy_captain_id)
+            record_encounter(memory, s.world.day, enc.enemy_region, "player_won",
+                             crew_killed=max(0, enc.enemy_ship_crew_max - enc.enemy_ship_crew))
+        else:
+            silver_loss = 15 + enc.enemy_strength * 3
+            s.captain.silver = max(0, s.captain.silver - silver_loss)
+            s.world.pirates.duels_lost += 1
+            console.print(f"\n[bold red]Defeated. -{silver_loss} silver.[/bold red]")
+            # Record encounter
+            from portlight.engine.captain_memory import get_or_create_memory, record_encounter
+            memory = get_or_create_memory(s.world.pirates.captain_memories, enc.enemy_captain_id)
+            record_encounter(memory, s.world.day, enc.enemy_region, "player_lost",
+                             crew_killed=max(0, enc.enemy_ship_crew_max - enc.enemy_ship_crew))
 
         _active_encounter = None
         _player_combatant = None
@@ -1961,7 +1990,6 @@ def maintain(
     from portlight.engine.weapon_quality import (
         get_maintenance_cost,
         get_weapon_summary,
-        maintain_weapon,
     )
 
     s = _session()
@@ -2019,7 +2047,7 @@ def maintain(
 
     gear.weapon_usage[weapon] = 0
     s.captain.silver -= discounted_cost
-    discount_note = f" (blacksmith discount!)" if discounted_cost < base_cost else ""
+    discount_note = " (blacksmith discount!)" if discounted_cost < base_cost else ""
     console.print(f"[green]{weapon.replace('_', ' ').title()} maintained — usage reset, quality preserved.{discount_note}[/green]")
     s._save()
 
@@ -2135,6 +2163,171 @@ def field_repair_cmd(
 
 
 # ---------------------------------------------------------------------------
+# Spare / Take-All (post-victory choice)
+# ---------------------------------------------------------------------------
+
+
+def _finalize_victory(s, spared: bool) -> None:
+    """Shared victory finalization — called by both spare and take-all commands."""
+    global _active_encounter, _player_combatant, _opponent_combatant, _pending_victory
+    from portlight.app import combat_views
+    from portlight.content.factions import PIRATE_CAPTAINS
+    from portlight.engine.captain_memory import get_or_create_memory, record_encounter
+    from portlight.engine.underworld import record_duel_outcome
+
+    enc = _active_encounter
+    if enc is None:
+        return
+
+    gear = s.captain.combat_gear
+
+    # Silver reward
+    if spared:
+        silver_gain = 20 + enc.enemy_strength * 3  # less silver for mercy
+    else:
+        silver_gain = 20 + enc.enemy_strength * 7  # more silver for taking all
+    s.captain.silver += silver_gain
+    s.world.pirates.duels_won += 1
+
+    # Record encounter in captain memory (with spare flag)
+    memory = get_or_create_memory(s.world.pirates.captain_memories, enc.enemy_captain_id)
+    record_encounter(
+        memory, s.world.day, enc.enemy_region, "player_won",
+        player_spared=spared,
+        player_used_firearm=False,
+        crew_killed=max(0, enc.enemy_ship_crew_max - enc.enemy_ship_crew),
+    )
+
+    # Underworld standing
+    uw_standing = s.captain.standing.underworld_standing
+    standing_delta = record_duel_outcome(uw_standing, enc.enemy_faction_id, player_won=True, spared=spared)
+
+    # Record weapon provenance
+    if gear.melee_weapon:
+        from portlight.engine.weapon_provenance import (
+            RELIC_COLORS,
+            RELIC_LABELS,
+            WeaponProvenance,
+            create_provenance,
+            record_kill,
+        )
+        prov = gear.weapon_provenance.get(gear.melee_weapon)
+        if not isinstance(prov, WeaponProvenance):
+            prov = create_provenance(gear.melee_weapon)
+            gear.weapon_provenance[gear.melee_weapon] = prov
+        tier_change, new_epithet = record_kill(prov, enc.enemy_captain_id, enc.enemy_captain_name)
+        if new_epithet:
+            console.print(f"[bold magenta]Your weapon is now known as \"{new_epithet}\"![/bold magenta]")
+        if tier_change:
+            label = RELIC_LABELS.get(tier_change, tier_change)
+            color = RELIC_COLORS.get(tier_change, "white")
+            console.print(f"[{color}]Your weapon has reached {label} status — {prov.kills} kills.[/{color}]")
+
+    # Roll loot (take-all gets more)
+    try:
+        from portlight.engine.loot import apply_loot, roll_loot
+        loot = roll_loot(enc.enemy_captain_id, enc.enemy_strength, s._rng)
+        if loot and not spared:
+            apply_loot(loot, s.captain)
+            console.print(combat_views.loot_view(loot) if hasattr(combat_views, 'loot_view') else f"[green]Loot: {loot}[/green]")
+        elif loot and spared:
+            # Sparing = no loot
+            console.print("[dim]You leave their possessions untouched.[/dim]")
+    except (ImportError, Exception):
+        pass
+
+    # Companion morale trigger
+    try:
+        from portlight.engine.companion_engine import CompanionState, PartyState, apply_morale_trigger, check_departures
+        party_data = s.captain.party
+        if isinstance(party_data, dict) and party_data.get("companions"):
+            companions = [
+                CompanionState(
+                    companion_id=c["companion_id"], role_id=c["role_id"],
+                    morale=c.get("morale", 70), joined_day=c.get("joined_day", 0),
+                    personality=c.get("personality", "pragmatic"),
+                ) for c in party_data["companions"]
+            ]
+            party = PartyState(companions=companions, max_size=party_data.get("max_size", 2),
+                               departed=party_data.get("departed", []))
+
+            trigger = "spared_enemy" if spared else "took_all"
+            reactions = apply_morale_trigger(party, trigger)
+            for comp_id, delta, flavor in reactions:
+                console.print(f"  [dim]{flavor}[/dim]")
+
+            departures = check_departures(party)
+            for dep in departures:
+                console.print(f"\n[bold red]{dep.companion_name} leaves the crew: \"{dep.departure_line}\"[/bold red]")
+
+            # Save party back
+            s.captain.party = {
+                "companions": [
+                    {"companion_id": c.companion_id, "role_id": c.role_id,
+                     "morale": c.morale, "joined_day": c.joined_day, "personality": c.personality}
+                    for c in party.companions
+                ],
+                "max_size": party.max_size, "departed": party.departed,
+            }
+    except (ImportError, Exception):
+        pass
+
+    # Summary
+    console.print(f"\n[green]+{silver_gain} silver[/green]")
+    if standing_delta > 0:
+        console.print(f"[green]+{standing_delta} underworld standing with {enc.enemy_faction_id}[/green]")
+    elif standing_delta < 0:
+        console.print(f"[red]{standing_delta} underworld standing with {enc.enemy_faction_id}[/red]")
+
+    # Captain flavor from factions
+    captain_data = PIRATE_CAPTAINS.get(enc.enemy_captain_id)
+    if captain_data:
+        if spared:
+            console.print(f"\n[italic]{captain_data.duel_defeat}[/italic]")
+        else:
+            console.print(f"\n[italic]{captain_data.duel_victory}[/italic]")
+
+    # Cleanup
+    _active_encounter = None
+    _player_combatant = None
+    _opponent_combatant = None
+    _pending_victory = False
+    s._save()
+
+
+@app.command()
+def spare() -> None:
+    """Show mercy to a defeated pirate captain. Gains respect, reduces grudge."""
+    global _pending_victory
+    s = _session()
+    if not _pending_victory or _active_encounter is None:
+        console.print("[yellow]No defeated opponent to spare. Win a duel first.[/yellow]")
+        return
+
+    enc = _active_encounter
+    console.print("\n[bold cyan]You sheathe your blade and step back.[/bold cyan]")
+    console.print(f"\"You fought well, {enc.enemy_captain_name}. Go — and remember this mercy.\"")
+
+    _finalize_victory(s, spared=True)
+
+
+@app.command(name="take-all")
+def take_all() -> None:
+    """Take everything from the defeated captain. More silver, more grudge."""
+    global _pending_victory
+    s = _session()
+    if not _pending_victory or _active_encounter is None:
+        console.print("[yellow]No defeated opponent. Win a duel first.[/yellow]")
+        return
+
+    enc = _active_encounter
+    console.print(f"\n[bold red]You take {enc.enemy_captain_name}'s silver, weapons, and dignity.[/bold red]")
+    console.print("\"You lost. Everything you carry is mine now.\"")
+
+    _finalize_victory(s, spared=False)
+
+
+# ---------------------------------------------------------------------------
 # Companion commands
 # ---------------------------------------------------------------------------
 
@@ -2245,7 +2438,7 @@ def party() -> None:
     """Show your companion party."""
     from portlight.engine.companion_engine import get_cohesion, get_party_summary
 
-    s = _session()
+    _session()  # ensure active game
     p = _get_party()
     summary = get_party_summary(p)
 

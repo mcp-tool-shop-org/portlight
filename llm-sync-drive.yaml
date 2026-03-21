@@ -1,0 +1,46 @@
+# llm-sync-drive configuration
+# See README.md for full documentation
+
+# Path to the repository to compile (relative to this file, or absolute)
+repo_path: "."
+
+# Auth mode: "adc" (simplest), "service-account" (headless key), or "oauth" (interactive)
+auth_mode: "adc"
+
+# Service account key or OAuth credentials file
+credentials_path: "credentials.json"
+
+# Cached OAuth token (only used when auth_mode is "oauth")
+token_path: "token.json"
+
+# Google Drive folder ID to upload into (from the Drive URL)
+drive_folder_id: "1ESh9yCwoXQboSNDgK7PHvfMUBwYi98Ld"
+
+# Google Drive file ID (set automatically after first upload — do not edit)
+# drive_file_id: null
+
+# Filename in Google Drive
+drive_filename: "llms.txt"
+
+# Also write to a local file for inspection
+# local_output: "llms.txt"
+
+# Description shown at the top of the compiled llms.txt
+project_description: "Portlight — trade-first maritime strategy CLI. Route arbitrage, contracts, infrastructure, finance, reputation, hero's journey narrative, and world culture across 20 ports in 5 regions."
+
+# Debounce interval: wait this many seconds after last change before syncing
+debounce_seconds: 5.0
+
+# Skip files larger than this (bytes). Default 100KB.
+max_file_bytes: 100000
+
+# Only include these extensions (empty = all detected text files)
+# include_extensions:
+#   - .py
+#   - .ts
+#   - .md
+
+# Extra ignore patterns (in addition to .gitignore and .llmsignore)
+# extra_ignore_patterns:
+#   - "*.log"
+#   - "dist/"

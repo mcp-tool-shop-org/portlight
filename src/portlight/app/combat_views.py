@@ -33,7 +33,7 @@ def _hp_bar(current: int, maximum: int, width: int = 20) -> str:
     filled = int(ratio * width)
     empty = width - filled
     color = "green" if ratio > 0.6 else "yellow" if ratio > 0.3 else "red"
-    bar = f"[{color}]{'█' * filled}{'░' * empty}[/{color}]"
+    bar = f"[{color}]{'#' * filled}{'-' * empty}[/{color}]"
     return f"{bar} {current}/{maximum}"
 
 
@@ -43,7 +43,7 @@ def _stamina_bar(current: int, maximum: int, width: int = 15) -> str:
     filled = int(ratio * width)
     empty = width - filled
     color = "cyan" if ratio > 0.5 else "yellow" if ratio > 0.25 else "red"
-    bar = f"[{color}]{'█' * filled}{'░' * empty}[/{color}]"
+    bar = f"[{color}]{'#' * filled}{'-' * empty}[/{color}]"
     return f"{bar} {current}/{maximum}"
 
 
@@ -53,13 +53,13 @@ def _boarding_bar(progress: int, threshold: int, width: int = 15) -> str:
     filled = int(ratio * width)
     empty = width - filled
     color = "magenta" if ratio < 0.5 else "yellow" if ratio < 0.8 else "bold green"
-    bar = f"[{color}]{'█' * filled}{'░' * empty}[/{color}]"
+    bar = f"[{color}]{'#' * filled}{'-' * empty}[/{color}]"
     return f"{bar} [{progress}/{threshold}]"
 
 
 def _strength_indicator(strength: int) -> str:
     """Sword icons and label for pirate strength 1-10."""
-    swords = "⚔" * min(strength, 10)
+    swords = "X" * min(strength, 10)
     if strength <= 3:
         return f"[green]{swords} Weak[/green]"
     elif strength <= 6:
@@ -110,7 +110,7 @@ def encounter_view(
     """Pirate encounter screen: who they are, how dangerous, your options."""
     lines: list[str] = []
 
-    lines.append("[bold red]⚓ Sails on the horizon![/bold red]")
+    lines.append("[bold red]Sails on the horizon![/bold red]")
     lines.append("")
     lines.append(f"  Captain:   [bold]{captain_name}[/bold]")
     lines.append(f"  Faction:   {faction_name}")
@@ -353,7 +353,7 @@ def training_view(
             cost_str = f"[red]{cost:,}[/red] silver"
 
         prereqs = m.get("prerequisites", "none")
-        status = "[green]✓[/green]" if known else ""
+        status = "[green]Y[/green]" if known else ""
 
         table.add_row(
             m.get("name", "?"),
@@ -413,7 +413,7 @@ def injuries_view(injuries_list: list[dict]) -> Panel:
         name = inj.get("name", "wound")
         name_str = f"[{color}]{name}[/{color}]"
         if is_permanent:
-            name_str = f"[bold {color}]⚠ {name}[/bold {color}]"
+            name_str = f"[bold {color}]! {name}[/bold {color}]"
 
         severity_str = f"[{color}]{severity}[/{color}]"
 
@@ -425,7 +425,7 @@ def injuries_view(injuries_list: list[dict]) -> Panel:
             healing_str = _hp_bar(healing_progress, healing_max, width=8)
 
         treated = inj.get("treated", False)
-        treated_str = "[green]✓[/green]" if treated else "[red]✗[/red]"
+        treated_str = "[green]Y[/green]" if treated else "[red]N[/red]"
         if is_permanent:
             treated_str = "[dim]—[/dim]"
 
@@ -717,7 +717,7 @@ def merchant_shop_view(
     for item in inventory:
         cost = item.get("silver_cost", 0)
         can_afford = captain_silver >= cost
-        afford_mark = "[green]✓[/green]" if can_afford else "[red]✗[/red]"
+        afford_mark = "[green]Y[/green]" if can_afford else "[red]N[/red]"
         table.add_row(
             item.get("name", "?"),
             item.get("item_type", "?"),

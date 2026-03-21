@@ -80,10 +80,12 @@ def check_degradation(
     weapon_id: str,
     weapon_type: str,
     usage: int,
+    threshold_bonus: int = 0,
 ) -> bool:
     """Check if a weapon should degrade based on usage count.
 
     weapon_type: 'melee', 'firearm', 'mechanical', 'armor'
+    threshold_bonus: extra uses from blacksmith skill (0 = no bonus)
     """
     threshold = {
         "melee": MELEE_DEGRADE_USES,
@@ -92,7 +94,7 @@ def check_degradation(
         "armor": ARMOR_DEGRADE_USES,
     }.get(weapon_type, MELEE_DEGRADE_USES)
 
-    return usage >= threshold
+    return usage >= threshold + threshold_bonus
 
 
 def tick_weapon_degradation(
@@ -101,10 +103,12 @@ def tick_weapon_degradation(
     weapon_id: str,
     weapon_type: str,
     uses: int = 1,
+    threshold_bonus: int = 0,
 ) -> tuple[bool, str | None]:
     """Record weapon use and check for degradation.
 
     Returns (degraded, new_quality_or_None).
+    threshold_bonus: extra uses from blacksmith skill (slows degradation).
     Mutates weapon_usage in place. Mutates weapon_quality if degradation occurs.
     """
     current_uses = weapon_usage.get(weapon_id, 0) + uses
@@ -114,7 +118,7 @@ def tick_weapon_degradation(
     if current_quality == "rusted":
         return False, None  # can't go lower
 
-    if check_degradation(weapon_id, weapon_type, current_uses):
+    if check_degradation(weapon_id, weapon_type, current_uses, threshold_bonus):
         new_quality = degrade_quality(current_quality)
         weapon_quality[weapon_id] = new_quality
         weapon_usage[weapon_id] = 0  # reset counter after degradation

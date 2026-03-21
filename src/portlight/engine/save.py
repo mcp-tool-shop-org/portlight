@@ -523,7 +523,7 @@ def _captain_to_dict(captain: Captain) -> dict:
 
 def _party_to_dict(party_data) -> dict:
     """Serialize party state. Accepts either PartyState or raw dict."""
-    from portlight.engine.companion_engine import CompanionState, PartyState
+    from portlight.engine.companion_engine import PartyState
     if isinstance(party_data, PartyState):
         return {
             "companions": [

@@ -10,7 +10,6 @@ from portlight.content.cross_port_networks import (
     get_relationships_for_npc,
     get_relationships_for_port,
 )
-from portlight.content.port_institutions import ALL_NPCS
 from portlight.content.ports import PORTS
 
 

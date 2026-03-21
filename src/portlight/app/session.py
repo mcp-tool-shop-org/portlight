@@ -459,7 +459,6 @@ class GameSession:
         if PortFeature.SHIPYARD not in port.features:
             return f"{port.name} has no shipyard"
 
-        from portlight.content.ships import SHIPS
         if ship_name:
             # Dry dock a fleet ship
             for owned in self.world.captain.fleet:

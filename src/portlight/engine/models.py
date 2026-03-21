@@ -447,6 +447,7 @@ class PirateState:
     naval_victories: int = 0
     naval_defeats: int = 0
     captain_memories: dict = field(default_factory=dict)  # captain_id → CaptainMemory (engine layer)
+    encounter_phase: str = ""  # persisted encounter phase (approach/naval/boarding/duel/"" = none)
 
 
 @dataclass
