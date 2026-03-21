@@ -330,6 +330,13 @@ class GameSession:
 
         events = advance_day(self.world, self._rng)
 
+        # Enrich with sea culture — route encounters, NPC sightings, weather, crew mood
+        from portlight.engine.sea_culture_engine import enrich_voyage_day
+        from portlight.engine.voyage import find_route as _find_route
+        _voyage = self.world.voyage
+        _route = _find_route(self.world, _voyage.origin_id, _voyage.destination_id) if _voyage else None
+        events = enrich_voyage_day(self.world, _route, events, self._rng)
+
         # Note: markets don't tick while at sea — prices only change when
         # you're in port to observe them. This is intentional: it preserves
         # the arbitrage window you planned for during departure.
