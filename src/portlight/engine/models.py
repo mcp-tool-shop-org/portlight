@@ -175,6 +175,37 @@ class Ship:
     maneuver: float = 0.5            # from template
     upgrades: list[InstalledUpgrade] = field(default_factory=list)
     upgrade_slots: int = 2           # set from UPGRADE_SLOTS at creation
+    roster: "CrewRoster" = field(default_factory=lambda: CrewRoster())
+
+    def sync_crew(self) -> None:
+        """Keep crew field in sync with roster total."""
+        self.crew = self.roster.total
+
+
+class CrewRole(str, Enum):
+    """Crew specialization roles."""
+    SAILOR = "sailor"
+    GUNNER = "gunner"
+    NAVIGATOR = "navigator"
+    SURGEON = "surgeon"
+    MARINE = "marine"
+    QUARTERMASTER = "quartermaster"
+
+
+@dataclass
+class CrewRoster:
+    """Breakdown of crew by role. Source of truth for crew count."""
+    sailors: int = 0
+    gunners: int = 0
+    navigators: int = 0
+    surgeons: int = 0
+    marines: int = 0
+    quartermasters: int = 0
+
+    @property
+    def total(self) -> int:
+        return (self.sailors + self.gunners + self.navigators
+                + self.surgeons + self.marines + self.quartermasters)
 
 
 @dataclass
