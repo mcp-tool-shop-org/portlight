@@ -53,15 +53,16 @@ from portlight.engine.infrastructure import (
 from portlight.engine.campaign import CampaignState, SessionSnapshot, evaluate_milestones
 from portlight.engine.narrative import NarrativeState, evaluate_narrative
 from portlight.engine.save import load_game, save_game
-from portlight.engine.voyage import EventType, advance_day, arrive, depart
+from portlight.engine.voyage import EventType, VoyageEvent, advance_day, arrive, depart
 from portlight.receipts.models import ReceiptLedger, TradeReceipt
 
 
 class GameSession:
     """Holds active game state and mediates all player actions."""
 
-    def __init__(self, base_path: Path | None = None) -> None:
+    def __init__(self, base_path: Path | None = None, slot: str = "default") -> None:
         self.base_path = base_path or Path(".")
+        self.slot = slot
         self.world: WorldState | None = None
         self.ledger: ReceiptLedger = ReceiptLedger()
         self.board: ContractBoard = ContractBoard()
@@ -131,7 +132,7 @@ class GameSession:
 
     def load(self) -> bool:
         """Load saved game. Returns True if loaded."""
-        result = load_game(self.base_path)
+        result = load_game(self.base_path, slot=self.slot)
         if result is None:
             return False
         self.world, self.ledger, self.board, self.infra, self.campaign, self.narrative = result
@@ -148,7 +149,9 @@ class GameSession:
     def _save(self) -> None:
         """Auto-save after every mutation."""
         if self.world:
-            save_game(self.world, self.ledger, self.board, self.infra, self.campaign, self.narrative, self.base_path)
+            # Clamp silver to non-negative (infrastructure/wage deductions can overshoot)
+            self.world.captain.silver = max(0, self.world.captain.silver)
+            save_game(self.world, self.ledger, self.board, self.infra, self.campaign, self.narrative, self.base_path, slot=self.slot)
 
     def _recalc(self, port) -> None:
         """Recalculate prices at a port with captain modifiers."""
@@ -369,9 +372,24 @@ class GameSession:
                     self.world.captain.standing,
                     self.world.day, port.id, port.region,
                 )
+                # Track cultural state on arrival
+                from portlight.engine.culture_engine import record_port_visit
+                record_port_visit(port.id, port.region, self.world.culture)
                 # Track festival arrival for narrative beat
                 if any(af.port_id == port.id for af in self.world.culture.active_festivals):
                     self.world.culture.festivals_visited += 1
+                # Generate arrival experience with NPC greetings
+                from portlight.engine.port_arrival_engine import generate_arrival, format_arrival_text
+                arrival_exp = generate_arrival(self.world, port.id)
+                arrival_lines = format_arrival_text(arrival_exp)
+                # Inject arrival text as a VoyageEvent so it flows through the event display
+                if arrival_lines:
+                    arrival_text = "\n".join(arrival_lines)
+                    events.append(VoyageEvent(
+                        event_type=EventType.NOTHING,
+                        message=arrival_text,
+                        flavor="[arrival]",
+                    ))
                 self._recalc(port)
                 self._refresh_board(port)
 
