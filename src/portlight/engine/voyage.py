@@ -105,7 +105,7 @@ _EVENT_WEIGHTS: list[tuple[EventType, float]] = [
     (EventType.CALM_SEAS, 0.10),
     (EventType.FAVORABLE_WIND, 0.11),
     (EventType.STORM, 0.10),
-    (EventType.PIRATES, 0.07),
+    (EventType.PIRATES, 0.12),
     (EventType.INSPECTION, 0.05),
     (EventType.PROVISIONS_SPOILED, 0.04),
     (EventType.CARGO_DAMAGED, 0.03),
