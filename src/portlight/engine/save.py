@@ -548,6 +548,10 @@ def _captain_to_dict(captain: Captain) -> dict:
         "skills": captain.skills,
         "party": _party_to_dict(captain.party),
         "fleet": [_owned_ship_to_dict(o) for o in captain.fleet],
+        "deferred_fees": captain.deferred_fees,
+        "breach_records": captain.breach_records,
+        "wanted_level": captain.wanted_level,
+        "active_bounties": captain.active_bounties,
     }
 
 
@@ -618,6 +622,10 @@ def _captain_from_dict(d: dict) -> Captain:
         skills=d.get("skills", {}),
         party=_party_to_dict(_party_from_dict(d.get("party", {}))) if "party" in d else {"companions": [], "max_size": 2, "departed": []},
         fleet=[_owned_ship_from_dict(o) for o in d.get("fleet", [])],
+        deferred_fees=d.get("deferred_fees", []),
+        breach_records=d.get("breach_records", []),
+        wanted_level=d.get("wanted_level", 0),
+        active_bounties=d.get("active_bounties", []),
     )
 
 

@@ -399,10 +399,13 @@ def routes() -> None:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def sail(destination: str) -> None:
+def sail(
+    destination: str,
+    defer: bool = typer.Option(False, "--defer", help="Defer port fee (pay double on arrival)"),
+) -> None:
     """Depart for a destination port."""
     s = _session()
-    err = s.sail(destination)
+    err = s.sail(destination, defer_fee=defer)
     if err:
         console.print(f"[red]{err}[/red]")
         # Show routes to help
@@ -1445,7 +1448,25 @@ def credit(
         console.print(f"Silver: {silver(s.captain.silver)}")
         return
 
-    console.print(f"[red]Unknown credit action: {action}[/red]. Use: open, draw, repay")
+    if action == "emergency":
+        if amount is None:
+            console.print("[yellow]Usage: portlight credit emergency <amount> (max 200)[/yellow]")
+            return
+        from portlight.engine.infrastructure import emergency_loan
+        result = emergency_loan(s.captain, amount)
+        if isinstance(result, str):
+            console.print(f"[red]{result}[/red]")
+            return
+        interest = max(1, int(amount * 0.15))
+        from portlight.app.formatting import silver
+        console.print(f"\n[bold yellow]Emergency loan![/bold yellow]")
+        console.print(f"  Received: [green]{silver(amount)}[/green]")
+        console.print(f"  Owed: [red]{silver(amount + interest)}[/red] (15% interest, collected on next port arrival)")
+        console.print(f"  Silver: {silver(s.captain.silver)}")
+        s._save()
+        return
+
+    console.print(f"[red]Unknown credit action: {action}[/red]. Use: open, draw, repay, emergency")
 
 
 # ---------------------------------------------------------------------------

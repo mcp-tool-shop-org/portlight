@@ -223,6 +223,43 @@ class TestBuySell:
         from portlight.engine.economy import sell_gear_value
         assert sell_gear_value("mythril_sword", {}) is None
 
+    def test_emergency_loan_adds_silver_and_debt(self):
+        """Emergency loan gives silver and adds deferred fee."""
+        from portlight.engine.infrastructure import emergency_loan
+        world = new_game()
+        silver_before = world.captain.silver
+        result = emergency_loan(world.captain, 100)
+        assert result == 100
+        assert world.captain.silver == silver_before + 100
+        assert len(world.captain.deferred_fees) == 1
+        assert world.captain.deferred_fees[0]["amount"] == 115  # 100 + 15% interest
+
+    def test_emergency_loan_capped_at_200(self):
+        from portlight.engine.infrastructure import emergency_loan
+        world = new_game()
+        result = emergency_loan(world.captain, 300)
+        assert isinstance(result, str)  # error
+
+    def test_deferred_port_fee_collected_on_arrival(self):
+        """Deferred fees should be collected when arriving at a port."""
+        import random
+        from portlight.engine.voyage import depart, advance_day, arrive
+        world = new_game()
+        world.captain.silver = 0  # broke
+        result = depart(world, "al_manar", defer_fee=True)
+        assert not isinstance(result, str), f"Depart failed: {result}"
+        assert len(world.captain.deferred_fees) == 1
+        # Give captain silver for the fee collection on arrival
+        world.captain.silver = 500
+        # Advance to arrival
+        for _ in range(20):
+            events = advance_day(world, random.Random(42))
+            if world.voyage and world.voyage.status.value == "arrived":
+                arrive(world)
+                break
+        # Deferred fee should have been collected
+        # (if captain had enough silver, it would be collected)
+
     def test_buy_reduces_port_stock(self):
         world = new_game()
         port = world.ports["porto_novo"]

@@ -248,11 +248,11 @@ class GameSession:
 
     # --- Voyage ---
 
-    def sail(self, destination_id: str) -> str | None:
+    def sail(self, destination_id: str, defer_fee: bool = False) -> str | None:
         """Depart for destination. Returns error string or None on success."""
         if not self.world:
             return "No active game"
-        result = depart(self.world, destination_id)
+        result = depart(self.world, destination_id, defer_fee=defer_fee)
         if isinstance(result, str):
             return result
         self._save()

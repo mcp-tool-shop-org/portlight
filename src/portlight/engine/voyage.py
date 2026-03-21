@@ -527,7 +527,7 @@ def check_route_suitability(route: Route, ship: "Ship") -> str | None:
     return None
 
 
-def depart(world: "WorldState", destination_id: str) -> VoyageState | str:
+def depart(world: "WorldState", destination_id: str, defer_fee: bool = False) -> VoyageState | str:
     """Begin a voyage from current port to destination."""
     captain = world.captain
     if captain.ship is None:
@@ -564,8 +564,17 @@ def depart(world: "WorldState", destination_id: str) -> VoyageState | str:
         fee_mult = cap_mods.pricing.port_fee_mult if cap_mods else 1.0
         fee = max(1, int(port.port_fee * fee_mult))
         if fee > captain.silver:
-            return f"Need {fee} silver for port fee, have {captain.silver}"
-        captain.silver -= fee
+            if defer_fee:
+                # Defer the fee: double amount charged on next arrival
+                captain.deferred_fees.append({
+                    "type": "port_fee",
+                    "amount": fee * 2,
+                    "day": captain.day,
+                })
+            else:
+                return f"Need {fee} silver for port fee, have {captain.silver}"
+        else:
+            captain.silver -= fee
 
     # Convoy: fleet ships at this port join the voyage
     for owned in captain.fleet:
@@ -780,5 +789,18 @@ def arrive(world: "WorldState") -> str | None:
     for owned in world.captain.fleet:
         if owned.docked_port_id == "":  # in transit
             owned.docked_port_id = voyage.destination_id
+
+    # Collect deferred fees on arrival
+    captain = world.captain
+    if captain.deferred_fees:
+        collected = 0
+        remaining = []
+        for fee in captain.deferred_fees:
+            if captain.silver >= fee["amount"]:
+                captain.silver -= fee["amount"]
+                collected += fee["amount"]
+            else:
+                remaining.append(fee)
+        captain.deferred_fees = remaining
 
     return None

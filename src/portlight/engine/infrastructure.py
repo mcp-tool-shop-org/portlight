@@ -1220,3 +1220,36 @@ def tick_credit(
                 messages.append("Credit line frozen after 3 defaults.")
 
     return messages
+
+
+# ---------------------------------------------------------------------------
+# Emergency loan (anti-soft-lock — no trust required)
+# ---------------------------------------------------------------------------
+
+def emergency_loan(
+    captain: "Captain",
+    amount: int,
+) -> str | int:
+    """Take an emergency loan at terrible terms (15% immediate interest).
+
+    No trust required. Available to anyone. The interest is applied
+    immediately — you borrow 100, you owe 115, but get 100 in hand.
+
+    Returns silver received on success, or error string.
+    """
+    if amount <= 0:
+        return "Amount must be positive"
+    if amount > 200:
+        return "Emergency loans capped at 200 silver"
+
+    interest = max(1, int(amount * 0.15))
+    total_debt = amount + interest
+    captain.silver += amount
+
+    # Track as a deferred fee (simple debt that must be repaid)
+    captain.deferred_fees.append({
+        "type": "emergency_loan",
+        "amount": total_debt,
+        "day": captain.day,
+    })
+    return amount

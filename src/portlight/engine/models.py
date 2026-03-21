@@ -346,6 +346,11 @@ class Captain:
     party: dict = field(default_factory=lambda: {"companions": [], "max_size": 2, "departed": []})
     # Fleet (Phase 7+)
     fleet: list[OwnedShip] = field(default_factory=list)
+    # Anti-soft-lock: deferred fees and breach tracking
+    deferred_fees: list[dict] = field(default_factory=list)  # emergency loans, deferred port fees
+    breach_records: list[dict] = field(default_factory=list)  # contract breach incidents
+    wanted_level: int = 0  # 0=clean, 1=watched, 2=wanted, 3=hunted
+    active_bounties: list[str] = field(default_factory=list)  # bounty target captain_ids
 
 
 # ---------------------------------------------------------------------------
