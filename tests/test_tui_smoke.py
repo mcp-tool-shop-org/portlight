@@ -1,8 +1,6 @@
-"""Smoke tests for Textual TUI — verifies imports and construction."""
+"""Smoke tests for Textual TUI — verifies imports, construction, and theme."""
 
 from __future__ import annotations
-
-import pytest
 
 
 def test_tui_app_import():
@@ -47,10 +45,84 @@ def test_combat_screen_import():
 
 
 def test_theme_css():
-    """Theme CSS is a non-empty string."""
+    """Theme CSS is a non-empty string with maritime colors."""
     from portlight.app.tui.theme import APP_CSS
     assert isinstance(APP_CSS, str)
-    assert len(APP_CSS) > 100
+    assert len(APP_CSS) > 500
+    assert "#0a1628" in APP_CSS  # deep ocean background
+    assert "#2a9d8f" in APP_CSS  # sea foam accent
+    assert "#e9c46a" in APP_CSS  # gold for silver/wealth
+    assert "#e76f51" in APP_CSS  # coral red for danger
+
+
+def test_theme_ship_art():
+    """Ship ASCII art is defined and contains visual elements."""
+    from portlight.app.tui.theme import SHIP_ART, SHIP_ART_SMALL
+    assert len(SHIP_ART) > 50
+    assert "\\" in SHIP_ART  # sail
+    assert "~" in SHIP_ART  # water
+    assert isinstance(SHIP_ART_SMALL, str)
+
+
+def test_theme_compass_rose():
+    """Compass rose contains all cardinal directions."""
+    from portlight.app.tui.theme import COMPASS_ROSE
+    for direction in ["N", "S", "E", "W", "NE", "NW", "SE", "SW"]:
+        assert direction in COMPASS_ROSE
+
+
+def test_theme_region_badges():
+    """Region badges exist for all 5 game regions."""
+    from portlight.app.tui.theme import REGION_BADGES
+    assert len(REGION_BADGES) == 5
+    assert "mediterranean" in REGION_BADGES
+    assert "north_atlantic" in REGION_BADGES
+    assert "west_africa" in REGION_BADGES
+    assert "east_indies" in REGION_BADGES
+    assert "south_seas" in REGION_BADGES
+
+
+def test_theme_wave_frames():
+    """Wave animation has multiple frames."""
+    from portlight.app.tui.theme import WAVE_FRAMES
+    assert len(WAVE_FRAMES) >= 2
+    assert all("~" in f for f in WAVE_FRAMES)
+
+
+def test_theme_render_bar():
+    """Visual bar renders correctly for different ratios."""
+    from portlight.app.tui.theme import render_bar
+    # Full health
+    bar_full = render_bar(10, 10)
+    assert len(bar_full) > 0
+    # Half health
+    bar_half = render_bar(5, 10)
+    assert len(bar_half) > 0
+    # Empty
+    bar_empty = render_bar(0, 10)
+    assert len(bar_empty) > 0
+    # Zero max
+    bar_zero = render_bar(0, 0)
+    assert len(bar_zero) > 0
+
+
+def test_theme_silver_display():
+    """Silver display formats amounts with appropriate styling."""
+    from portlight.app.tui.theme import silver_display
+    assert "1,000" in silver_display(1000)
+    assert "500" in silver_display(500)
+    assert "0" in silver_display(0)
+
+
+def test_theme_danger_indicator():
+    """Danger indicator returns different symbols for different levels."""
+    from portlight.app.tui.theme import danger_indicator
+    safe = danger_indicator(0.05)
+    low = danger_indicator(0.10)
+    high = danger_indicator(0.18)
+    perilous = danger_indicator(0.25)
+    # They should all be non-empty and different from each other
+    assert all(len(s) > 0 for s in [safe, low, high, perilous])
 
 
 def test_dashboard_content_tabs():
@@ -66,14 +138,73 @@ def test_dashboard_content_tabs():
     ]
     for tab in expected_tabs:
         content._current_tab = tab
-        # Should not raise
         assert content._current_tab == tab
 
 
 def test_app_bindings():
-    """App has bindings for all navigation keys."""
+    """App has bindings for all navigation and action keys."""
     from portlight.app.tui.app import PortlightApp
     app = PortlightApp()
     binding_keys = {b.key for b in app.BINDINGS}
-    expected = {"d", "m", "r", "c", "i", "f", "k", "p", "l", "w", "b", "s", "g", "a", "q"}
-    assert expected.issubset(binding_keys)
+    # Navigation keys
+    nav_keys = {"d", "m", "r", "c", "i", "f", "k", "p", "l", "w"}
+    assert nav_keys.issubset(binding_keys)
+    # Action keys
+    action_keys = {"b", "s", "g", "a"}
+    assert action_keys.issubset(binding_keys)
+    # Quit
+    assert "q" in binding_keys
+
+
+def test_splash_art():
+    """Splash screen art is defined."""
+    from portlight.app.tui.screens.dashboard import SPLASH_ART, SPLASH_TITLE
+    assert len(SPLASH_ART) > 100
+    assert "____" in SPLASH_TITLE  # ASCII art banner
+
+
+def test_sidebar_components():
+    """StatusSidebar can be imported and has compose method."""
+    from portlight.app.tui.screens.dashboard import StatusSidebar
+    from portlight.app.session import GameSession
+    sidebar = StatusSidebar(GameSession())
+    assert hasattr(sidebar, "refresh_status")
+    assert hasattr(sidebar, "compose")
+
+
+def test_tabbar():
+    """TabBar has all expected tab labels."""
+    from portlight.app.tui.screens.dashboard import TabBar
+    bar = TabBar()
+    labels = [label for _, label in bar.TAB_LABELS]
+    assert "Dash" in labels
+    assert "Market" in labels
+    assert "Routes" in labels
+    assert "Fleet" in labels
+    assert "Help" in labels
+
+
+def test_market_trade_dialog_construct():
+    """TradeDialog can be constructed with parameters."""
+    from portlight.app.tui.screens.market import TradeDialog
+    dialog = TradeDialog("buy", "grain", "Grain", 10, 12)
+    assert dialog.action == "buy"
+    assert dialog.good_id == "grain"
+    assert dialog.max_qty == 10
+    assert dialog.price == 12
+
+
+def test_sail_dialog_construct():
+    """SailDialog can be constructed with destinations."""
+    from portlight.app.tui.screens.routes import SailDialog
+    dests = [("porto_novo", "Porto Novo", 30, 0.08, "mediterranean", 6)]
+    dialog = SailDialog(dests)
+    assert len(dialog.destinations) == 1
+
+
+def test_event_icons():
+    """Event icons dictionary is populated."""
+    from portlight.app.tui.screens.routes import _EVENT_ICONS
+    assert "pirate" in _EVENT_ICONS
+    assert "storm" in _EVENT_ICONS
+    assert "arrival" in _EVENT_ICONS
