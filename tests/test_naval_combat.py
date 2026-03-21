@@ -308,6 +308,18 @@ class TestEvadeRounds:
             normal_dmg.append(abs(r2.player_hull_delta))
         assert sum(evade_dmg) < sum(normal_dmg)
 
+    def test_evade_can_fully_dodge_weak_broadside(self):
+        """Evade against a ship with few cannons can result in 0 hull damage."""
+        player = _make_player_ship()
+        enemy = _make_enemy_ship(cannons=1)  # very weak broadside
+        zero_found = False
+        for seed in range(200):
+            r = resolve_naval_round("evade", "broadside", player, enemy, 0, random.Random(seed))
+            if r.player_hull_delta == 0:
+                zero_found = True
+                break
+        assert zero_found, "Evade should be able to fully avoid a 1-cannon broadside"
+
 
 # ---------------------------------------------------------------------------
 # Flavor text

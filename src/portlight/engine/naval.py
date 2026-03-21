@@ -249,7 +249,7 @@ def resolve_naval_round(
         base = player_ship.cannons * rng.randint(1, 3)
         reduced = max(1, int(base * (1 - enemy_ship.maneuver * 0.3)))
         if enemy_action == "evade":
-            reduced = max(1, reduced // 2)
+            reduced = max(0, reduced // 2)  # evade can fully dodge a weak broadside
         e_hull_delta -= reduced
 
     elif player_action == "rake" and player_ship.cannons > 0:
@@ -273,7 +273,7 @@ def resolve_naval_round(
         base = enemy_ship.cannons * rng.randint(1, 3)
         reduced = max(1, int(base * (1 - player_ship.maneuver * 0.3)))
         if player_action == "evade":
-            reduced = max(1, reduced // 2)
+            reduced = max(0, reduced // 2)  # evade can fully dodge a weak broadside
         p_hull_delta -= reduced
 
     elif enemy_action == "rake" and enemy_ship.cannons > 0:

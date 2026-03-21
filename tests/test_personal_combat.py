@@ -596,3 +596,43 @@ class TestFlavorText:
             p, o = _player(), _opponent()
             r = resolve_combat_round("thrust", p, o, "balanced", _rng(seed))
             assert r.flavor  # non-empty string
+
+
+# ---------------------------------------------------------------------------
+# Throwing weapon gear sync (CLI-level cleanup)
+# ---------------------------------------------------------------------------
+
+class TestThrowingWeaponGearSync:
+    """Verify that fully-spent throwing weapons are pruned from gear dict."""
+
+    def test_spent_weapons_removed_from_dict(self):
+        """After spending all throwing knives, the key should be removed."""
+        gear = {"throwing_knife": 1, "bolas": 2}
+        # Simulate the sync: 1 spent total
+        total_before = sum(gear.values())
+        remaining = total_before - 1  # threw 1
+        spent = total_before - remaining
+        for wid in list(gear):
+            if spent <= 0:
+                break
+            can_take = min(spent, gear[wid])
+            gear[wid] -= can_take
+            spent -= can_take
+        # Cleanup zero-count entries
+        gear = {k: v for k, v in gear.items() if v > 0}
+        assert "throwing_knife" not in gear
+        assert gear == {"bolas": 2}
+
+    def test_partial_spend_keeps_weapon(self):
+        """Spending 1 of 3 bolas should keep the entry."""
+        gear = {"bolas": 3}
+        total_before = sum(gear.values())
+        spent = total_before - 2  # 1 spent
+        for wid in list(gear):
+            if spent <= 0:
+                break
+            can_take = min(spent, gear[wid])
+            gear[wid] -= can_take
+            spent -= can_take
+        gear = {k: v for k, v in gear.items() if v > 0}
+        assert gear == {"bolas": 2}

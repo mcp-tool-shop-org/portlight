@@ -1923,12 +1923,14 @@ def fight(
         if gear.throwing_weapons:
             total_before = sum(gear.throwing_weapons.values())
             spent = total_before - p.throwing_weapons
-            for wid in gear.throwing_weapons:
+            for wid in list(gear.throwing_weapons):
                 if spent <= 0:
                     break
                 can_take = min(spent, gear.throwing_weapons[wid])
                 gear.throwing_weapons[wid] -= can_take
                 spent -= can_take
+            # Remove fully spent throwing weapons
+            gear.throwing_weapons = {k: v for k, v in gear.throwing_weapons.items() if v > 0}
 
         if player_won:
             # VICTORY — pause for spare/take-all choice
