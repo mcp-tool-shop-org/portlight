@@ -16,7 +16,7 @@ from portlight.balance.types import BalanceRunConfig, PolicyId, RunMetrics
 def _run_captain_batch(
     captain_type: str,
     policy: PolicyId = PolicyId.OPPORTUNISTIC_TRADER,
-    seeds: tuple[int, ...] = (42, 137, 256, 999, 314, 777),
+    seeds: tuple[int, ...] = (42, 137, 256, 999, 314, 777, 9, 16, 23, 55),
     max_days: int = 60,
 ) -> list[RunMetrics]:
     """Run a batch for one captain with multiple seeds."""

@@ -64,7 +64,7 @@ from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"
-CURRENT_SAVE_VERSION = 10
+CURRENT_SAVE_VERSION = 11
 
 
 # ---------------------------------------------------------------------------
@@ -235,8 +235,25 @@ def _migrate_v9_to_v10(data: dict) -> dict:
     return data
 
 
-# Add v9→v10 to migration chain
+# Add v9→v10 and v10→v11 to migration chain
 _MIGRATIONS.append((9, 10, _migrate_v9_to_v10))
+
+
+def _migrate_v10_to_v11(data: dict) -> dict:
+    """v10 → v11: Add officers to ships."""
+    captain = data.get("captain", {})
+    ship = captain.get("ship")
+    if ship:
+        ship.setdefault("officers", [])
+    for owned in captain.get("fleet", []):
+        fleet_ship = owned.get("ship", {})
+        if fleet_ship:
+            fleet_ship.setdefault("officers", [])
+    data["version"] = 11
+    return data
+
+
+_MIGRATIONS.append((10, 11, _migrate_v10_to_v11))
 
 
 def migrate_save(data: dict) -> dict:
@@ -292,6 +309,11 @@ def _ship_to_dict(ship: Ship) -> dict:
             "quartermasters": ship.roster.quartermasters,
         } if hasattr(ship, "roster") else None,
         "morale": getattr(ship, "morale", 50),
+        "officers": [
+            {"name": o.name, "role": o.role.value if hasattr(o.role, 'value') else o.role,
+             "experience": o.experience, "origin_port": o.origin_port, "trait": o.trait}
+            for o in (ship.officers if hasattr(ship, "officers") else [])
+        ],
     }
 
 
@@ -321,6 +343,23 @@ def _ship_from_dict(d: dict) -> Ship:
         roster = CrewRoster(sailors=d.get("crew", 0))
     d["roster"] = roster
     d.setdefault("morale", 50)
+    # Deserialize officers
+    from portlight.engine.models import CrewRole, Officer
+    raw_officers = d.pop("officers", [])
+    officers = []
+    for o in raw_officers:
+        try:
+            role = CrewRole(o.get("role", "sailor"))
+        except ValueError:
+            role = CrewRole.SAILOR
+        officers.append(Officer(
+            name=o.get("name", "Unknown"),
+            role=role,
+            experience=o.get("experience", 0),
+            origin_port=o.get("origin_port", ""),
+            trait=o.get("trait", ""),
+        ))
+    d["officers"] = officers
     return Ship(**d)
 
 

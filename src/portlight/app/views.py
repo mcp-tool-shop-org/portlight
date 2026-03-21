@@ -713,9 +713,23 @@ def crew_roster_view(ship: "Ship | None") -> Panel:
             spec.description,
         )
 
+    # Named officers section
+    if ship.officers:
+        table.add_section()
+        table.add_row("[bold]Officers[/bold]", "", "", "", "")
+        for officer in ship.officers:
+            table.add_row(
+                f"  {officer.name}",
+                officer.role.value.title(),
+                f"[dim]{officer.trait}[/dim]",
+                f"[dim]{officer.experience}d exp[/dim]",
+                f"[dim]from {officer.origin_port}[/dim]" if officer.origin_port else "",
+            )
+
     from portlight.engine.ship_stats import compute_daily_wages
     total_wage = compute_daily_wages(ship.roster)
-    footer = f"Total crew: {ship.crew}/{ship.crew_max}  |  Daily wages: {total_wage} silver"
+    morale_str = f"  |  Morale: {ship.morale}/100"
+    footer = f"Total crew: {ship.crew}/{ship.crew_max}  |  Daily wages: {total_wage} silver{morale_str}"
 
     return Panel(table, subtitle=footer, border_style="cyan")
 

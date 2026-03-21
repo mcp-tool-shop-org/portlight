@@ -177,6 +177,7 @@ class Ship:
     upgrade_slots: int = 2           # set from UPGRADE_SLOTS at creation
     roster: "CrewRoster" = field(default_factory=lambda: CrewRoster())
     morale: int = 50                 # crew morale (0-100)
+    officers: list["Officer"] = field(default_factory=list)
 
     def sync_crew(self) -> None:
         """Keep crew field in sync with roster total."""
@@ -207,6 +208,16 @@ class CrewRoster:
     def total(self) -> int:
         return (self.sailors + self.gunners + self.navigators
                 + self.surgeons + self.marines + self.quartermasters)
+
+
+@dataclass
+class Officer:
+    """A named crew member with personality. Officers are specialists with identity."""
+    name: str
+    role: "CrewRole"
+    experience: int = 0          # days served
+    origin_port: str = ""        # where they were hired
+    trait: str = ""              # personality trait (e.g. "loyal", "greedy", "superstitious")
 
 
 @dataclass

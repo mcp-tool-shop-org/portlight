@@ -64,8 +64,10 @@ def _check_cargo_within_capacity(s: "GameSession") -> InvariantResult:
             subsystem=Subsystem.ECONOMY,
             passed=True,
         )
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.ship_stats import resolve_cargo_capacity
     used = sum(c.quantity for c in s.captain.cargo)
-    cap = ship.cargo_capacity
+    cap = resolve_cargo_capacity(ship, UPGRADES)
     return InvariantResult(
         name="cargo_within_capacity",
         subsystem=Subsystem.ECONOMY,

@@ -351,8 +351,8 @@ def _should_hire_specialist(session: "GameSession", prefer_roles: list[str] | No
     if not ship or not session.current_port:
         return None
 
-    # Only hire specialists when we have comfortable surplus (>400 silver)
-    if captain.silver < 400:
+    # Only hire specialists when we have comfortable surplus (>800 silver)
+    if captain.silver < 800:
         return None
 
     from portlight.content.upgrades import UPGRADES

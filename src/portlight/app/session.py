@@ -735,6 +735,22 @@ class GameSession:
         current = get_role_count(ship.roster, crew_role)
         set_role_count(ship.roster, crew_role, current + count)
         ship.sync_crew()
+
+        # Generate named officers for specialist roles
+        if crew_role != CrewRole.SAILOR:
+            from portlight.engine.models import Officer
+            from portlight.content.officer_names import generate_officer_name, generate_officer_trait
+            region = port.region if port else "Mediterranean"
+            for _ in range(count):
+                name = generate_officer_name(region, self._rng)
+                trait = generate_officer_trait(self._rng)
+                ship.officers.append(Officer(
+                    name=name,
+                    role=crew_role,
+                    origin_port=port.id if port else "",
+                    trait=trait,
+                ))
+
         self._save()
         return None
 
@@ -762,6 +778,18 @@ class GameSession:
         fired = min(count, current)
         set_role_count(ship.roster, crew_role, current - fired)
         ship.sync_crew()
+
+        # Remove named officers for specialist roles (remove from end)
+        if crew_role != CrewRole.SAILOR:
+            to_remove = fired
+            new_officers = []
+            for o in reversed(ship.officers):
+                if o.role == crew_role and to_remove > 0:
+                    to_remove -= 1
+                else:
+                    new_officers.append(o)
+            ship.officers = list(reversed(new_officers))
+
         self._save()
         return None
 
