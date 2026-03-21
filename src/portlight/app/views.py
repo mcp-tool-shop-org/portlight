@@ -726,8 +726,11 @@ def crew_roster_view(ship: "Ship | None") -> Panel:
                 f"[dim]from {officer.origin_port}[/dim]" if officer.origin_port else "",
             )
 
+    from portlight.content.ships import SHIPS as _SHIPS_CAT
     from portlight.engine.ship_stats import compute_daily_wages
-    total_wage = compute_daily_wages(ship.roster)
+    _tmpl = _SHIPS_CAT.get(ship.template_id)
+    _ship_wage = _tmpl.daily_wage if _tmpl else 1
+    total_wage = compute_daily_wages(ship.roster, _ship_wage)
     morale_str = f"  |  Morale: {ship.morale}/100"
     footer = f"Total crew: {ship.crew}/{ship.crew_max}  |  Daily wages: {total_wage} silver{morale_str}"
 

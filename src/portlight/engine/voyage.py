@@ -607,7 +607,8 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     template = SHIPS.get(captain.ship.template_id)
     # Use roster-based wages if roster has crew, else fallback to flat rate
     if captain.ship.roster.total > 0:
-        wage_cost = compute_daily_wages(captain.ship.roster)
+        daily_wage = template.daily_wage if template else 1
+        wage_cost = compute_daily_wages(captain.ship.roster, daily_wage)
     else:
         daily_wage = template.daily_wage if template else 1
         wage_cost = daily_wage * captain.ship.crew

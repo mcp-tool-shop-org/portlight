@@ -209,19 +209,21 @@ def quartermaster_sell_bonus(roster: CrewRoster) -> float:
     return 0.05 if roster.quartermasters >= 1 else 0.0
 
 
-def compute_daily_wages(roster: CrewRoster) -> int:
+def compute_daily_wages(roster: CrewRoster, ship_daily_wage: int = 1) -> int:
     """Total daily wage bill from roster composition.
 
-    Each role has different wages. Quartermaster applies a 10% discount.
+    Sailors use the ship's template daily_wage (bigger ships cost more to crew).
+    Specialists use their own role-specific wage rates.
+    Quartermaster applies a 10% discount.
     """
     from portlight.content.crew_roles import ROLE_SPECS
     base = (
-        roster.sailors * ROLE_SPECS[CrewRole.SAILOR].wage
-        + roster.gunners * ROLE_SPECS[CrewRole.GUNNER].wage
-        + roster.navigators * ROLE_SPECS[CrewRole.NAVIGATOR].wage
-        + roster.surgeons * ROLE_SPECS[CrewRole.SURGEON].wage
-        + roster.marines * ROLE_SPECS[CrewRole.MARINE].wage
-        + roster.quartermasters * ROLE_SPECS[CrewRole.QUARTERMASTER].wage
+        roster.sailors * max(ship_daily_wage, ROLE_SPECS[CrewRole.SAILOR].wage)
+        + roster.gunners * max(ship_daily_wage, ROLE_SPECS[CrewRole.GUNNER].wage)
+        + roster.navigators * max(ship_daily_wage, ROLE_SPECS[CrewRole.NAVIGATOR].wage)
+        + roster.surgeons * max(ship_daily_wage, ROLE_SPECS[CrewRole.SURGEON].wage)
+        + roster.marines * max(ship_daily_wage, ROLE_SPECS[CrewRole.MARINE].wage)
+        + roster.quartermasters * max(ship_daily_wage, ROLE_SPECS[CrewRole.QUARTERMASTER].wage)
     )
     if roster.quartermasters >= 1:
         base = int(base * 0.90)
