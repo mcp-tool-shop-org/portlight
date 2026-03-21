@@ -1584,6 +1584,1105 @@ CORSAIRS_REST_PROFILE = PortInstitutionalProfile(
 )
 
 
+
+# =========================================================================
+# IRONHAVEN — The Iron Pact's Furnace
+# =========================================================================
+
+_IRONHAVEN_NPCS = [
+    PortNPC(
+        id="ih_gunnar",
+        name="Gunnar Stahl",
+        title="Harbor Master",
+        port_id="ironhaven",
+        institution="harbor_master",
+        personality="blunt",
+        description=(
+            "Built like a hull beam, with a voice calibrated for shouting across "
+            "foundry floors. Gunnar ran supply logistics for the garrison before he "
+            "ran the harbor. He assigns berths by cargo priority: iron and weapons "
+            "shipments dock first. Everything else waits."
+        ),
+        agenda=(
+            "Efficiency. Gunnar wants ships loaded and gone. The harbor is a funnel "
+            "for the foundry, not a destination. He has no patience for captains who "
+            "linger, haggle, or complain about berth assignments. His harbor runs "
+            "like the military operation he was trained for."
+        ),
+        greeting_neutral="\"Cargo type and tonnage. You'll dock when I have a berth. Iron shipments first — that's the rule.\"",
+        greeting_friendly="\"Captain. Berth two, portside — I held it. Load fast and you'll make the evening tide.\"",
+        greeting_hostile="\"Outer anchorage. No priority. And if I hear you've been selling to pirates, you won't dock here again.\"",
+        rumor="Gunnar deserted from the same garrison as the Iron Wolves — but years earlier and for different reasons. He left because the pay stopped. They left because the discipline bored them. He considers them traitors. They consider him a coward. Neither will say this to the other's face.",
+        relationship_notes={
+            "ih_forge_master": "Serves him. The foundry is Ironhaven's purpose. Gunnar's harbor exists to feed it.",
+            "ih_astrid": "Uncomfortable. She's too political for his taste. He moves iron; she moves power.",
+            "ih_the_smith": "Drinking companion. Two military men who understand each other without conversation.",
+            "ih_olga": "Professional respect. She runs the tavern the way he runs the harbor — no nonsense.",
+            "ih_inspector_kross": "Allies. Both ex-military. Both believe in rules. The only question is whose rules.",
+            "ih_broker_jan": "Useful. Jan brings contracts that keep the harbor busy.",
+        },
+    ),
+    PortNPC(
+        id="ih_forge_master",
+        name="Forge Master Henrik Brandt",
+        title="Guild Master",
+        port_id="ironhaven",
+        institution="exchange",
+        personality="imperious",
+        description=(
+            "A massive man whose leather apron has never fully cooled. Henrik is the "
+            "Iron Guild's Master — he sets the iron price, controls the foundry's "
+            "output, and governs Ironhaven with the absolute authority of a man who "
+            "controls the thing everyone needs. His hands are scarred from decades "
+            "at the forge, and he considers this proof of legitimacy."
+        ),
+        agenda=(
+            "The Iron Guild's supremacy. Henrik wants Ironhaven to be the world's "
+            "sole source of refined iron and quality weapons. He views Iron Point's "
+            "raw ore as an insult — 'unrefined swamp metal' was his phrase, and he "
+            "meant it. He'll crush any competition through quality, volume, and if "
+            "necessary, political pressure. The Iron Pact is his instrument."
+        ),
+        greeting_neutral="\"Iron or weapons? The price is posted at the foundry gate. We don't haggle — we smelt, we price, you pay.\"",
+        greeting_friendly="\"Captain — a pleasure. I've reserved a special alloy for you. Military grade. The kind of iron that makes ship hulls sing.\"",
+        greeting_hostile="\"I know where my iron ends up. And I know where YOUR iron comes from. The Guild remembers, Captain. Every ingot has a mark.\"",
+        rumor="Henrik personally destroyed a shipment of Iron Point ore that arrived at Ironhaven for refining. He poured it into the harbor and told the merchant to swim home with it. The Guild applauded. Iron Point's Red Hand has never forgiven him.",
+        relationship_notes={
+            "ih_gunnar": "His logistics arm. Gunnar keeps the harbor feeding the foundry. That's all Henrik needs from him.",
+            "ih_astrid": "Political allies, personal friction. She wants the Pact strong; he wants the Guild dominant. Sometimes those are the same thing.",
+            "ih_the_smith": "The only person Henrik considers an equal. Both are masters of fire and metal.",
+            "ih_olga": "Beneath his notice — or so he pretends. He eats at her tavern every night. The food is the only thing he doesn't try to control.",
+            "ih_inspector_kross": "Useful tool. Kross catches the weapons leaks that Henrik can't afford.",
+            "ih_broker_jan": "Values him. Jan turns iron into contracts. Contracts turn into Guild power.",
+        },
+    ),
+    PortNPC(
+        id="ih_astrid",
+        name="Astrid Vekhren",
+        title="Pact Commissioner",
+        port_id="ironhaven",
+        institution="governor",
+        personality="strategic",
+        description=(
+            "Pale eyes, cropped hair, and the stillness of someone who calculates "
+            "before she breathes. Astrid is the Iron Pact's political commissioner — "
+            "not a governor in the traditional sense, but the person who coordinates "
+            "between Ironhaven and Stormwall, manages Alliance relations, and decides "
+            "who the Pact's enemies are. She's the only person Henrik defers to, and "
+            "she knows it."
+        ),
+        agenda=(
+            "Pact dominance in the North Atlantic and Alliance influence across the "
+            "Mediterranean. Astrid thinks bigger than Henrik — she wants the Pact to "
+            "be the Alliance's military arm, controlling weapons policy for the entire "
+            "bloc. She proposed the weapons embargo against pirate-linked captains and "
+            "pushed it through Costa's government in Porto Novo. She's playing a game "
+            "that extends far beyond Ironhaven's harbor."
+        ),
+        greeting_neutral="\"Captain. The Pact monitors all weapons trade in the North Atlantic. Your cargo will be reviewed. This is not optional.\"",
+        greeting_friendly="\"Captain — the Pact values reliable partners. I have a commission that requires discretion and loyalty. Walk with me.\"",
+        greeting_hostile="\"Your trade history has been flagged. The Pact takes weapons proliferation seriously. I suggest you reconsider your associations.\"",
+        rumor="Astrid has a file on every captain who's docked at Ironhaven in the last five years. She knows their routes, their cargoes, and their associates. Some say she has informants at Corsair's Rest. If she does, Ghost hasn't found them yet — and that worries Ghost.",
+        relationship_notes={
+            "ih_gunnar": "Uses him. Gunnar runs the harbor; Astrid runs the politics. She doesn't need his approval.",
+            "ih_forge_master": "Allies with friction. She needs his iron; he needs her politics. Neither trusts the other completely.",
+            "ih_the_smith": "Curious about him. He's the best weaponsmith but he won't explain his designs. She respects the talent, distrusts the silence.",
+            "ih_olga": "Avoids the tavern. Astrid doesn't drink in public. Information is power, and taverns leak.",
+            "ih_inspector_kross": "Her most trusted agent. Kross enforces the weapons embargo. Astrid gives the orders.",
+            "ih_broker_jan": "Controls him. Jan's contracts must align with Pact policy. He knows the boundaries.",
+        },
+    ),
+    PortNPC(
+        id="ih_the_smith",
+        name="The Smith",
+        title="Master Weaponsmith",
+        port_id="ironhaven",
+        institution="shipyard",
+        personality="silent",
+        description=(
+            "Nobody calls him anything else. The Smith works the deepest forge in "
+            "Ironhaven — the one that runs day and night, where the heat warps the "
+            "air and the sound of his hammer has a rhythm that the whole harbor "
+            "synchronizes to. He builds weapons the way Elena in Silva Bay builds "
+            "ships: with an obsession that borders on religious. He has never given "
+            "an interview, never explained a design, and never built the same weapon "
+            "twice."
+        ),
+        agenda=(
+            "Perfection. The Smith doesn't care about the Iron Guild, the Pact, or "
+            "politics. He cares about metal. He refused to mass-produce weapons for "
+            "the garrison — each piece must be individual. This drove the military "
+            "contract to cheaper foundries, but captains who want the best weapon in "
+            "the Known World come to the deep forge and wait."
+        ),
+        greeting_neutral="He looks up from the anvil. Looks at your hands. Looks at your ship through the forge door. Goes back to hammering. After a while: \"...What do you need?\"",
+        greeting_friendly="A nod. He puts down his hammer — the highest compliment. \"I've been working on something. Come see.\"",
+        greeting_hostile="The hammering doesn't stop. He doesn't look up. You don't exist to him today.",
+        rumor="The Smith built a sword for Scarlet Ana — the only weapon he's made for a pirate. He won't say why. Ana won't say what she paid. The sword is said to cut through rope, bone, and negotiation with equal ease.",
+        relationship_notes={
+            "ih_gunnar": "Drinking companion. They sit in silence. It works.",
+            "ih_forge_master": "The only person Henrik considers an equal. Henrik respects the craft; the Smith ignores the politics.",
+            "ih_astrid": "She watches him. He doesn't notice, or doesn't care. His silence frustrates her need to know everything.",
+            "ih_olga": "Eats at her tavern. Always orders the same thing. Olga stopped asking years ago.",
+            "ih_inspector_kross": "Irrelevant to each other. The Smith's weapons never go through customs — they're collected in person.",
+            "ih_broker_jan": "Jan has tried to broker the Smith's weapons through contracts. The Smith refused. He chooses his own buyers.",
+        },
+    ),
+    PortNPC(
+        id="ih_olga",
+        name="Olga Strand",
+        title="Tavern Keeper",
+        port_id="ironhaven",
+        institution="tavern",
+        personality="stoic",
+        description=(
+            "A woman who has poured drinks for foundry workers for twenty-three years "
+            "and never once smiled at a joke she didn't find funny. Olga runs the "
+            "Forge & Anchor — the only tavern in Ironhaven that foundry workers, "
+            "sailors, and military officers all drink in. She keeps the peace not "
+            "through charm but through the understanding that she will personally "
+            "throw anyone through the door who starts trouble, and she's done it "
+            "before, and the door still has the dent."
+        ),
+        agenda=(
+            "A quiet house. Olga wants her tavern to run without drama. She doesn't "
+            "collect secrets like Enzo in Porto Novo — she overhears them and forgets "
+            "them, which is why people talk freely here. The foundry workers trust her. "
+            "The officers trust her. Even the Iron Wolves' contacts trust her, because "
+            "Olga genuinely doesn't care about anyone's faction."
+        ),
+        greeting_neutral="\"Ale, mead, or the strong stuff. Food's on the board. Sit where you like. Start trouble, leave through the wall.\"",
+        greeting_friendly="\"Captain. Your corner's free. I'll bring you the good mead — the batch from the mainland. You've earned it.\"",
+        greeting_hostile="\"You can drink. You can eat. You can NOT recruit, argue, or raise your voice. My house, my rules. Clear?\"",
+        rumor="Olga arm-wrestled the Forge Master once — and won. Henrik claims the table was uneven. Olga says nothing, which everyone takes as confirmation. The foundry workers still toast her on the anniversary.",
+        relationship_notes={
+            "ih_gunnar": "Regulars in silence. Military men drink quietly. She respects that.",
+            "ih_forge_master": "He eats here every night and pretends the tavern is beneath him. She pretends not to notice. A comfortable arrangement.",
+            "ih_astrid": "Never comes in. Olga isn't sure if she should be insulted or relieved.",
+            "ih_the_smith": "Orders the same thing every night. She stopped asking years ago. Some routines are sacred.",
+            "ih_inspector_kross": "Watches him carefully. He drinks alone and listens to other tables. She hasn't decided if that's professional habit or something else.",
+            "ih_broker_jan": "He talks too much. She pours anyway.",
+        },
+    ),
+    PortNPC(
+        id="ih_inspector_kross",
+        name="Inspector Kross",
+        title="Weapons Inspector",
+        port_id="ironhaven",
+        institution="customs",
+        personality="methodical",
+        description=(
+            "Square jaw, regulation haircut, and inspection reports filed in "
+            "triplicate. Kross is the Iron Pact's weapons inspector — his job isn't "
+            "general customs but specifically tracking where Ironhaven's weapons end "
+            "up. Every blade, every barrel, every crate of iron is logged with serial "
+            "marks. If Pact weapons appear at Corsair's Rest, Kross traces the chain "
+            "back to the captain who diverted them."
+        ),
+        agenda=(
+            "The weapons embargo. Kross is Astrid's enforcement arm — he makes sure "
+            "Ironhaven weapons go to legitimate buyers only. He maintains a registry "
+            "of every weapons sale, cross-references it with port reports from across "
+            "the Mediterranean, and presents his findings to Astrid weekly. He's "
+            "thorough, humorless, and extremely good at his job."
+        ),
+        greeting_neutral="\"Weapons in your hold? I'll need to see serial marks and buyer documentation. This is routine — Pact regulation.\"",
+        greeting_friendly="\"Captain — your record is clean. Quick inspection, fast turnaround. The Pact appreciates captains who keep the chain of custody intact.\"",
+        greeting_hostile="\"Full weapons audit. Every crate, every mark. I have reports that Pact iron has appeared in unauthorized hands. Your cargo will be verified. Thoroughly.\"",
+        rumor="Kross traced a stolen weapons shipment from Ironhaven to Corsair's Rest through six intermediate ports and fourteen false manifests. The smuggler had a seventeen-day head start. Kross caught him in twelve. The smuggler is still in the Stormwall brig.",
+        relationship_notes={
+            "ih_gunnar": "Fellow ex-military. They understand duty the same way.",
+            "ih_forge_master": "Serves the Guild's interest — every weapon tracked means every weapon accountable.",
+            "ih_astrid": "His superior and the person whose orders he trusts absolutely.",
+            "ih_the_smith": "No interaction. The Smith's custom work is outside the mass-production tracking system.",
+            "ih_olga": "Drinks alone at her tavern. Listens. Olga watches him listen. Neither says anything.",
+            "ih_broker_jan": "Reviews Jan's weapons contracts for embargo compliance. Jan resents it but complies.",
+        },
+    ),
+    PortNPC(
+        id="ih_broker_jan",
+        name="Jan Eriksson",
+        title="Senior Broker",
+        port_id="ironhaven",
+        institution="broker",
+        personality="pragmatic",
+        description=(
+            "Thick glasses, ink-stained cuffs, and the resigned expression of a man "
+            "who turns iron into paperwork for a living. Jan brokers Ironhaven's "
+            "contracts — weapons supply agreements, iron bulk orders, and the military "
+            "commissions that keep the Pact funded. He's competent, thorough, and "
+            "slightly exhausted by the political oversight Astrid places on every deal."
+        ),
+        agenda=(
+            "Good contracts with minimum political interference. Jan would love to "
+            "broker freely — sell to whoever pays — but Astrid's embargo restricts "
+            "his market. He follows the rules because the Pact pays well, but he "
+            "privately thinks the embargo loses more business than it protects. He's "
+            "not wrong, but he's not brave enough to say it to Astrid's face."
+        ),
+        greeting_neutral="\"Iron contracts, weapons supply, or military commission? I have all three. The terms are standard — Pact approved.\"",
+        greeting_friendly="\"Captain! Good timing — I have a bulk iron order that needs a reliable ship. The margin is solid and the route is safe. Interested?\"",
+        greeting_hostile="\"I... need to verify your trade history before offering contracts. Pact policy. It shouldn't take more than... a few days.\"",
+        rumor="Jan keeps a private ledger of contracts he wasn't allowed to broker — deals that would have been profitable but were blocked by the weapons embargo. The total lost revenue grows every month. He doesn't show anyone, but he keeps counting.",
+        relationship_notes={
+            "ih_gunnar": "Gets along. Gunnar loads what Jan brokers. Simple chain.",
+            "ih_forge_master": "Valued by Henrik. Jan's contracts fund the foundry's expansion.",
+            "ih_astrid": "His political ceiling. She approves his contracts. He resents the oversight but respects the authority.",
+            "ih_the_smith": "Tried to broker the Smith's custom weapons. Was refused. Accepted it with quiet frustration.",
+            "ih_olga": "Talks too much at the tavern after a few meads. Olga pours anyway.",
+            "ih_inspector_kross": "Kross reviews his weapons contracts. Jan complies. The tension is professional, not personal.",
+        },
+    ),
+]
+
+_IRONHAVEN_INSTITUTIONS = [
+    PortInstitution(
+        id="ih_harbor",
+        name="The Iron Dock",
+        port_id="ironhaven",
+        institution_type="harbor_master",
+        description=(
+            "Reinforced stone quays built to handle heavy iron shipments. Cranes "
+            "swing overhead loading ingots. The harbor smells of coal smoke and "
+            "hot metal. Berth priority is posted on a board: iron and weapons first."
+        ),
+        function="Cargo-priority berth assignment. Iron and weapons shipments get priority docking. Everything else waits for space.",
+        political_leaning="Iron Pact logistics. The harbor serves the foundry.",
+        npc_id="ih_gunnar",
+    ),
+    PortInstitution(
+        id="ih_foundry",
+        name="The Great Foundry",
+        port_id="ironhaven",
+        institution_type="exchange",
+        description=(
+            "The chimney visible twenty leagues at sea, glowing red at night. Inside: "
+            "blast furnaces, rolling mills, and the constant ring of metal on metal. "
+            "Iron prices are posted at the gate — take it or leave it. The foundry "
+            "never closes."
+        ),
+        function="Iron pricing, weapons production, bulk metal sales. The Iron Guild sets prices here — no auction, no negotiation.",
+        political_leaning="Iron Guild sovereignty. Henrik's foundry IS Ironhaven's government.",
+        npc_id="ih_forge_master",
+    ),
+    PortInstitution(
+        id="ih_pact_office",
+        name="The Pact Office",
+        port_id="ironhaven",
+        institution_type="governor",
+        description=(
+            "A grey stone building with the Iron Pact banner — a black wolf on iron "
+            "grey. Maps of North Atlantic shipping lanes cover every wall. Astrid's "
+            "desk faces the harbor so she can watch arrivals while reading reports."
+        ),
+        function="Political coordination, weapons policy, embargo enforcement. The Pact's command center for North Atlantic operations.",
+        political_leaning="Iron Pact strategic headquarters. Astrid coordinates with Stormwall from this office.",
+        npc_id="ih_astrid",
+    ),
+    PortInstitution(
+        id="ih_deep_forge",
+        name="The Deep Forge",
+        port_id="ironhaven",
+        institution_type="shipyard",
+        description=(
+            "Below the main foundry — a forge that runs hotter and quieter than "
+            "the rest. The Smith works alone here, or with one apprentice at most. "
+            "The heat warps the air. The rhythm of his hammer sets the harbor's pulse. "
+            "No sign, no hours posted. You wait until he looks up."
+        ),
+        function="Custom weaponsmithing, ship armament. Not mass production — each piece is individual. The best weapons in the Known World, if he agrees to make one for you.",
+        political_leaning="Apolitical. The Smith answers to the metal, not the Guild.",
+        npc_id="ih_the_smith",
+    ),
+    PortInstitution(
+        id="ih_tavern",
+        name="The Forge & Anchor",
+        port_id="ironhaven",
+        institution_type="tavern",
+        description=(
+            "Iron fixtures, a forge-stone fireplace, and the smell of mead and metal "
+            "shavings. The only tavern where foundry workers, sailors, and military "
+            "officers all drink together. A dent in the door frame from the last "
+            "person Olga threw out."
+        ),
+        function="Social hub, crew recruitment. Olga keeps the peace through the understanding that she will throw anyone through the door.",
+        political_leaning="Neutral by disposition. Olga doesn't care about factions. She cares about a quiet house.",
+        npc_id="ih_olga",
+    ),
+    PortInstitution(
+        id="ih_customs",
+        name="The Weapons Registry",
+        port_id="ironhaven",
+        institution_type="customs",
+        description=(
+            "Not a general customs house — a weapons-specific tracking office. "
+            "Serial marks, buyer chains, destination logs. Every blade and barrel "
+            "that leaves Ironhaven is documented. The registry's filing cabinets "
+            "contain the history of every weapon the Pact has ever produced."
+        ),
+        function="Weapons tracking and embargo enforcement. Every weapon logged, every chain verified. If Pact iron appears at Corsair's Rest, Kross traces it back.",
+        political_leaning="Iron Pact enforcement. Kross serves Astrid's weapons policy.",
+        npc_id="ih_inspector_kross",
+    ),
+    PortInstitution(
+        id="ih_broker",
+        name="The Contract Hall",
+        port_id="ironhaven",
+        institution_type="broker",
+        description=(
+            "A functional office attached to the foundry — desks, filing cabinets, "
+            "and a chalkboard of active contracts. No silk curtains here — the "
+            "contracts are stamped on iron-grey paper with the Pact seal."
+        ),
+        function="Iron and weapons contracts, military commissions. Pact-approved deals only — Jan's market is defined by Astrid's embargo policy.",
+        political_leaning="Pact-constrained. Jan brokers within Astrid's rules, not beyond them.",
+        npc_id="ih_broker_jan",
+    ),
+]
+
+IRONHAVEN_PROFILE = PortInstitutionalProfile(
+    port_id="ironhaven",
+    governor_title="Pact Commissioner",
+    power_structure=(
+        "Ironhaven is governed by the Iron Guild's production and the Iron Pact's "
+        "politics — a dual authority. Henrik controls the foundry and sets iron "
+        "prices. Astrid coordinates Pact strategy and enforces the weapons embargo. "
+        "They need each other and neither fully trusts the other. The Smith operates "
+        "outside both systems — his custom forge answers to craft alone. Gunnar runs "
+        "the harbor as logistics, not politics. Olga's tavern is the only space "
+        "where rank dissolves. Kross watches the weapons chain with military "
+        "precision. Jan brokers what Astrid allows, resenting the boundaries he "
+        "won't cross."
+    ),
+    internal_tension=(
+        "The core tension is between Henrik's industrial ambition and Astrid's "
+        "political control. Henrik wants to sell iron to anyone who pays. Astrid "
+        "wants to restrict weapons sales to maintain Pact leverage. The embargo "
+        "makes the Pact powerful but costs the Guild revenue — Jan's private ledger "
+        "of lost deals grows monthly. The Smith is the wildcard: he builds for "
+        "whoever he chooses, including pirates (he built a sword for Scarlet Ana), "
+        "and neither Henrik nor Astrid can stop him because his talent is irreplaceable. "
+        "Meanwhile, Gunnar shares a history with the Iron Wolves he never discusses, "
+        "and Kross traces weapons that sometimes lead to uncomfortable conclusions "
+        "about where the Guild's loyalty ends and the black market begins."
+    ),
+    institutions=_IRONHAVEN_INSTITUTIONS,
+    npcs=_IRONHAVEN_NPCS,
+)
+
+
+# =========================================================================
+# STORMWALL — The Fortress
+# =========================================================================
+
+_STORMWALL_NPCS = [
+    PortNPC(
+        id="sw_commander_vogt",
+        name="Commander Elias Vogt",
+        title="Garrison Commander",
+        port_id="stormwall",
+        institution="governor",
+        personality="rigid",
+        description=(
+            "Iron-straight posture, regulation uniform even at dinner, and a face "
+            "that has forgotten how to smile — not because he's cruel, but because "
+            "smiling isn't regulation. Commander Vogt has run Stormwall's garrison "
+            "for eight years and considers the port an extension of the fortress. "
+            "Trade is tolerated because the Pact requires revenue. Vogt considers "
+            "it a necessary evil."
+        ),
+        agenda=(
+            "Defense. Vogt sees threats in every direction — Iron Wolves raiding "
+            "supply lines, smugglers running weapons to pirates, and the perpetual "
+            "question of what's north of the strait that his patrols haven't mapped. "
+            "He doubled the night watch six months ago and won't say why. His soldiers "
+            "look north when they think no one's watching."
+        ),
+        greeting_neutral="\"State your business, Captain. Stormwall is a military port. All cargo is subject to inspection. All visitors are logged.\"",
+        greeting_friendly="\"Captain — the garrison appreciates reliable supply captains. Your record is clean. Berth assignment is priority today.\"",
+        greeting_hostile="\"Your ship is flagged. Full inspection. Full manifest review. You will cooperate, or you will be escorted out of our waters.\"",
+        rumor="Vogt's daughter married a trader from Corsair's Rest. He hasn't spoken to her since. The soldiers say he keeps her letters in his desk, unopened. Whether that's discipline or heartbreak depends on who you ask.",
+        relationship_notes={
+            "sw_quartermaster": "His right hand. Maren runs the supplies; Vogt runs the strategy. Clean chain of command.",
+            "sw_dr_halvorsen": "Valued. The garrison doctor is the reason the fortress functions through winter.",
+            "sw_ingrid": "Tolerates. The tavern is where his soldiers decompress. He allows it because the alternative is worse.",
+            "sw_inspector_berg": "Trusts completely. Berg's inspections keep the port clean.",
+            "sw_broker_siv": "Necessary. Siv's contracts bring the revenue the garrison needs.",
+        },
+    ),
+    PortNPC(
+        id="sw_quartermaster",
+        name="Quartermaster Maren Dahl",
+        title="Quartermaster",
+        port_id="stormwall",
+        institution="exchange",
+        personality="efficient",
+        description=(
+            "Small, precise, and organizationally terrifying. Maren knows the exact "
+            "count of every provision, every weapon, every medical supply in Stormwall's "
+            "stores. She runs the port's exchange — not a bazaar or a grain hall, but "
+            "a military supply depot where civilian traders can buy and sell to keep "
+            "the garrison stocked."
+        ),
+        agenda=(
+            "The garrison's readiness. Maren's job is ensuring Stormwall never runs "
+            "out of anything critical. She pays premium for medicines, grain, and "
+            "timber. She sells weapons and surplus iron at fair but firm prices. "
+            "Overstocking is waste; understocking is danger. She lives in the narrow "
+            "space between."
+        ),
+        greeting_neutral="\"What are you selling? Medicines and grain get premium rates. Everything else is posted on the supply board.\"",
+        greeting_friendly="\"Captain — you're carrying medicines? Thank the stars. The winter stores are low. I'll pay above market. How much do you have?\"",
+        greeting_hostile="\"The garrison's supply needs are classified. You may sell at posted rates or leave. No negotiation today.\"",
+        rumor="Maren once requisitioned an entire merchant's cargo of tea because the garrison was snowed in for three weeks. She paid double. The merchant complained. Maren said, 'Your complaint is noted. The garrison says thank you.' End of discussion.",
+        relationship_notes={
+            "sw_commander_vogt": "Her commanding officer. She runs the logistics; he runs the strategy. Perfect symbiosis.",
+            "sw_dr_halvorsen": "Allied. They coordinate medicine stockpiles. Winter readiness is their shared obsession.",
+            "sw_ingrid": "Friendly. Maren drinks at Ingrid's on weekends — the only time she allows herself to relax.",
+            "sw_inspector_berg": "Professional respect. Berg inspects what comes in; Maren decides what stays.",
+            "sw_broker_siv": "Essential partner. Siv brings the traders that fill the supply gaps.",
+        },
+    ),
+    PortNPC(
+        id="sw_dr_halvorsen",
+        name="Dr. Kristian Halvorsen",
+        title="Garrison Surgeon",
+        port_id="stormwall",
+        institution="apothecary",
+        personality="compassionate",
+        description=(
+            "A tall, thin man whose kindness is at odds with the fortress around him. "
+            "Dr. Halvorsen runs Stormwall's infirmary — the only real medical facility "
+            "in the North Atlantic. He treats soldiers, sailors, and civilians alike, "
+            "and he exports medicines from Stormwall's stores to ports that need them. "
+            "The garrison produces its own medicines from northern herbs, and Halvorsen's "
+            "winter fever cure is famous across the Atlantic."
+        ),
+        agenda=(
+            "Saving lives, regardless of uniform. Halvorsen has quietly treated Iron "
+            "Wolf deserters who washed up near the fortress. Vogt doesn't know — or "
+            "pretends not to. Halvorsen believes the medical oath outranks military "
+            "orders. So far, the two haven't collided. So far."
+        ),
+        greeting_neutral="\"Are you well, Captain? Or do you need the infirmary? Either way, if you're carrying medicinal herbs, I'm buying.\"",
+        greeting_friendly="\"Captain! Your last shipment of southern medicines saved three soldiers during the cold snap. Please — come see the infirmary. I've improved the fever cure.\"",
+        greeting_hostile="\"I treat all who are sick or wounded. That is my oath. If you need medicine, I will sell it. If you need healing, I will provide it. Your politics don't enter my infirmary.\"",
+        rumor="Halvorsen stitched up a Wolf sailor who raided a Pact supply ship. When Vogt found out, they argued behind closed doors for an hour. Halvorsen emerged, went back to the infirmary, and continued working. Vogt said nothing. The soldier lived.",
+        relationship_notes={
+            "sw_commander_vogt": "Mutual respect with an unspoken boundary. Vogt values the doctor. The doctor pushes the limits of military loyalty.",
+            "sw_quartermaster": "Allies. They coordinate medical stockpiles with military precision and civilian compassion.",
+            "sw_ingrid": "She sends soldiers to him when they've drunk too much. He sends them back when they've healed. A cycle.",
+            "sw_inspector_berg": "No strong feelings. Medicine doesn't need customs clearance — it needs patients.",
+            "sw_broker_siv": "Appreciative. Siv sources the rare herbs that Halvorsen can't grow in northern soil.",
+        },
+    ),
+    PortNPC(
+        id="sw_ingrid",
+        name="Ingrid Norum",
+        title="Tavern Keeper",
+        port_id="stormwall",
+        institution="tavern",
+        personality="resilient",
+        description=(
+            "Broad-shouldered from hauling kegs up fortress stairs, with a tired "
+            "smile and the patience of someone who's listened to soldiers' stories "
+            "for fifteen years. Ingrid runs the Watchtower — Stormwall's only tavern, "
+            "built into the base of the fortress's main tower. It's where the soldiers "
+            "go when their shift ends, and Ingrid knows every one of them by name."
+        ),
+        agenda=(
+            "Keeping the garrison human. Ingrid believes soldiers who can't laugh "
+            "can't fight. Her tavern is where regulations loosen enough for the "
+            "garrison to breathe. She waters no drinks, overcharges no soldier, and "
+            "breaks up fights before they start — not with force but with the quiet "
+            "authority of a woman the entire garrison trusts."
+        ),
+        greeting_neutral="\"Come in out of the cold. Mead's hot, bread's fresh, and the fire's going. You look like you need all three.\"",
+        greeting_friendly="\"Captain! You're alive — I wasn't sure after that last storm report. Sit, sit. The good mead is yours tonight.\"",
+        greeting_hostile="\"You can drink. But the soldiers here have had a hard week, and they don't need trouble. Keep your voice down and your opinions private.\"",
+        rumor="Ingrid's husband was a Stormwall soldier who died on patrol ten years ago. She stayed because the garrison needed her more than home did. Nobody pities her — she doesn't allow it. She lights a candle in the window every night. The soldiers pretend not to notice.",
+        relationship_notes={
+            "sw_commander_vogt": "He allows the tavern because he knows his soldiers need it. She runs it because she knows they need her.",
+            "sw_quartermaster": "Friends. Maren drinks on weekends. They don't talk about work — a rare gift in a fortress.",
+            "sw_dr_halvorsen": "She sends him the drunk ones; he sends back the sober ones. A functional cycle.",
+            "sw_inspector_berg": "Wary. Berg is always working, even when drinking. Ingrid doesn't like people who can't stop watching.",
+            "sw_broker_siv": "Warm. Siv is young and far from home. Ingrid mothers her whether she wants it or not.",
+        },
+    ),
+    PortNPC(
+        id="sw_inspector_berg",
+        name="Inspector Berg",
+        title="Senior Customs Inspector",
+        port_id="stormwall",
+        institution="customs",
+        personality="thorough",
+        description=(
+            "Lean, watchful, and methodical to the point where it becomes unsettling. "
+            "Berg inspects every ship that enters Stormwall — no exceptions, no "
+            "shortcuts. His inspections are the reason Stormwall has the highest "
+            "port fees in the game: you're paying for the privilege of being examined "
+            "by someone who has memorized every known smuggling technique."
+        ),
+        agenda=(
+            "Security. Berg works for Commander Vogt, and his inspections are part "
+            "of the fortress's defense perimeter. He's not looking for tariff "
+            "violations — he's looking for threats. Weapons going the wrong direction, "
+            "intelligence being smuggled, or Iron Wolf operatives using merchant ships "
+            "as cover. He's caught three spies in two years."
+        ),
+        greeting_neutral="\"Full inspection. Please open all holds and provide your manifest. This is Stormwall — everyone is inspected.\"",
+        greeting_friendly="\"Captain — your record is exemplary. Abbreviated inspection today. But I will still check the weapons hold. Protocol.\"",
+        greeting_hostile="\"Extended inspection. Every hold, every crate, every barrel. If you have concerns about the thoroughness, take them up with the Commander.\"",
+        rumor="Berg found a coded message sewn into a grain sack. It contained Iron Wolf patrol routes for the next month. The captain who carried it swore he didn't know. Berg believed him. The captain was released. The message was decoded. Three Wolf raids were prevented.",
+        relationship_notes={
+            "sw_commander_vogt": "Direct superior. Berg's loyalty to the Commander is absolute.",
+            "sw_quartermaster": "Professional respect. Maren handles supply logistics; Berg handles security screening. No overlap.",
+            "sw_dr_halvorsen": "No strong feelings. Medical supplies pass quickly — Berg has no reason to detain them.",
+            "sw_ingrid": "Drinks at the Watchtower. Always listening. Ingrid has noticed.",
+            "sw_broker_siv": "Reviews her contracts for security implications. Siv finds it excessive. Berg finds it necessary.",
+        },
+    ),
+    PortNPC(
+        id="sw_broker_siv",
+        name="Siv Lindgren",
+        title="Trade Liaison",
+        port_id="stormwall",
+        institution="broker",
+        personality="optimistic",
+        description=(
+            "Young, enthusiastic, and slightly out of place in a fortress full of "
+            "veterans. Siv is Stormwall's trade liaison — the person who convinces "
+            "civilian merchants that a military port with the highest fees in the "
+            "Mediterranean is actually worth visiting. She's good at her job because "
+            "she genuinely believes what she's selling: Stormwall protects the trade "
+            "lanes, and the fees pay for that protection."
+        ),
+        agenda=(
+            "Making Stormwall viable as a trade port, not just a military base. Siv "
+            "wants to attract merchants with premium contracts for medicines, grain, "
+            "and tea — the goods the garrison needs most. She's fighting against "
+            "Stormwall's reputation as an overpriced inspection gauntlet, and she's "
+            "slowly winning. The fact that Stormwall's medicines are the best in the "
+            "Atlantic helps."
+        ),
+        greeting_neutral="\"Welcome to Stormwall! I know the fees are steep, but our contracts pay above market. Medicines especially — Dr. Halvorsen is always buying.\"",
+        greeting_friendly="\"Captain! I have a contract reserved for you — the garrison needs tea before winter, and I told Maren you'd deliver. Good rates. Interested?\"",
+        greeting_hostile="\"I... should mention that Commander Vogt has flagged your vessel. I'm sure it's a misunderstanding, but I can't offer contracts until it's cleared.\"",
+        rumor="Siv turned down a posting at Porto Novo — more prestige, better weather — because she believed in Stormwall's mission. The garrison respects her for it. Whether that respect will translate into political influence remains to be seen.",
+        relationship_notes={
+            "sw_commander_vogt": "Serves his strategic needs. He needs revenue; she brings traders. A clean relationship.",
+            "sw_quartermaster": "Essential partner. Maren identifies supply gaps; Siv finds captains to fill them.",
+            "sw_dr_halvorsen": "Sources rare herbs for him. He's grateful in the quiet northern way.",
+            "sw_ingrid": "Ingrid mothers her. Siv pretends to mind. She doesn't.",
+            "sw_inspector_berg": "Finds his security reviews excessive. He finds her optimism naive. They're probably both right.",
+        },
+    ),
+]
+
+_STORMWALL_INSTITUTIONS = [
+    PortInstitution(
+        id="sw_fortress_gate",
+        name="The Fortress Gate",
+        port_id="stormwall",
+        institution_type="harbor_master",
+        description=(
+            "Not a civilian harbor — the harbor IS the fortress. Stone quays built "
+            "into the fortress walls, with chains that can close the entrance. Navy "
+            "vessels in the inner harbor; civilian berths in the outer ring."
+        ),
+        function="Military-priority docking. Civilian ships wait. Everyone is inspected. Highest port fees in the game (10 silver).",
+        political_leaning="Pure military. The harbor serves the fortress.",
+        npc_id="sw_commander_vogt",
+    ),
+    PortInstitution(
+        id="sw_supply_depot",
+        name="The Supply Depot",
+        port_id="stormwall",
+        institution_type="exchange",
+        description=(
+            "A military warehouse with civilian access — rows of labeled crates, "
+            "precise inventory counts, and Maren's supply board listing what the "
+            "garrison needs and what it's willing to pay."
+        ),
+        function="Military supply exchange. Premium rates for medicines, grain, tea. Fair rates for everything else. Posted prices, no negotiation.",
+        political_leaning="Garrison-first. The depot serves military readiness.",
+        npc_id="sw_quartermaster",
+    ),
+    PortInstitution(
+        id="sw_command",
+        name="The Commander's Office",
+        port_id="stormwall",
+        institution_type="governor",
+        description=(
+            "A stone office at the fortress's highest point. Maps of the North "
+            "Atlantic cover every wall. A telescope points north. The desk is "
+            "military-neat. Vogt's only personal item: a framed letter he never opens."
+        ),
+        function="Military governance, port policy, security directives. Vogt's authority is absolute within the fortress.",
+        political_leaning="Iron Pact military command. Stormwall is the Pact's sword.",
+        npc_id="sw_commander_vogt",
+    ),
+    PortInstitution(
+        id="sw_infirmary",
+        name="The Garrison Infirmary",
+        port_id="stormwall",
+        institution_type="apothecary",
+        description=(
+            "The best medical facility in the North Atlantic. Clean beds, organized "
+            "supplies, an herb garden on the fortress's sheltered south wall, and "
+            "Halvorsen's winter fever cure brewing in copper pots."
+        ),
+        function="Medical care, medicine production and export. Stormwall's medicines are the best in the Atlantic — a trade advantage as powerful as Ironhaven's iron.",
+        political_leaning="Humanitarian within military structure. Halvorsen serves the oath, not the uniform.",
+        npc_id="sw_dr_halvorsen",
+    ),
+    PortInstitution(
+        id="sw_watchtower",
+        name="The Watchtower",
+        port_id="stormwall",
+        institution_type="tavern",
+        description=(
+            "Built into the base of the main tower. Low ceilings, thick walls, "
+            "and a fireplace that never goes out. Off-duty soldiers fill the benches. "
+            "A single candle burns in the window every night."
+        ),
+        function="Garrison social hub. Where regulations loosen enough for soldiers to breathe. Crew recruitment from military surplus.",
+        political_leaning="The garrison's heart. Ingrid keeps soldiers human.",
+        npc_id="sw_ingrid",
+    ),
+    PortInstitution(
+        id="sw_inspection",
+        name="The Inspection Hall",
+        port_id="stormwall",
+        institution_type="customs",
+        description=(
+            "A stone hall with iron tables for cargo examination. Good lighting — "
+            "Berg insisted. Every crate is opened, every manifest verified, every "
+            "suspicious item logged and photographed by sketch artist."
+        ),
+        function="Security-focused customs. Not looking for tariff violations — looking for threats. Berg has caught three spies in two years.",
+        political_leaning="Fortress security. Inspections are defense, not commerce.",
+        npc_id="sw_inspector_berg",
+    ),
+    PortInstitution(
+        id="sw_liaison",
+        name="The Trade Liaison Office",
+        port_id="stormwall",
+        institution_type="broker",
+        description=(
+            "A surprisingly cheerful office near the civilian berths — Siv insisted "
+            "on curtains and a welcome sign. It's the only room in the fortress that "
+            "doesn't look like it was designed to withstand a siege."
+        ),
+        function="Civilian contract matching, garrison supply sourcing. Siv's job: convince merchants that Stormwall's fees are worth it.",
+        political_leaning="Bridge between military and civilian. Siv makes the fortress accessible to traders.",
+        npc_id="sw_broker_siv",
+    ),
+]
+
+STORMWALL_PROFILE = PortInstitutionalProfile(
+    port_id="stormwall",
+    governor_title="Garrison Commander",
+    power_structure=(
+        "Pure military hierarchy. Commander Vogt has absolute authority. Maren "
+        "runs supplies, Berg runs security, Halvorsen runs medicine, and they all "
+        "report to Vogt. Siv is the civilian bridge — the only person whose job is "
+        "making the fortress work as a trade port. Ingrid's tavern is the pressure "
+        "valve that keeps the garrison from cracking under Vogt's rigid discipline."
+    ),
+    internal_tension=(
+        "The surface tension is military vs. civilian: Stormwall is a fortress "
+        "that needs trade revenue to function. Vogt sees merchants as a necessary "
+        "evil; Siv sees them as partners. The deeper tension is Halvorsen's oath — "
+        "he treats everyone, including Iron Wolf deserters. Vogt either doesn't know "
+        "or pretends not to. If it becomes public, it forces a confrontation between "
+        "military duty and medical ethics that neither man wants. Meanwhile, Vogt's "
+        "unopened letters and nightly telescope-watching hint at something personal "
+        "beneath the regulation exterior — a daughter, a threat from the north, or "
+        "both."
+    ),
+    institutions=_STORMWALL_INSTITUTIONS,
+    npcs=_STORMWALL_NPCS,
+)
+
+
+# =========================================================================
+# THORNPORT — The Practical Neutral
+# =========================================================================
+
+_THORNPORT_NPCS = [
+    PortNPC(
+        id="tp_captain_berg_not",
+        name="Harbormaster Ake",
+        title="Harbor Master",
+        port_id="thornport",
+        institution="harbor_master",
+        personality="laconic",
+        description=(
+            "A weathered whaler who took the harbormaster job because someone had to "
+            "and nobody else wanted it. Ake speaks in sentence fragments, gestures "
+            "toward berths instead of assigning them, and considers any interaction "
+            "longer than ten seconds a social event. He's the most relaxed harbor "
+            "master in the Known World."
+        ),
+        agenda=(
+            "Not being bothered. Ake wants ships to dock, unload, reload, and leave "
+            "without requiring his input. The harbor runs on habit — everyone knows "
+            "where to go. He only intervenes when ships collide, which happens about "
+            "twice a year, and he considers that an acceptable rate."
+        ),
+        greeting_neutral="\"...Berth's open. That one.\" He gestures vaguely with a pipe.",
+        greeting_friendly="\"Ah. You again. Good.\" A nod. This is effusive by Ake's standards.",
+        greeting_hostile="\"...Hmm.\" He gestures toward the outer anchorage. Then goes back to his pipe.",
+        rumor="Ake harpooned a whale at seventy paces in his youth — the longest throw anyone in Thornport remembers. He retired from whaling the next day, saying there was nothing left to prove. He hasn't thrown anything since, except occasionally a drunk off the dock.",
+        relationship_notes={
+            "tp_sigrid": "She runs the tea trade; he runs the harbor. They communicate in nods.",
+            "tp_old_magnus": "Drinking companion. They sit together in silence for hours. Both consider this friendship.",
+            "tp_elder_astrid_t": "She governs; he doesn't care about governance. A perfect arrangement.",
+            "tp_bones": "Bones brings the catch. Ake docks the boats. No words needed.",
+            "tp_customs_lena": "She handles the paperwork he refuses to do. He's grateful in his wordless way.",
+            "tp_broker_erik": "Erik talks too much. Ake endures it because Erik brings business.",
+        },
+    ),
+    PortNPC(
+        id="tp_sigrid",
+        name="Sigrid Halvdan",
+        title="Tea Mistress",
+        port_id="thornport",
+        institution="exchange",
+        personality="warm",
+        description=(
+            "Weathered hands that can roll and grade tea leaves by touch, and a "
+            "voice that carries the rhythm of old whaling songs even when she's "
+            "talking about market prices. Sigrid is Thornport's tea and tobacco "
+            "factor — the woman who turned a whaling town's side trade into its "
+            "primary industry when the whales started swimming north."
+        ),
+        agenda=(
+            "Thornport's survival. The whales are leaving. The fishing is good but "
+            "not enough. Sigrid built the tea and tobacco trade from nothing — "
+            "buying from eastern merchants, blending locally, and selling to anyone "
+            "who'll buy. She's Thornport's economic savior and she knows it, but "
+            "she carries the weight quietly."
+        ),
+        greeting_neutral="\"Tea? Come, taste today's blend. I mix it myself — northern water changes the flavor. You might be surprised.\"",
+        greeting_friendly="\"Captain! I've been saving a special blend — eastern leaves, northern water, and something I'm not telling anyone about yet. For friends only.\"",
+        greeting_hostile="\"Tea is for everyone. Even those I don't trust. Sit, drink, and perhaps we'll find a reason to do business. Perhaps not.\"",
+        rumor="Sigrid sailed the Monsoon Shortcut once — to buy tea directly from Jade Port. She came back with enough tea to supply Thornport for a year and a story she won't tell. Old Farouk in Al-Manar knows the story. He smiles when you ask.",
+        relationship_notes={
+            "tp_captain_berg_not": "They communicate in nods. It works.",
+            "tp_old_magnus": "Old friends. Magnus tells the stories; Sigrid provides the tea. Half of Thornport's culture happens at their table.",
+            "tp_elder_astrid_t": "Allies. Both want Thornport to survive. Sigrid provides the economy; Astrid provides the governance.",
+            "tp_bones": "He brings the fish; she brings the tea. Together they feed the town — literally and economically.",
+            "tp_customs_lena": "Sigrid mentors her. Lena is young and capable. Sigrid sees her younger self.",
+            "tp_broker_erik": "Business partnership. Erik sells what Sigrid blends. The margin keeps the town alive.",
+        },
+    ),
+    PortNPC(
+        id="tp_elder_astrid_t",
+        name="Elder Astrid",
+        title="Town Elder",
+        port_id="thornport",
+        institution="governor",
+        personality="pragmatic",
+        description=(
+            "White-haired, sharp-eyed, and seated on a bench outside the meetinghouse "
+            "in all weather because 'the office is where the wind is.' Elder Astrid "
+            "has led Thornport for twenty years by consensus — she doesn't give orders, "
+            "she asks questions until people agree. She's a Free Port to her bones: "
+            "no alliances, no enemies, trade with everyone."
+        ),
+        agenda=(
+            "Independence and survival. Astrid watched Stormwall try to tax Thornport's "
+            "tea. She watched the Iron Pact try to recruit Thornport into the military "
+            "alliance. She said no to both, politely and permanently. Thornport sells "
+            "tea and tobacco to soldiers, pirates, merchants, and monks. Astrid will "
+            "never take a side, and she'll outlast anyone who tries to make her."
+        ),
+        greeting_neutral="\"Welcome to Thornport. We don't have much, but what we have is honest. Tell me what you need — or just sit. The wind's good today.\"",
+        greeting_friendly="\"Captain — sit with me. The harbor's quiet today. Tell me what you've seen out there. I collect stories the way others collect silver.\"",
+        greeting_hostile="\"Thornport trades with all. We refuse none. But we also remember, Captain. Everything you do here will be remembered. Choose well.\"",
+        rumor="Elder Astrid was a whaler captain — one of the best. She gave it up when she realized the whales were disappearing and led Thornport's transition to tea and tobacco. The whalers resisted. She waited them out. Now even the old whalers admit she was right.",
+        relationship_notes={
+            "tp_captain_berg_not": "He doesn't care about governance. She doesn't require him to. Perfect.",
+            "tp_sigrid": "Allies. Astrid's governance + Sigrid's trade = Thornport's survival.",
+            "tp_old_magnus": "She listens to his stories more carefully than anyone suspects. History is governance.",
+            "tp_bones": "Respects him. The fishing fleet feeds the town. That's as political as it gets.",
+            "tp_customs_lena": "Appointed her — the lightest customs in the Alliance. Astrid wants compliance, not interference.",
+            "tp_broker_erik": "Watches him. He's ambitious. Ambition isn't wrong, but it needs watching in a small town.",
+        },
+    ),
+    PortNPC(
+        id="tp_old_magnus",
+        name="Old Magnus",
+        title="Storyteller",
+        port_id="thornport",
+        institution="tavern",
+        personality="nostalgic",
+        description=(
+            "A white-bearded giant who hasn't sailed in twenty years but talks about "
+            "the sea as if he left it yesterday. Old Magnus runs the Whale Bone — "
+            "Thornport's tavern, built under the Whale Arch. He serves ale, tells "
+            "stories, and remembers things the town is trying to forget. Every captain "
+            "who passes through Thornport ends up at Magnus's table, and every one "
+            "leaves with a story they didn't expect."
+        ),
+        agenda=(
+            "Memory. Magnus is Thornport's living history — the man who remembers "
+            "the great whaling days, the storms that shaped the coastline, and the "
+            "captains who sailed north and never came back. He tells these stories "
+            "not for nostalgia but because he believes a town that forgets its past "
+            "loses its future. His tavern is a library made of voices."
+        ),
+        greeting_neutral="\"Sit! Ale's fresh. Have you heard the one about the whale that swallowed a customs inspector? No? Well, it starts in a storm...\"",
+        greeting_friendly="\"CAPTAIN! My favorite audience! Sit, sit — I've been saving a story for you. This one's TRUE, which makes it better and worse.\"",
+        greeting_hostile="\"...Even sailors I don't like get a drink. Even sailors I don't trust get a story. But the story might be about a captain who made bad choices. Fair warning.\"",
+        rumor="Old Magnus claims he once saw something in the far north — past the last charted island, in waters no whaler had entered. He won't say what. He'll tell any other story, embellish any other memory, but that one makes him go quiet. The only time anyone's seen Magnus without words.",
+        relationship_notes={
+            "tp_captain_berg_not": "They sit together in silence for hours. Both consider this the deepest friendship in Thornport.",
+            "tp_sigrid": "She provides the tea; he provides the stories. Together they ARE Thornport's culture.",
+            "tp_elder_astrid_t": "She listens to his stories more carefully than he realizes. She's mining them for wisdom.",
+            "tp_bones": "Old shipmates. Bones still sails; Magnus watches from shore. They understand the sadness in that.",
+            "tp_customs_lena": "Calls her 'little customs' and feeds her tall tales about smuggling. She pretends to be annoyed. She's not.",
+            "tp_broker_erik": "Tells him stories about merchants who overreached. Erik hasn't figured out they're warnings.",
+        },
+    ),
+    PortNPC(
+        id="tp_bones",
+        name="Bones Thorsen",
+        title="Fleet Captain",
+        port_id="thornport",
+        institution="shipyard",
+        personality="weathered",
+        description=(
+            "The last working whaler in Thornport — now running a fishing fleet from "
+            "the same boats that once hunted leviathans. Bones is the closest thing "
+            "Thornport has to a shipyard: he maintains, repairs, and occasionally "
+            "builds small vessels from the town's timber surplus. His name comes from "
+            "a whale skeleton he keeps on the dock as a monument."
+        ),
+        agenda=(
+            "Keeping the fleet sailing. Bones doesn't build grand ships — he patches "
+            "fishing boats, repairs merchant vessels that can't reach Silva Bay, and "
+            "maintains the small craft that are Thornport's livelihood. He's practical "
+            "to a fault and measures everything in whether it keeps boats in the water."
+        ),
+        greeting_neutral="\"Need repairs? I'm no Silva Bay, but I'll keep you floating. Hull patches and mast work — that's what I do.\"",
+        greeting_friendly="\"Captain! She's looking rough — bring her in. I'll have your hull patched before the tide turns. Old Bones keeps his promises.\"",
+        greeting_hostile="\"I'll fix your ship because the sea doesn't hold grudges. But you pay upfront and you don't touch my fleet.\"",
+        rumor="Bones carved every name on the Whale Arch by hand — every whaler who sailed from Thornport and didn't come back. There are forty-seven names. He adds one every few years. He never explains when he does.",
+        relationship_notes={
+            "tp_captain_berg_not": "Old shipmates. Bones brings the catch; Ake docks the boats. Words are unnecessary.",
+            "tp_sigrid": "He brings the fish; she brings the trade. Between them, the town eats and earns.",
+            "tp_elder_astrid_t": "Respects her. She saved the town when the whales left. He'll never say it out loud, but he knows.",
+            "tp_old_magnus": "Old shipmates from the whaling days. Magnus tells the stories; Bones carries the weight of them.",
+            "tp_customs_lena": "Indifferent. Fish don't need customs paperwork.",
+            "tp_broker_erik": "Useful. Erik brings repair contracts for visiting merchants. It's good side income.",
+        },
+    ),
+    PortNPC(
+        id="tp_customs_lena",
+        name="Customs Officer Lena",
+        title="Customs Officer",
+        port_id="thornport",
+        institution="customs",
+        personality="earnest",
+        description=(
+            "Young, diligent, and perpetually apologetic about doing her job. Lena "
+            "is Thornport's customs officer — the lightest customs presence in the "
+            "Alliance. She checks manifests, stamps paperwork, and tries not to slow "
+            "anyone down. Elder Astrid appointed her specifically because she wouldn't "
+            "over-inspect. Thornport's philosophy: 'don't look too hard and people "
+            "keep coming back.'"
+        ),
+        agenda=(
+            "Doing enough to satisfy the Alliance without annoying the town. Lena "
+            "walks a careful line — too thorough and traders avoid Thornport; too lax "
+            "and the Alliance sends someone stricter. She manages this by being "
+            "genuinely kind, reasonably fast, and strategically blind to minor "
+            "irregularities that don't threaten anyone."
+        ),
+        greeting_neutral="\"Quick inspection — I promise it won't take long. Thornport doesn't fuss over paperwork. Manifest, stamp, and you're free.\"",
+        greeting_friendly="\"Captain! You're cleared — I pre-stamped your manifest when I saw your sails. Go see Sigrid before the good tea runs out.\"",
+        greeting_hostile="\"I... need to do a full review. Alliance policy. I'm sorry — I know it's inconvenient. I'll be as fast as I can.\"",
+        rumor="Lena found a crate of undeclared opium on a merchant ship. Instead of seizing it, she told the captain to dump it overboard before Stormwall's Inspector Berg heard about it. The captain dumped it. He brings Lena dried flowers from every port now. She keeps them on her desk.",
+        relationship_notes={
+            "tp_captain_berg_not": "He's grateful she handles the paperwork he refuses to do.",
+            "tp_sigrid": "Sigrid mentors her. Lena admires her strength. She sees her future self — hopefully.",
+            "tp_elder_astrid_t": "Appointed by Astrid. Lena tries to live up to the trust.",
+            "tp_old_magnus": "He calls her 'little customs' and tells her smuggling stories. She pretends to be annoyed.",
+            "tp_bones": "No interaction. Fish don't need customs.",
+            "tp_broker_erik": "Cordial. She stamps his contracts without fuss. He brings her pastries from southern ports.",
+        },
+    ),
+    PortNPC(
+        id="tp_broker_erik",
+        name="Erik Strand",
+        title="Broker",
+        port_id="thornport",
+        institution="broker",
+        personality="cheerful",
+        description=(
+            "The only person in Thornport who wears a tie — and he wears it "
+            "ironically, or sincerely, and nobody can tell which. Erik handles "
+            "Thornport's contracts: tea shipments, tobacco orders, timber supply, "
+            "and the occasional fish contract that Bones laughs at. He's young, "
+            "energetic, and convinced that Thornport is one good trade deal away "
+            "from becoming important."
+        ),
+        agenda=(
+            "Putting Thornport on the map. Erik wants bigger contracts, premium "
+            "clients, and a reputation that extends beyond 'that whaling town that "
+            "sells tea.' He's competing — in his mind — with Fernanda in Porto Novo "
+            "and Tariq in Al-Manar. He's delusional about the scale, but his energy "
+            "is infectious and his contracts are honest."
+        ),
+        greeting_neutral="\"Welcome to Thornport! Best tea in the Atlantic, fair timber prices, and contracts that actually pay on time. What can I set up for you?\"",
+        greeting_friendly="\"Captain! I have a contract — tea for Stormwall, premium rates, Maren's buying above market. I held it for you. Because that's what good brokers do.\"",
+        greeting_hostile="\"I... don't have anything at your level right now. But keep an eye on the board — things change. Thornport's always open.\"",
+        rumor="Erik sent a letter to Fernanda Reis proposing a 'broker exchange program' between Porto Novo and Thornport. Fernanda never replied. Erik tells people she's considering it. He believes this. Nobody corrects him because his enthusiasm is the nicest thing about Thornport.",
+        relationship_notes={
+            "tp_captain_berg_not": "Erik talks; Ake endures. A one-sided friendship that works somehow.",
+            "tp_sigrid": "Business partnership. She blends; he sells. The margin keeps the town going.",
+            "tp_elder_astrid_t": "She watches his ambition. It's not dangerous yet. She'll let him know when it is.",
+            "tp_old_magnus": "Magnus tells him stories about merchants who overreached. Erik hasn't figured out they're warnings.",
+            "tp_bones": "Brings repair contracts. Bones appreciates the side income.",
+            "tp_customs_lena": "Brings her pastries from southern ports. She stamps his contracts without fuss. A fair exchange.",
+        },
+    ),
+]
+
+_THORNPORT_INSTITUTIONS = [
+    PortInstitution(
+        id="tp_harbor",
+        name="The Whale Dock",
+        port_id="thornport",
+        institution_type="harbor_master",
+        description=(
+            "A timber dock under the Whale Arch — the bleached jawbone that spans "
+            "the harbor entrance. Fishing boats, tea clippers, and the occasional "
+            "merchant vessel tie up along the worn planks. No ceremony, no priority "
+            "system. First come, first served."
+        ),
+        function="Minimal harbor management. Ake gestures at open berths. That's the system.",
+        political_leaning="Free Port. Thornport doesn't take sides. Everyone docks.",
+        npc_id="tp_captain_berg_not",
+    ),
+    PortInstitution(
+        id="tp_tea_house",
+        name="The Blending Room",
+        port_id="thornport",
+        institution_type="exchange",
+        description=(
+            "A warm room behind Sigrid's house where tea is graded, blended, and "
+            "sold. Barrels of tobacco line one wall. The air smells of leaf and smoke. "
+            "Prices are written on a slate board — simple, fair, no auction."
+        ),
+        function="Tea and tobacco trading, blending, quality grading. Thornport's economic engine — built by Sigrid from nothing.",
+        political_leaning="Independent. Sigrid sells to everyone. That's the Free Port way.",
+        npc_id="tp_sigrid",
+    ),
+    PortInstitution(
+        id="tp_meeting_house",
+        name="The Meeting Bench",
+        port_id="thornport",
+        institution_type="governor",
+        description=(
+            "Not a building — a bench outside the meetinghouse where Elder Astrid "
+            "sits in all weather. The office is where the wind is. People come to "
+            "her; she doesn't summon them."
+        ),
+        function="Governance by consensus. Astrid asks questions until people agree. No orders, no edicts, no bureaucracy.",
+        political_leaning="Fiercely Free Port. No alliances, no enemies. Trade with everyone, answer to no one.",
+        npc_id="tp_elder_astrid_t",
+    ),
+    PortInstitution(
+        id="tp_whale_bone",
+        name="The Whale Bone",
+        port_id="thornport",
+        institution_type="tavern",
+        description=(
+            "Built under the Whale Arch, decorated with harpoons, scrimshaw, and "
+            "forty-seven names carved into the ceiling beams — every whaler who "
+            "sailed from Thornport and never came back. The ale is strong. The "
+            "stories are stronger."
+        ),
+        function="Social hub, storytelling, crew recruitment. Magnus's tavern is Thornport's memory.",
+        political_leaning="Neutral by nature. Magnus serves stories and ale to anyone who'll listen.",
+        npc_id="tp_old_magnus",
+    ),
+    PortInstitution(
+        id="tp_boat_yard",
+        name="Bones' Boat Yard",
+        port_id="thornport",
+        institution_type="shipyard",
+        description=(
+            "Not a shipyard — a boat yard. Small-craft repairs, hull patches, mast "
+            "work. A whale skeleton stands on the dock as a monument. Tools are hung "
+            "on pegs that have been worn smooth by decades of use."
+        ),
+        function="Small-vessel repair and maintenance. No new construction — Bones patches, not builds. For serious work, go to Silva Bay.",
+        political_leaning="Practical. Bones fixes what needs fixing. Politics don't float.",
+        npc_id="tp_bones",
+    ),
+    PortInstitution(
+        id="tp_customs",
+        name="The Stamp Desk",
+        port_id="thornport",
+        institution_type="customs",
+        description=(
+            "A desk near the dock with a stamp, a manifest book, and dried flowers "
+            "in a jar. The lightest customs presence in the Alliance. Lena's philosophy: "
+            "don't look too hard and people keep coming back."
+        ),
+        function="Minimal inspection. Quick manifests, rubber stamps, strategic blindness to minor irregularities.",
+        political_leaning="Alliance-minimum. Just enough to stay compliant. Not a gram more.",
+        npc_id="tp_customs_lena",
+    ),
+    PortInstitution(
+        id="tp_broker",
+        name="Erik's Desk",
+        port_id="thornport",
+        institution_type="broker",
+        description=(
+            "A desk in the meetinghouse with a handwritten sign: 'THORNPORT BROKERAGE — "
+            "CONTRACTS, COMMISSIONS, AND EXCEPTIONAL TEA.' Erik is the only person "
+            "in Thornport who uses business cards."
+        ),
+        function="Tea, tobacco, timber, and fish contracts. Small-scale but honest. Erik believes one good deal will change everything.",
+        political_leaning="Ambitious Free Port. Erik wants to put Thornport on the map without joining any bloc.",
+        npc_id="tp_broker_erik",
+    ),
+]
+
+THORNPORT_PROFILE = PortInstitutionalProfile(
+    port_id="thornport",
+    governor_title="Town Elder",
+    power_structure=(
+        "Thornport is governed by consensus under Elder Astrid's gentle questions. "
+        "Sigrid built the economy. Magnus holds the memory. Bones keeps the boats "
+        "floating. Ake runs the harbor with gestures and pipe smoke. It's the least "
+        "political port in the Known World — not because they don't care about power, "
+        "but because they've decided that selling tea to everyone is a better strategy "
+        "than picking sides."
+    ),
+    internal_tension=(
+        "The existential question: what happens when the whales are gone entirely? "
+        "Sigrid built the tea trade as a replacement, but the transition isn't complete. "
+        "The old whalers (represented by Bones and Magnus) carry the town's identity; "
+        "the new traders (represented by Sigrid and Erik) carry its future. Astrid "
+        "bridges them, but the bridge is generational — Astrid and Magnus are aging. "
+        "Sigrid will lead the economics; Erik wants to lead the contracts. Lena is "
+        "the Alliance's lightest footprint, and Thornport wants to keep it that way. "
+        "The quiet tension: Magnus saw something in the far north he won't discuss, "
+        "and Vogt at Stormwall is watching the same direction. Whatever is up there, "
+        "Thornport might not be able to stay neutral forever."
+    ),
+    institutions=_THORNPORT_INSTITUTIONS,
+    npcs=_THORNPORT_NPCS,
+)
+
+
 # ---------------------------------------------------------------------------
 # Master registry — will grow as we build each port
 # ---------------------------------------------------------------------------
@@ -1593,6 +2692,9 @@ PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
     "al_manar": AL_MANAR_PROFILE,
     "silva_bay": SILVA_BAY_PROFILE,
     "corsairs_rest": CORSAIRS_REST_PROFILE,
+    "ironhaven": IRONHAVEN_PROFILE,
+    "stormwall": STORMWALL_PROFILE,
+    "thornport": THORNPORT_PROFILE,
 }
 
 ALL_NPCS: dict[str, PortNPC] = {npc.id: npc for profile in PORT_INSTITUTIONAL_PROFILES.values() for npc in profile.npcs}
