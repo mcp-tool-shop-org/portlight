@@ -551,6 +551,11 @@ def depart(world: "WorldState", destination_id: str) -> VoyageState | str:
             return f"Need {fee} silver for port fee, have {captain.silver}"
         captain.silver -= fee
 
+    # Convoy: fleet ships at this port join the voyage
+    for owned in captain.fleet:
+        if owned.docked_port_id == current_port_id:
+            owned.docked_port_id = ""  # in transit
+
     voyage = VoyageState(
         origin_id=current_port_id,
         destination_id=destination_id,
@@ -649,6 +654,22 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     captain.silver = max(0, captain.silver + event.silver_delta)
     captain.ship.crew = max(0, captain.ship.crew + event.crew_delta)
 
+    # Apply storm damage to convoy ships
+    convoy_ships = [o for o in captain.fleet if o.docked_port_id == ""]
+    if convoy_ships and event.hull_delta < 0:
+        from portlight.content.upgrades import UPGRADES as _CONV_UPG
+        from portlight.engine.ship_stats import resolve_storm_resist
+        for owned in convoy_ships:
+            escort_template = SHIPS.get(owned.ship.template_id)
+            if escort_template:
+                sr = resolve_storm_resist(owned.ship, escort_template, _CONV_UPG)
+            else:
+                sr = 0.0
+            # Convoy ships take proportional damage (reduced by their own storm resist)
+            raw_dmg = abs(event.hull_delta)
+            dmg = max(1, int(raw_dmg * (1 - sr)))
+            owned.ship.hull = max(0, owned.ship.hull - dmg)
+
     # Apply cargo damage
     if event.cargo_lost:
         for good_id, lost in event.cargo_lost.items():
@@ -659,7 +680,7 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
                         captain.cargo.remove(item)
                     break
 
-    # Progress (undermanned penalty + captain speed bonus + crew navigator + seasonal modifier)
+    # Progress (undermanned penalty + captain speed bonus + crew navigator + convoy + seasonal)
     from portlight.content.upgrades import UPGRADES
     from portlight.engine.ship_stats import resolve_speed, navigator_speed_bonus
     resolved_speed = resolve_speed(captain.ship, UPGRADES)
@@ -672,6 +693,13 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         # Slight penalty when not fully crewed
         crew_ratio = captain.ship.crew / captain.ship.crew_max
         base_speed *= (0.7 + 0.3 * crew_ratio)
+
+    # Convoy speed: limited by slowest ship in convoy
+    convoy_ships = [o for o in captain.fleet if o.docked_port_id == ""]
+    if convoy_ships:
+        for owned in convoy_ships:
+            ship_speed = resolve_speed(owned.ship, UPGRADES)
+            base_speed = min(base_speed, ship_speed)
 
     # Seasonal speed modifier
     if _season_profile:
@@ -696,4 +724,10 @@ def arrive(world: "WorldState") -> str | None:
     if voyage is None or voyage.status != VoyageStatus.ARRIVED:
         return "Not arrived yet"
     voyage.status = VoyageStatus.IN_PORT
+
+    # Convoy: dock in-transit fleet ships at destination
+    for owned in world.captain.fleet:
+        if owned.docked_port_id == "":  # in transit
+            owned.docked_port_id = voyage.destination_id
+
     return None
