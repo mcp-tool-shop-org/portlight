@@ -170,17 +170,28 @@ class TestMeleeTriangle:
                 results.append(r)
         assert any(r.damage_to_opponent > 0 for r in results)
 
-    def test_same_stance_draw(self):
-        """When both pick the same melee action, both take 1 damage."""
+    def test_same_stance_draw_no_damage(self):
+        """When both pick the same melee action, neither takes damage."""
         # Run many rounds to find a same-stance case
         for seed in range(100):
             p, o = _player(), _opponent()
             r = resolve_combat_round("thrust", p, o, "aggressive", _rng(seed))
             if r.opponent_action == "thrust":
-                assert r.damage_to_opponent == 1
-                assert r.damage_to_player == 1
+                assert r.damage_to_opponent == 0
+                assert r.damage_to_player == 0
                 return
         pytest.skip("No same-stance draw found in 100 seeds")
+
+    def test_parry_vs_parry_no_damage(self):
+        """Parry vs parry should be a clean stalemate with zero damage."""
+        for seed in range(100):
+            p, o = _player(), _opponent()
+            r = resolve_combat_round("parry", p, o, "defensive", _rng(seed))
+            if r.opponent_action == "parry":
+                assert r.damage_to_opponent == 0, "Parry vs parry should deal 0 damage to opponent"
+                assert r.damage_to_player == 0, "Parry vs parry should deal 0 damage to player"
+                return
+        pytest.skip("No parry-vs-parry found in 100 seeds")
 
 
 # ---------------------------------------------------------------------------

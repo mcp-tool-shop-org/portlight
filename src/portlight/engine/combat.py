@@ -624,8 +624,9 @@ def resolve_combat_round(
         elif outcome == "lose":
             dmg_to_player = rng.randint(2, 3)
         else:
-            dmg_to_opponent = 1
-            dmg_to_player = 1
+            # Draw: both chose same stance — no damage exchanged
+            dmg_to_opponent = 0
+            dmg_to_player = 0
 
         flavor = _MELEE_FLAVOR.get((player_action, outcome), "Blades clash.")
 

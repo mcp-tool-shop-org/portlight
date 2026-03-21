@@ -416,9 +416,9 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
         elif phase == "naval":
             console.print("  [cyan]portlight naval <broadside|close|evade|rake|flee>[/cyan]")
         elif phase == "boarding":
-            console.print("  [cyan]portlight fight <thrust|slash|parry>[/cyan]")
+            console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge>[/cyan]")
         elif phase == "duel":
-            console.print("  [cyan]portlight fight <thrust|slash|parry>[/cyan]")
+            console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge>[/cyan]")
         elif phase == "resolved":
             console.print("  [cyan]portlight spare[/cyan] or [cyan]portlight take-all[/cyan]")
         return
