@@ -23,7 +23,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from portlight.engine.models import Port, ReputationState, WorldState
+    from portlight.engine.models import Captain, Port, ReputationState, WorldState
 
 
 # ---------------------------------------------------------------------------
@@ -503,6 +503,7 @@ def resolve_completed(
 def tick_contracts(
     board: ContractBoard,
     day: int,
+    captain: "Captain | None" = None,
 ) -> list[ContractOutcome]:
     """Daily tick: expire overdue contracts, remove stale offers."""
     outcomes = []
@@ -546,6 +547,9 @@ def tick_contracts(
             contract.status = ContractStatus.EXPIRED
             outcomes.append(outcome)
             board.completed.append(outcome)
+            # Record breach on captain
+            if captain is not None:
+                _record_breach(captain, contract.offer_id, day, contract.destination_port_id, contract.family)
         else:
             still_active.append(contract)
 
@@ -561,8 +565,9 @@ def abandon_contract(
     board: ContractBoard,
     offer_id: str,
     day: int,
+    captain: "Captain | None" = None,
 ) -> ContractOutcome | str:
-    """Player abandons a contract. Reputation cost."""
+    """Player abandons a contract. Reputation cost + breach record."""
     contract = next((c for c in board.active if c.offer_id == offer_id), None)
     if contract is None:
         return "No active contract with that ID"
@@ -581,4 +586,40 @@ def abandon_contract(
     contract.status = ContractStatus.ABANDONED
     board.active = [c for c in board.active if c.offer_id != offer_id]
     board.completed.append(outcome)
+    # Record breach on captain
+    if captain is not None:
+        _record_breach(captain, contract.offer_id, day, contract.destination_port_id, contract.family)
     return outcome
+
+
+# ---------------------------------------------------------------------------
+# Breach tracking
+# ---------------------------------------------------------------------------
+
+def _record_breach(
+    captain: "Captain",
+    contract_id: str,
+    day: int,
+    port_id: str,
+    family: str,
+) -> None:
+    """Record a contract breach and escalate wanted level."""
+    captain.breach_records.append({
+        "contract_id": contract_id,
+        "day": day,
+        "port_id": port_id,
+        "family": family,
+    })
+    # Escalate wanted level based on breach count
+    count = len(captain.breach_records)
+    if count >= 5:
+        captain.wanted_level = max(captain.wanted_level, 3)  # hunted
+    elif count >= 3:
+        captain.wanted_level = max(captain.wanted_level, 2)  # wanted
+    elif count >= 2:
+        captain.wanted_level = max(captain.wanted_level, 1)  # watched
+
+
+def get_breach_count_for_family(captain: "Captain", family: str) -> int:
+    """Count breaches for a specific contract family."""
+    return sum(1 for b in captain.breach_records if b.get("family") == family)

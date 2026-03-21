@@ -617,6 +617,12 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         region = dest_port.region if dest_port else "Mediterranean"
         inspection_mult *= get_inspection_modifier(captain.standing, region)
 
+    # Wanted level increases inspection frequency
+    if captain.wanted_level >= 2:
+        inspection_mult *= 1.5  # 50% more inspections
+    elif captain.wanted_level >= 1:
+        inspection_mult *= 1.2  # 20% more inspections
+
     # Consume provisions (captain modifier affects burn rate)
     # provision_burn < 1.0 means some days you don't consume
     if provision_burn >= 1.0 or rng.random() < provision_burn:

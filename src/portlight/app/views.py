@@ -210,6 +210,19 @@ def status_view(world: "WorldState", ledger: "ReceiptLedger", infra: "Infrastruc
     if ledger.receipts:
         lines.append(f"Net P&L: {fmt.silver_delta(ledger.net_profit)} ({len(ledger.receipts)} trades)")
 
+    # Wanted status
+    if captain.wanted_level >= 3:
+        lines.append("[bold red][HUNTED][/bold red] Bounty hunters are searching for you!")
+    elif captain.wanted_level >= 2:
+        lines.append("[bold yellow][WANTED][/bold yellow] Ports are watching for you.")
+    elif captain.wanted_level >= 1:
+        lines.append("[yellow][WATCHED][/yellow] Your reputation precedes you.")
+
+    # Deferred debts
+    if captain.deferred_fees:
+        total_debt = sum(f["amount"] for f in captain.deferred_fees)
+        lines.append(f"[red]Debts: {total_debt} silver owed[/red]")
+
     # Daily upkeep burn (if infrastructure exists)
     upkeep = _daily_upkeep(infra) if infra else 0
     if upkeep > 0:
