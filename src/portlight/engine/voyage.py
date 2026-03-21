@@ -100,25 +100,25 @@ def ship_class_rank(template_id: str) -> int:
 # ---------------------------------------------------------------------------
 
 _EVENT_WEIGHTS: list[tuple[EventType, float]] = [
-    (EventType.NOTHING, 0.27),
-    (EventType.CALM_SEAS, 0.12),
-    (EventType.FAVORABLE_WIND, 0.10),
-    (EventType.STORM, 0.12),
-    (EventType.PIRATES, 0.08),
+    (EventType.NOTHING, 0.28),
+    (EventType.CALM_SEAS, 0.10),
+    (EventType.FAVORABLE_WIND, 0.11),
+    (EventType.STORM, 0.10),
+    (EventType.PIRATES, 0.07),
     (EventType.INSPECTION, 0.05),
-    (EventType.PROVISIONS_SPOILED, 0.05),
-    (EventType.CARGO_DAMAGED, 0.04),
-    (EventType.MERCHANT_ENCOUNTER, 0.05),
-    (EventType.FLOTSAM, 0.04),
-    # Cultural events (8% total — atmosphere, not punishment)
-    (EventType.FOREIGN_VESSEL, 0.01),
-    (EventType.CULTURAL_WATERS, 0.01),
+    (EventType.PROVISIONS_SPOILED, 0.04),
+    (EventType.CARGO_DAMAGED, 0.03),
+    (EventType.MERCHANT_ENCOUNTER, 0.06),
+    (EventType.FLOTSAM, 0.05),
+    # Cultural events (12% total — atmosphere, not punishment)
+    (EventType.FOREIGN_VESSEL, 0.015),
+    (EventType.CULTURAL_WATERS, 0.015),
     (EventType.SEA_CEREMONY, 0.01),
-    (EventType.WHALE_SIGHTING, 0.01),
-    (EventType.LIGHTHOUSE, 0.01),
-    (EventType.MUSICIAN_ABOARD, 0.01),
+    (EventType.WHALE_SIGHTING, 0.015),
+    (EventType.LIGHTHOUSE, 0.015),
+    (EventType.MUSICIAN_ABOARD, 0.015),
     (EventType.DRIFTING_OFFERING, 0.01),
-    (EventType.STAR_NAVIGATION, 0.01),
+    (EventType.STAR_NAVIGATION, 0.015),
 ]
 
 

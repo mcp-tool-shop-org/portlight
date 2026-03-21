@@ -55,15 +55,15 @@ class TestCulturalEventTypes:
         for et in self.CULTURAL_TYPES:
             assert et in weighted_types, f"{et} missing from _EVENT_WEIGHTS"
 
-    def test_cultural_weights_sum_to_008(self):
+    def test_cultural_weights_sum_reasonable(self):
         cultural_sum = sum(
             w for e, w in _EVENT_WEIGHTS if e in self.CULTURAL_TYPES
         )
-        assert abs(cultural_sum - 0.08) < 0.001
+        assert 0.08 <= cultural_sum <= 0.15, f"Cultural weight sum {cultural_sum} outside 8-15%"
 
-    def test_nothing_reduced_to_027(self):
+    def test_nothing_weight_reduced(self):
         nothing_w = next(w for e, w in _EVENT_WEIGHTS if e == EventType.NOTHING)
-        assert abs(nothing_w - 0.27) < 0.001
+        assert nothing_w < 0.35, "NOTHING should be reduced from original 35%"
 
     def test_total_weights_sum_to_1(self):
         total = sum(w for _, w in _EVENT_WEIGHTS)

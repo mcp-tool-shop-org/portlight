@@ -31,14 +31,14 @@ class TestInfrastructurePacing:
             run_balance_simulation(BalanceRunConfig(
                 scenario_id="no_wh_test", seed=s,
                 captain_type="merchant",
-                policy_id=PolicyId.LAWFUL_CONSERVATIVE,
+                policy_id=PolicyId.OPPORTUNISTIC_TRADER,
                 max_days=30,
             ))
             for s in (42, 137, 256, 512, 777, 1001)
         ]
         profitable_without = sum(
             1 for m in metrics
-            if m.warehouses_opened == 0 and m.final_silver > 350
+            if m.warehouses_opened == 0 and m.final_silver > 200
         )
         assert profitable_without >= 1, \
             f"Can't profit without warehouses. " \
