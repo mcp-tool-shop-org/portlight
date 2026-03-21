@@ -200,6 +200,43 @@ class Captain:
 # Voyage
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Seasons
+# ---------------------------------------------------------------------------
+
+class Season(str, Enum):
+    """Four seasons derived from game day. Each cycle = 360 days."""
+    SPRING = "spring"       # days 1-90: calm, trade reopens
+    SUMMER = "summer"       # days 91-180: monsoon in east, peak activity
+    AUTUMN = "autumn"       # days 181-270: harvest, storms build
+    WINTER = "winter"       # days 271-360: harsh, North Atlantic deadly
+
+
+@dataclass
+class SeasonalProfile:
+    """How a season affects a specific region."""
+    season: Season
+    region: str
+    danger_mult: float = 1.0         # multiplier on route danger
+    speed_mult: float = 1.0          # multiplier on travel speed
+    market_effects: dict[str, float] = field(default_factory=dict)  # good_id → demand mult
+    weather_flavor: list[str] = field(default_factory=list)
+    travel_warning: str = ""         # shown before departure
+
+
+def get_season(day: int) -> Season:
+    """Derive current season from game day (360-day cycle)."""
+    day_in_year = ((day - 1) % 360) + 1
+    if day_in_year <= 90:
+        return Season.SPRING
+    elif day_in_year <= 180:
+        return Season.SUMMER
+    elif day_in_year <= 270:
+        return Season.AUTUMN
+    else:
+        return Season.WINTER
+
+
 class VoyageStatus(str, Enum):
     IN_PORT = "in_port"
     AT_SEA = "at_sea"

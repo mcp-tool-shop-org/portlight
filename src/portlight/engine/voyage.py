@@ -544,6 +544,14 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         if ship_rank < route_rank:
             danger *= 1.5  # 50% more danger with unsuitable ship
 
+    # Seasonal danger modifier
+    dest_port = world.ports.get(voyage.destination_id)
+    _dest_region = dest_port.region if dest_port else "Mediterranean"
+    from portlight.content.seasons import get_seasonal_profile
+    _season_profile = get_seasonal_profile(_dest_region, world.day)
+    if _season_profile:
+        danger *= _season_profile.danger_mult
+
     event_type = _pick_event(danger, rng, inspection_mult)
     event = _resolve_event(event_type, rng, captain, captain.ship)
     events.append(event)
@@ -564,7 +572,7 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
                         captain.cargo.remove(item)
                     break
 
-    # Progress (undermanned penalty + captain speed bonus)
+    # Progress (undermanned penalty + captain speed bonus + seasonal modifier)
     base_speed = captain.ship.speed + speed_bonus
     crew_min = template.crew_min if template else 1
     if captain.ship.crew < crew_min:
@@ -573,6 +581,10 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         # Slight penalty when not fully crewed
         crew_ratio = captain.ship.crew / captain.ship.crew_max
         base_speed *= (0.7 + 0.3 * crew_ratio)
+
+    # Seasonal speed modifier
+    if _season_profile:
+        base_speed *= _season_profile.speed_mult
 
     day_progress = int(base_speed * event.speed_modifier)
     voyage.progress += day_progress

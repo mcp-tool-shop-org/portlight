@@ -68,11 +68,23 @@ def recalculate_prices(
         slot.sell_price = max(1, round(raw * (1 - slot.spread / 2) * flood_mult * sell_mult_cap))
 
 
-def tick_markets(ports: dict[str, Port], days: int = 1, rng: random.Random | None = None) -> list[str]:
-    """Advance all port markets by `days`. Returns list of shock messages (if any)."""
+def tick_markets(
+    ports: dict[str, Port], days: int = 1, rng: random.Random | None = None,
+    current_day: int = 0,
+) -> list[str]:
+    """Advance all port markets by `days`. Returns list of shock messages (if any).
+
+    If current_day is provided, seasonal demand modifiers are applied.
+    """
     rng = rng or random.Random()
     messages: list[str] = []
     for port in ports.values():
+        # Get seasonal profile for this port's region
+        _seasonal = None
+        if current_day > 0:
+            from portlight.content.seasons import get_seasonal_profile
+            _seasonal = get_seasonal_profile(port.region, current_day)
+
         for slot in port.market:
             for _ in range(days):
                 # Drift toward target (stronger pull when far from target)
@@ -95,6 +107,18 @@ def tick_markets(ports: dict[str, Port], days: int = 1, rng: random.Random | Non
                 if rng.random() < 0.08:
                     shock = rng.randint(-4, 4)
                     slot.stock_current = max(0, slot.stock_current + shock)
+
+                # Seasonal demand pull (shifts stock target temporarily)
+                if _seasonal and slot.good_id in _seasonal.market_effects:
+                    demand_mult = _seasonal.market_effects[slot.good_id]
+                    if demand_mult > 1.0:
+                        # High demand: drain stock faster (consumers buy more)
+                        drain = int((demand_mult - 1.0) * slot.restock_rate * 0.5)
+                        slot.stock_current = max(0, slot.stock_current - drain)
+                    elif demand_mult < 1.0:
+                        # Low demand / abundance: stock accumulates
+                        surplus = int((1.0 - demand_mult) * slot.restock_rate * 0.5)
+                        slot.stock_current += surplus
 
         # Regional supply shock (3% chance per port per day tick)
         if rng.random() < 0.03 * days:

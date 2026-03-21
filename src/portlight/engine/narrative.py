@@ -373,6 +373,49 @@ _BEATS: list[NarrativeBeat] = [
             "live in your captain's log."
         ),
     ),
+
+    # === SEASONAL BEATS ===
+    NarrativeBeat(
+        id="first_winter",
+        phase=NarrativePhase.TESTS,
+        title="The Cold Season",
+        text=(
+            "Winter closes in. The northern ports grow quiet and the sea turns grey. "
+            "Experienced captains planned for this — they stocked medicines and tea "
+            "when prices were low. The unprepared pay winter rates."
+        ),
+        hint="Watch the seasons. Buy goods when abundant, sell when scarce.",
+    ),
+    NarrativeBeat(
+        id="monsoon_survivor",
+        phase=NarrativePhase.TESTS,
+        title="Through the Monsoon",
+        text=(
+            "The monsoon season tried to swallow your ship whole. Rain so heavy "
+            "it felt solid, waves that blocked out the sky. But you kept the crew alive "
+            "and the cargo dry. The East Indies respect a captain who dares the monsoon."
+        ),
+    ),
+    NarrativeBeat(
+        id="harvest_trader",
+        phase=NarrativePhase.REWARD,
+        title="Riding the Harvest",
+        text=(
+            "You timed it perfectly. When the harvest flooded the market with cheap grain "
+            "and cotton, you were there to buy. When winter drove demand through the roof, "
+            "you were there to sell. The calendar is a captain's secret weapon."
+        ),
+    ),
+    NarrativeBeat(
+        id="four_seasons_captain",
+        phase=NarrativePhase.THE_RETURN,
+        title="Captain for All Seasons",
+        text=(
+            "You've sailed through spring calms and winter gales, monsoon fury and "
+            "autumn harvests. The sea has shown you every face it has. "
+            "You trade with the rhythm of the world, not against it."
+        ),
+    ),
 ]
 
 _BEATS_BY_ID: dict[str, NarrativeBeat] = {b.id: b for b in _BEATS}
@@ -553,5 +596,25 @@ def evaluate_narrative(
     # Proverb collector: visited 15+ unique ports
     if len(culture.port_visits) >= 15:
         _fire("proverb_collector")
+
+    # === SEASONAL BEATS ===
+    from portlight.engine.models import Season, get_season
+    current_season = get_season(world.day)
+
+    # First winter: fire when player experiences their first winter
+    if current_season == Season.WINTER and world.day >= 271:
+        _fire("first_winter")
+
+    # Monsoon survivor: sailed in East Indies during summer (monsoon)
+    if current_season == Season.SUMMER and region == "East Indies":
+        _fire("monsoon_survivor")
+
+    # Harvest trader: traded in autumn (harvest season) with good profit
+    if current_season == Season.AUTUMN and ledger.net_profit >= 500:
+        _fire("harvest_trader")
+
+    # Four seasons captain: played through all 4 seasons (day > 360)
+    if world.day > 360:
+        _fire("four_seasons_captain")
 
     return newly_fired
