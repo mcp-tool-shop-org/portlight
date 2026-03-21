@@ -61,10 +61,86 @@ def new(
         console.print(f"[red]Unknown captain type: {captain_type}[/red]")
         console.print(f"Choose: {', '.join(sorted(valid_types))}")
         raise typer.Exit(1)
+    if captain_type == "custom":
+        _create_custom_game(name)
+        return
+
     s = GameSession(slot=_active_slot)
     s.new(name, captain_type=captain_type)
     console.print("\n[bold green]A new voyage begins.[/bold green]\n")
     console.print(views.welcome_view(s.captain, s.captain_template, s.world, s.infra))
+
+
+def _create_custom_game(name: str) -> None:
+    """Interactive custom captain builder."""
+    from portlight.engine.captain_identity import CAPTAIN_TEMPLATES, CaptainType
+    from portlight.engine.custom_captain import CustomCaptainSpec, build_custom_template, validate_spec
+
+    console.print("\n[bold cyan]--- Custom Captain Builder ---[/bold cyan]")
+    console.print("Distribute [bold]10 skill points[/bold] across 4 categories.\n")
+
+    # Point allocation
+    console.print("  [bold]Trade[/bold]      — better buy/sell prices, lower port fees")
+    console.print("  [bold]Sailing[/bold]    — faster travel, less provisions, storm resistance")
+    console.print("  [bold]Shadow[/bold]     — inspection evasion, underworld connections")
+    console.print("  [bold]Reputation[/bold] — starting trust and regional standing\n")
+
+    trade = typer.prompt("Trade points (0-6)", default=2, type=int)
+    sailing = typer.prompt("Sailing points (0-6)", default=3, type=int)
+    shadow = typer.prompt("Shadow points (0-6)", default=3, type=int)
+    reputation = typer.prompt("Reputation points (0-6)", default=2, type=int)
+
+    total = trade + sailing + shadow + reputation
+    if total != 10:
+        console.print(f"[red]Points must total 10 (got {total}). Try again.[/red]")
+        raise typer.Exit(1)
+
+    # Home port
+    console.print("\n[bold]Choose home port:[/bold]")
+    home_ports = {
+        "1": ("porto_novo", "Mediterranean"),
+        "2": ("corsairs_rest", "Mediterranean"),
+        "3": ("ironhaven", "North Atlantic"),
+        "4": ("sun_harbor", "West Africa"),
+        "5": ("crosswind_isle", "East Indies"),
+        "6": ("coral_throne", "South Seas"),
+    }
+    for k, (pid, region) in home_ports.items():
+        console.print(f"  [{k}] {pid.replace('_', ' ').title()} ({region})")
+    port_choice = typer.prompt("Home port", default="1")
+    port_id, region = home_ports.get(port_choice, ("porto_novo", "Mediterranean"))
+
+    # Title
+    title = typer.prompt("Captain title", default="Freelance Captain")
+
+    spec = CustomCaptainSpec(
+        name=name,
+        title=title,
+        home_port_id=port_id,
+        home_region=region,
+        trade_points=trade,
+        sailing_points=sailing,
+        shadow_points=shadow,
+        reputation_points=reputation,
+    )
+
+    errors = validate_spec(spec)
+    if errors:
+        for e in errors:
+            console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+
+    template = build_custom_template(spec)
+
+    # Register the template temporarily so new_game can find it
+    CAPTAIN_TEMPLATES[CaptainType.CUSTOM] = template
+
+    s = GameSession(slot=_active_slot)
+    s.new(name, captain_type="custom")
+    console.print("\n[bold green]A new voyage begins.[/bold green]\n")
+    console.print(views.welcome_view(s.captain, s.captain_template, s.world, s.infra))
+    console.print(f"\n[dim]Build: Trade {trade} / Sailing {sailing} / Shadow {shadow} / Reputation {reputation}[/dim]")
+    console.print(f"[dim]Home: {port_id.replace('_', ' ').title()} ({region})[/dim]")
 
 
 # ---------------------------------------------------------------------------
