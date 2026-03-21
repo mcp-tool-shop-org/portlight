@@ -167,10 +167,22 @@ def _execute_one(
         session.repair()
 
     elif a == "hire":
-        session.hire_crew(args.get("count", 99))
+        session.hire_crew(args.get("count", 99), args.get("role", "sailor"))
+
+    elif a == "hire_role":
+        session.hire_crew(args.get("count", 1), args.get("role", "sailor"))
+
+    elif a == "fire_role":
+        session.fire_crew(args.get("role", "sailor"), args.get("count", 1))
 
     elif a == "buy_ship":
         session.buy_ship(args["ship_id"])
+
+    elif a == "install_upgrade":
+        session.install_upgrade(args["upgrade_id"])
+
+    elif a == "sell_fleet_ship":
+        session.sell_fleet_ship(args["ship_name"])
 
     elif a == "accept_contract":
         session.accept_contract(args["offer_id"])

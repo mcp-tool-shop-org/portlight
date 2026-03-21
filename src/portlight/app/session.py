@@ -473,13 +473,12 @@ class GameSession:
         fleet_count = len(self.world.captain.fleet) + 1  # +1 for current flagship
 
         if fleet_count < fleet_limit:
-            # Add old ship to fleet (docked at this port)
+            # Add old ship to fleet (docked at this port, empty cargo)
+            # Cargo stays with the captain for the new ship
             self.world.captain.fleet.append(OwnedShip(
                 ship=old_ship,
                 docked_port_id=port.id,
-                cargo=list(self.world.captain.cargo),
             ))
-            self.world.captain.cargo = []
         else:
             # Fleet full — sell old ship for 40% of its template price
             old_template = SHIPS.get(old_ship.template_id)
@@ -647,9 +646,14 @@ class GameSession:
             count = min(count, avail)
 
         count = min(count, space)
-        cost = count * spec.wage * 10  # hiring cost = 10x daily wage
+        # Sailors use port crew_cost, specialists cost wage * 10
+        if crew_role == CrewRole.SAILOR:
+            cost_per = port.crew_cost
+        else:
+            cost_per = spec.wage * 10
+        cost = count * cost_per
         if cost > self.world.captain.silver:
-            return f"Need {cost} silver for {count} {spec.name}(s) ({spec.wage * 10}/each), have {self.world.captain.silver}"
+            return f"Need {cost} silver for {count} {spec.name}(s) ({cost_per}/each), have {self.world.captain.silver}"
 
         self.world.captain.silver -= cost
         current = get_role_count(ship.roster, crew_role)

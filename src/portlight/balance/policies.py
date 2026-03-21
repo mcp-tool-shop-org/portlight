@@ -239,15 +239,31 @@ def _should_repair(session: "GameSession") -> ActionPlan | None:
 
 
 def _should_hire(session: "GameSession") -> ActionPlan | None:
-    """Hire if undermanned."""
+    """Hire sailors if undermanned. Fill toward crew_max for best speed."""
     captain = session.captain
     ship = captain.ship
     if not ship or not session.current_port:
         return None
     from portlight.content.ships import SHIPS
     template = SHIPS.get(ship.template_id)
-    if template and ship.crew < template.crew_min + 2:
-        return ActionPlan("hire", {})
+    if template and ship.crew < template.crew_max:
+        # Hire up to crew_max for optimal speed
+        return ActionPlan("hire", {"count": 99, "role": "sailor"})
+    return None
+
+
+def _should_sell_fleet_ship(session: "GameSession") -> ActionPlan | None:
+    """Sell any docked fleet ships to reduce wage burn."""
+    captain = session.captain
+    port = session.current_port
+    if not port or not captain.fleet:
+        return None
+    from portlight.engine.models import PortFeature
+    if PortFeature.SHIPYARD not in port.features:
+        return None
+    for owned in captain.fleet:
+        if owned.docked_port_id == port.id and not owned.cargo:
+            return ActionPlan("sell_fleet_ship", {"ship_name": owned.ship.name})
     return None
 
 
@@ -276,6 +292,95 @@ def _should_upgrade_ship(session: "GameSession") -> ActionPlan | None:
         rank = class_order.get(tmpl.ship_class.value, 0)
         if rank == current_rank + 1 and tmpl.price <= captain.silver * 0.8:
             return ActionPlan("buy_ship", {"ship_id": sid})
+    return None
+
+
+def _should_install_upgrade(session: "GameSession", prefer_categories: list[str] | None = None) -> ActionPlan | None:
+    """Install a ship upgrade if at a shipyard with slots and silver."""
+    port = session.current_port
+    if not port:
+        return None
+    from portlight.engine.models import PortFeature
+    if PortFeature.SHIPYARD not in port.features:
+        return None
+    captain = session.captain
+    ship = captain.ship
+    if not ship:
+        return None
+    if len(ship.upgrades) >= ship.upgrade_slots:
+        return None
+
+    # Only install upgrades when we have comfortable surplus
+    if captain.silver < 300:
+        return None
+
+    from portlight.content.upgrades import UPGRADES
+    installed_ids = {u.upgrade_id for u in ship.upgrades}
+    budget = int(captain.silver * 0.2)
+
+    # Score upgrades by category preference and ROI
+    best = None
+    best_score = 0
+    for uid, tmpl in UPGRADES.items():
+        if uid in installed_ids:
+            continue
+        if tmpl.price > budget:
+            continue
+        score = 1.0
+        if prefer_categories and tmpl.category.value in prefer_categories:
+            score *= 3.0
+        # Speed and cargo upgrades are always valuable
+        if tmpl.speed_bonus > 0:
+            score *= 1.5
+        if tmpl.cargo_bonus > 0:
+            score *= 1.3
+        # Cheaper = better ROI early
+        score *= (1.0 / max(tmpl.price, 50)) * 100
+        if score > best_score:
+            best_score = score
+            best = uid
+
+    if best:
+        return ActionPlan("install_upgrade", {"upgrade_id": best})
+    return None
+
+
+def _should_hire_specialist(session: "GameSession", prefer_roles: list[str] | None = None) -> ActionPlan | None:
+    """Hire a specialist crew member if affordable (only with surplus silver)."""
+    captain = session.captain
+    ship = captain.ship
+    if not ship or not session.current_port:
+        return None
+
+    # Only hire specialists when we have comfortable surplus (>400 silver)
+    if captain.silver < 400:
+        return None
+
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.ship_stats import resolve_crew_max
+    eff_crew_max = resolve_crew_max(ship, UPGRADES)
+    if ship.crew >= eff_crew_max:
+        return None
+
+    from portlight.engine.models import CrewRole
+    from portlight.content.crew_roles import ROLE_SPECS, get_role_count
+
+    # Priority order (default): navigator > quartermaster > gunner > marine
+    roles_to_try = prefer_roles or ["navigator", "quartermaster", "gunner", "marine"]
+
+    for role_name in roles_to_try:
+        try:
+            role = CrewRole(role_name)
+        except ValueError:
+            continue
+        spec = ROLE_SPECS[role]
+        current = get_role_count(ship.roster, role)
+        if spec.max_per_ship is not None and current >= spec.max_per_ship:
+            continue
+        hire_cost = spec.wage * 10  # hiring cost
+        if hire_cost <= captain.silver * 0.05:  # very conservative: 5% of silver
+            return ActionPlan("hire_role", {"role": role_name, "count": 1})
+
     return None
 
 
@@ -365,6 +470,21 @@ def _lawful_conservative(s: "GameSession") -> list[ActionPlan]:
     if upgrade:
         actions.append(upgrade)
 
+    # Sell docked fleet ships to reduce wage burn (bots don't use fleet)
+    sell_fleet = _should_sell_fleet_ship(s)
+    if sell_fleet:
+        actions.append(sell_fleet)
+
+    # Install ship component upgrades (conservative: cargo + navigation)
+    comp = _should_install_upgrade(s, ["cargo", "navigation"])
+    if comp:
+        actions.append(comp)
+
+    # Hire specialist (navigator first for speed)
+    spec = _should_hire_specialist(s, ["navigator", "quartermaster"])
+    if spec:
+        actions.append(spec)
+
     # Sail
     dest = _best_route(s)
     if dest:
@@ -408,6 +528,21 @@ def _opportunistic_trader(s: "GameSession") -> list[ActionPlan]:
     if upgrade:
         actions.append(upgrade)
 
+    # Sell docked fleet ships to reduce wage burn (bots don't use fleet)
+    sell_fleet = _should_sell_fleet_ship(s)
+    if sell_fleet:
+        actions.append(sell_fleet)
+
+    # Upgrades: speed + cargo for opportunistic trading
+    comp = _should_install_upgrade(s, ["sails", "cargo"])
+    if comp:
+        actions.append(comp)
+
+    # Hire specialist
+    spec = _should_hire_specialist(s, ["navigator", "quartermaster", "gunner"])
+    if spec:
+        actions.append(spec)
+
     dest = _best_route(s)
     if dest:
         actions.append(ActionPlan("sail", {"destination": dest}))
@@ -448,6 +583,19 @@ def _contract_forward(s: "GameSession") -> list[ActionPlan]:
     upgrade = _should_upgrade_ship(s)
     if upgrade:
         actions.append(upgrade)
+
+    # Sell docked fleet ships to reduce wage burn (bots don't use fleet)
+    sell_fleet = _should_sell_fleet_ship(s)
+    if sell_fleet:
+        actions.append(sell_fleet)
+
+    comp = _should_install_upgrade(s, ["cargo", "sails"])
+    if comp:
+        actions.append(comp)
+
+    spec = _should_hire_specialist(s, ["navigator", "quartermaster"])
+    if spec:
+        actions.append(spec)
 
     dest = _best_route(s)
     if dest:
@@ -509,6 +657,19 @@ def _infrastructure_forward(s: "GameSession") -> list[ActionPlan]:
     if upgrade:
         actions.append(upgrade)
 
+    # Sell docked fleet ships to reduce wage burn (bots don't use fleet)
+    sell_fleet = _should_sell_fleet_ship(s)
+    if sell_fleet:
+        actions.append(sell_fleet)
+
+    comp = _should_install_upgrade(s, ["cargo", "crew_quarters"])
+    if comp:
+        actions.append(comp)
+
+    spec = _should_hire_specialist(s, ["quartermaster", "navigator"])
+    if spec:
+        actions.append(spec)
+
     dest = _best_route(s)
     if dest:
         actions.append(ActionPlan("sail", {"destination": dest}))
@@ -566,6 +727,19 @@ def _leverage_forward(s: "GameSession") -> list[ActionPlan]:
     upgrade = _should_upgrade_ship(s)
     if upgrade:
         actions.append(upgrade)
+
+    # Sell docked fleet ships to reduce wage burn (bots don't use fleet)
+    sell_fleet = _should_sell_fleet_ship(s)
+    if sell_fleet:
+        actions.append(sell_fleet)
+
+    comp = _should_install_upgrade(s, ["sails", "cargo"])
+    if comp:
+        actions.append(comp)
+
+    spec = _should_hire_specialist(s)
+    if spec:
+        actions.append(spec)
 
     dest = _best_route(s)
     if dest:
@@ -628,6 +802,21 @@ def _shadow_runner(s: "GameSession") -> list[ActionPlan]:
     if upgrade:
         actions.append(upgrade)
 
+    # Sell docked fleet ships to reduce wage burn (bots don't use fleet)
+    sell_fleet = _should_sell_fleet_ship(s)
+    if sell_fleet:
+        actions.append(sell_fleet)
+
+    # Shadow runner: hidden compartments + speed
+    comp = _should_install_upgrade(s, ["cargo", "sails", "navigation"])
+    if comp:
+        actions.append(comp)
+
+    # Gunners for combat, quartermaster for sell bonus
+    spec = _should_hire_specialist(s, ["gunner", "quartermaster", "navigator"])
+    if spec:
+        actions.append(spec)
+
     dest = _best_route(s)
     if dest:
         actions.append(ActionPlan("sail", {"destination": dest}))
@@ -647,8 +836,11 @@ def _buy_luxury(s: "GameSession") -> ActionPlan | None:
     if not ship:
         return None
 
+    from portlight.content.upgrades import UPGRADES as _UPG
+    from portlight.engine.ship_stats import resolve_cargo_capacity
     cargo_used = sum(c.quantity for c in captain.cargo)
-    space = ship.cargo_capacity - int(cargo_used)
+    eff_cap = resolve_cargo_capacity(ship, _UPG)
+    space = eff_cap - int(cargo_used)
     budget = int(captain.silver * 0.6)
 
     luxury_ids = {"silk", "spice", "porcelain", "tea", "pearls"}
@@ -698,6 +890,21 @@ def _long_haul_optimizer(s: "GameSession") -> list[ActionPlan]:
     upgrade = _should_upgrade_ship(s)
     if upgrade:
         actions.append(upgrade)
+
+    # Sell docked fleet ships to reduce wage burn (bots don't use fleet)
+    sell_fleet = _should_sell_fleet_ship(s)
+    if sell_fleet:
+        actions.append(sell_fleet)
+
+    # Long haul: storm resistance + speed + hull durability
+    comp = _should_install_upgrade(s, ["sails", "hull_plating", "navigation"])
+    if comp:
+        actions.append(comp)
+
+    # Navigator essential for long haul, surgeon for survival
+    spec = _should_hire_specialist(s, ["navigator", "surgeon", "quartermaster"])
+    if spec:
+        actions.append(spec)
 
     # Prefer long routes
     dest = _best_route(s, prefer_long=True)
