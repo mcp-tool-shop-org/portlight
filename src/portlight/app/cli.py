@@ -6,6 +6,8 @@ The CLI feels like a commandable game, not a command library.
 
 from __future__ import annotations
 
+import random
+
 import typer
 from rich.console import Console
 
@@ -14,15 +16,28 @@ from portlight.app.session import GameSession
 
 app = typer.Typer(
     name="portlight",
-    help="Portlight — trade-first maritime strategy game",
+    help="Portlight -- trade-first maritime strategy game",
     no_args_is_help=True,
 )
 console = Console()
 
+# Global save slot -- set by --save callback before any subcommand runs
+_active_slot: str = "default"
+
+
+@app.callback()
+def _main(
+    save: str = typer.Option("default", "--save", "-s",
+        help="Save slot name (isolates separate games)"),
+) -> None:
+    """Portlight -- trade-first maritime strategy game."""
+    global _active_slot  # noqa: PLW0603
+    _active_slot = save
+
 
 def _session() -> GameSession:
     """Load or fail with helpful message."""
-    s = GameSession()
+    s = GameSession(slot=_active_slot)
     if not s.load():
         console.print("[red]No saved game found.[/red] Start a new game with: [bold]portlight new YourName --type merchant[/bold]")
         raise typer.Exit(1)
@@ -46,7 +61,7 @@ def new(
         console.print(f"[red]Unknown captain type: {captain_type}[/red]")
         console.print(f"Choose: {', '.join(sorted(valid_types))}")
         raise typer.Exit(1)
-    s = GameSession()
+    s = GameSession(slot=_active_slot)
     s.new(name, captain_type=captain_type)
     console.print("\n[bold green]A new voyage begins.[/bold green]\n")
     console.print(views.welcome_view(s.captain, s.captain_template, s.world, s.infra))
@@ -1348,7 +1363,7 @@ def save() -> None:
 @app.command()
 def load() -> None:
     """Load a saved game."""
-    s = GameSession()
+    s = GameSession(slot=_active_slot)
     if s.load():
         console.print("[green]Game loaded.[/green]")
         console.print(views.status_view(s.world, s.ledger, s.infra))
@@ -1552,7 +1567,10 @@ def naval(
         return
 
     combat_ship = resolved_ship(s.captain.ship, UPGRADES)
-    result = resolve_naval_turn(enc, action, combat_ship, s._rng)
+    # Unique RNG per turn to avoid replay on process restart
+    import random
+    naval_rng = random.Random(s.world.seed + s.world.day * 1000 + enc.naval_turns + 7777)
+    result = resolve_naval_turn(enc, action, combat_ship, naval_rng)
 
     # Apply hull/crew damage to player ship
     s.captain.ship.hull = max(0, s.captain.ship.hull + result["player_hull_delta"])
@@ -1725,7 +1743,9 @@ def fight(
         console.print(f"[red]Invalid action. Available: {', '.join(valid)}[/red]")
         return
 
-    result = resolve_duel_turn(enc, action, p, o, s._rng)
+    # Advance RNG past already-played turns to avoid deterministic replay
+    combat_rng = random.Random(s.world.seed + s.world.day * 1000 + enc.duel_turns + enc.naval_turns)
+    result = resolve_duel_turn(enc, action, p, o, combat_rng)
 
     console.print(combat_views.combat_round_view({
         "turn": result.turn,

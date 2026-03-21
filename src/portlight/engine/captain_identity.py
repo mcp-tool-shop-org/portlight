@@ -352,7 +352,7 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
         ),
         home_region="Mediterranean",
         home_port_id="corsairs_rest",
-        starting_silver=400,
+        starting_silver=500,
         starting_ship_id="coastal_sloop",
         starting_provisions=30,
         pricing=PricingModifiers(

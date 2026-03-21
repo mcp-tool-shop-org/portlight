@@ -22,14 +22,14 @@ ROUTES: list[Route] = [
     # =========================================================================
     # MEDITERRANEAN internal (Sloop-safe)
     # =========================================================================
-    Route("porto_novo",     "al_manar",          distance=24,  danger=0.08,  min_ship_class="sloop",
+    Route("porto_novo",     "al_manar",          distance=24,  danger=0.12,  min_ship_class="sloop",
           lore_name="The Grain Road", lore="The oldest trade route in the Mediterranean. Grain ships have sailed this lane since before memory."),
-    Route("porto_novo",     "silva_bay",         distance=16,  danger=0.05,  min_ship_class="sloop",
+    Route("porto_novo",     "silva_bay",         distance=16,  danger=0.08,  min_ship_class="sloop",
           lore_name="The Timber Run", lore="Short and safe — the shipwrights' lifeline. Silva Bay's timber built Porto Novo's fleet."),
-    Route("al_manar",       "silva_bay",         distance=20,  danger=0.07,  min_ship_class="sloop"),
-    Route("porto_novo",     "corsairs_rest",     distance=18,  danger=0.10,  min_ship_class="sloop",
+    Route("al_manar",       "silva_bay",         distance=20,  danger=0.10,  min_ship_class="sloop"),
+    Route("porto_novo",     "corsairs_rest",     distance=18,  danger=0.18,  min_ship_class="sloop",
           lore_name="The Shadow Lane", lore="Every merchant denies using it. Every merchant uses it. The line between trade and smuggling runs through these waters."),
-    Route("silva_bay",      "corsairs_rest",     distance=14,  danger=0.08,  min_ship_class="sloop"),
+    Route("silva_bay",      "corsairs_rest",     distance=14,  danger=0.15,  min_ship_class="sloop"),
 
     # =========================================================================
     # NORTH ATLANTIC internal (Sloop-safe)

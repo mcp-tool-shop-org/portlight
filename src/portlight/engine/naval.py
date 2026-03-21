@@ -340,5 +340,9 @@ def resolve_boarding(
         p_lost = rng.randint(3, 6)
         e_lost = rng.randint(1, 3)
 
+    # Cap losses at actual crew count
+    p_lost = min(p_lost, max(0, player_crew - 1))  # always keep at least 1
+    e_lost = min(e_lost, enemy_crew)
+
     player_advantage = player_crew - p_lost > enemy_crew - e_lost
     return p_lost, e_lost, player_advantage
