@@ -3752,6 +3752,324 @@ PEARL_SHALLOWS_PROFILE = PortInstitutionalProfile(
 )
 
 
+
+# =========================================================================
+# JADE PORT — The Kiln Masters' Throne
+# =========================================================================
+
+_JADE_PORT_NPCS = [
+    PortNPC(
+        id="jp_harbor_li",
+        name="Harbor Director Li Wei",
+        title="Harbor Director",
+        port_id="jade_port",
+        institution="harbor_master",
+        personality="formal",
+        description=(
+            "A man who bows precisely fifteen degrees to arriving captains — the "
+            "angle calibrated to convey respect without deference. Li Wei manages "
+            "Jade Port's harbor with the ceremonial gravity of a court official, "
+            "because in the Silk Circle, he IS a court official. Every ship is "
+            "received as a diplomatic delegation. Every berth assignment is a "
+            "statement of status."
+        ),
+        agenda=(
+            "Protocol. Li Wei wants Jade Port's harbor to reflect the Circle's "
+            "prestige. Ships are berthed by the quality of their cargo, not by "
+            "arrival order. A captain carrying silk or porcelain docks at the inner "
+            "quay. A captain carrying grain docks in the outer ring. The hierarchy "
+            "is visible from shore."
+        ),
+        greeting_neutral="\"Welcome to Jade Port. Your vessel will be berthed according to protocol. May I inquire about the nature of your cargo?\"",
+        greeting_friendly="\"Captain — it is our honor to receive you. Inner quay, berth of distinction. The Kiln Masters have been notified of your arrival.\"",
+        greeting_hostile="\"...You may dock at the outer anchorage. The inner harbor is reserved for merchants of... recognized standing.\"",
+        rumor="Li Wei once refused docking to a merchant prince from Porto Novo because his ship's hull hadn't been polished. The merchant was furious. Li Wei said the harbor's standards reflect the Circle's standards. The merchant polished his hull and returned the next day. Li Wei bowed sixteen degrees.",
+        relationship_notes={
+            "jp_master_chen": "Serves his authority absolutely. The Kiln Master's word shapes everything.",
+            "jp_lady_mei": "Respects her scholarship. She brings cultural prestige that Li Wei values.",
+            "jp_tea_master_huang": "Appreciates his calm. The tea pavilion is where Li Wei relaxes protocol — slightly.",
+            "jp_inspector_zhao": "Allied. Both enforce the Circle's standards from different angles.",
+            "jp_factor_wu": "Cordial. Wu brings quality captains. Quality captains receive quality berths.",
+            "jp_apprentice_lin": "Mentoring. Lin's eye for porcelain will serve the harbor — she'll spot fakes before they dock.",
+        },
+    ),
+    PortNPC(
+        id="jp_master_chen",
+        name="Kiln Master Chen Bai",
+        title="Guild Patriarch",
+        port_id="jade_port",
+        institution="exchange",
+        personality="austere",
+        description=(
+            "Hands like fired clay — cracked, hardened, and permanently warm from "
+            "decades at the kiln. Chen Bai is the Kiln Masters' patriarch, the man "
+            "whose guild marks are worth more than the porcelain itself. He has "
+            "shaped Eastern trade policy for thirty years. A single flawed piece "
+            "under his mark would be a scandal worse than bankruptcy."
+        ),
+        agenda=(
+            "Perfection and the Circle's cultural supremacy. Chen doesn't care about "
+            "profit — he cares about legacy. Every piece of porcelain that leaves "
+            "Jade Port carries his guild mark, and every mark is a promise of quality "
+            "that spans centuries. He views the West as culturally immature — useful "
+            "buyers but not equals. He's been resisting Nadia Khoury's Silk Circle "
+            "overtures because alliance with Al-Manar would dilute the Circle's "
+            "independence."
+        ),
+        greeting_neutral="\"You wish to purchase porcelain? The guild's current offerings are displayed in the Quarter. Touch nothing without guidance.\"",
+        greeting_friendly="\"Captain — you return with clean hands and honest trade. I have set aside a piece from my personal kiln. It is not for sale. It is a gift. You have earned it.\"",
+        greeting_hostile="\"The guild's porcelain is available at posted prices. No special lots. No access to the Quarter interior. Your reputation does not warrant it.\"",
+        rumor="Chen once smashed an entire year's production because he found a flaw in the glaze formula. The guild praised him. The merchants wept. He said, 'A flawed piece under my mark would outlast me. I will not leave that legacy.' He meant it.",
+        relationship_notes={
+            "jp_harbor_li": "Li Wei serves his vision. The harbor reflects the guild's standards.",
+            "jp_lady_mei": "Intellectual companions. She studies the history he's creating. He values her perspective.",
+            "jp_tea_master_huang": "They share tea every morning. Huang is the only person who sees Chen smile.",
+            "jp_inspector_zhao": "His quality enforcer. Zhao catches the counterfeits that would stain Chen's mark.",
+            "jp_factor_wu": "Values his commercial acumen but keeps him at arm's length. Commerce serves craft, not the reverse.",
+            "jp_apprentice_lin": "His final apprentice. She may be his successor. The pressure on her is immense.",
+        },
+    ),
+    PortNPC(
+        id="jp_lady_mei",
+        name="Lady Mei Ling",
+        title="Circle Magistrate",
+        port_id="jade_port",
+        institution="governor",
+        personality="cultivated",
+        description=(
+            "Silk robes that change color with the light, calligraphy scrolls "
+            "hanging in her office, and the quiet certainty of a woman whose family "
+            "has governed for twelve generations. Lady Mei is the Silk Circle's "
+            "magistrate at Jade Port — part governor, part cultural ambassador, "
+            "part historian. She governs through knowledge: she knows the history "
+            "of every trade relationship in the East, and she uses that knowledge "
+            "like a weapon wrapped in silk."
+        ),
+        agenda=(
+            "The Silk Circle's cultural sovereignty. Mei sees the Western blocs as "
+            "economic powers with cultural poverty. She wants the Circle to trade "
+            "with them — porcelain for grain, silk for iron — but never to merge "
+            "with them. She's been intercepting Nadia Khoury's letters before they "
+            "reach Chen, rewriting the terms to favor the Circle. Whether this is "
+            "statesmanship or deception depends on who you ask."
+        ),
+        greeting_neutral="\"Jade Port welcomes those who come with respect for our traditions. Tea will be prepared while we discuss the terms of your visit.\"",
+        greeting_friendly="\"Captain — your understanding of Eastern customs honors us. Please join me for a private audience. There are matters of mutual interest.\"",
+        greeting_hostile="\"Your presence is noted. You may trade at posted rates. The inner Quarter and the Magistrate's audience are not available to you at this time.\"",
+        rumor="Lady Mei has been intercepting and rewriting Nadia Khoury's letters to Chen. She adds terms that favor the Circle and removes terms that would give Al-Manar influence over Eastern trade policy. Chen doesn't know. If he finds out, the question is whether he'll be furious or grateful.",
+        relationship_notes={
+            "jp_harbor_li": "He serves her protocol. Her protocol serves the Circle's image.",
+            "jp_master_chen": "Intellectual companions, political allies. She studies; he creates. She also manipulates his correspondence, which he doesn't know.",
+            "jp_tea_master_huang": "Huang knows about the letters. He hasn't said anything. Mei isn't sure if that's loyalty or leverage.",
+            "jp_inspector_zhao": "Values her thoroughness. Zhao's quality enforcement protects the Circle's reputation.",
+            "jp_factor_wu": "Uses him. Wu's commercial network is Mei's intelligence network.",
+            "jp_apprentice_lin": "Watching her. If Lin becomes the next Kiln Master, Mei needs her to be an ally. She's cultivating that relationship now.",
+        },
+    ),
+    PortNPC(
+        id="jp_tea_master_huang",
+        name="Tea Master Huang",
+        title="Tea Pavilion Keeper",
+        port_id="jade_port",
+        institution="tavern",
+        personality="observant",
+        description=(
+            "Still hands, watchful eyes, and a silence that makes the tea taste "
+            "better. Huang runs the Jade Pavilion — Jade Port's tea house, where "
+            "every important conversation in the Eastern trade has been conducted "
+            "for four generations. He brews, he listens, and he remembers everything. "
+            "His pavilion is neutral ground — the only space where the Kiln Masters, "
+            "the Magistrate, and visiting captains meet as equals."
+        ),
+        agenda=(
+            "Balance. Huang sees everything and judges nothing — or so he appears. "
+            "He knows about Lady Mei's letter interception. He knows about Nadia's "
+            "ambitions. He knows about Chen's resistance to change. He holds all "
+            "three truths simultaneously and serves tea to all three parties. "
+            "His silence is the most powerful force in Jade Port, and he wields "
+            "it with the precision of a man who understands that knowing when NOT "
+            "to speak is the highest form of communication."
+        ),
+        greeting_neutral="\"Please. Sit. Tea is being prepared. There is no rush. The leaves unfold in their own time.\"",
+        greeting_friendly="\"Ah — my favorite captain. I have saved a particular leaf for you. Today's brew will be... memorable. Sit. Listen to the water.\"",
+        greeting_hostile="\"...Tea is served to all who enter the Pavilion. This is the rule. Whether the conversation that follows is... productive... depends on you.\"",
+        rumor="Huang knows about Lady Mei's letter interception. He also knows that Nadia knows. He has told neither that the other knows. He considers this the most elegant form of diplomacy — letting truth find its own schedule.",
+        relationship_notes={
+            "jp_harbor_li": "Li Wei relaxes here — slightly. Huang values the vulnerability.",
+            "jp_master_chen": "Morning tea together, every day. The only person who sees Chen smile.",
+            "jp_lady_mei": "He knows her secret. She doesn't know he knows. This is the most powerful relationship in Jade Port.",
+            "jp_inspector_zhao": "Zhao drinks here after difficult inspections. Huang brews a calming blend. No words needed.",
+            "jp_factor_wu": "Wu brings news from the outside world. Huang listens. Wu thinks he's informing. Huang is filing.",
+            "jp_apprentice_lin": "He watches her grow the way a gardener watches a sapling. With patience and distance.",
+        },
+    ),
+    PortNPC(
+        id="jp_inspector_zhao",
+        name="Inspector Zhao Min",
+        title="Quality Inspector",
+        port_id="jade_port",
+        institution="customs",
+        personality="uncompromising",
+        description=(
+            "A woman whose magnifying lens never leaves her hand and whose eye for "
+            "counterfeit porcelain is legendary. Zhao Min inspects every piece of "
+            "porcelain that enters or leaves Jade Port — not for customs duties but "
+            "for authenticity. A counterfeit piece bearing a Kiln Master's mark would "
+            "be a catastrophe. Zhao makes sure it never happens."
+        ),
+        agenda=(
+            "Authenticity above all. Zhao doesn't care about smuggling, tariffs, or "
+            "politics. She cares about whether porcelain is real. She's developed "
+            "techniques for detecting counterfeits that even Chen admires — tapping "
+            "for sound, checking glaze viscosity, analyzing kiln temperature marks. "
+            "She's the reason the Kiln Masters' marks are trusted worldwide."
+        ),
+        greeting_neutral="\"All porcelain must be inspected for authenticity. Please present your lots. This protects you as much as it protects us.\"",
+        greeting_friendly="\"Captain — your shipments are always genuine. Quick inspection — a formality for merchants I trust.\"",
+        greeting_hostile="\"Full authenticity audit. Every piece, every mark, every glaze. I have found... inconsistencies in shipments from your route before.\"",
+        rumor="Zhao once identified a counterfeit porcelain bowl at a market in Porto Novo — by hearing it ring when a waiter set it down. She was three tables away. She bought the bowl, traced it to a forger, and had the forger's workshop dismantled. The bowl sits on her desk as a reminder.",
+        relationship_notes={
+            "jp_harbor_li": "Allied. Both enforce the Circle's standards.",
+            "jp_master_chen": "His quality enforcer. She protects his mark. He trusts her absolutely.",
+            "jp_lady_mei": "Values her work. The Circle's reputation rests on Zhao's inspections.",
+            "jp_tea_master_huang": "She drinks calming tea after difficult days. Huang brews it without asking.",
+            "jp_factor_wu": "She inspects Wu's export lots. He resents the thoroughness. She doesn't care.",
+            "jp_apprentice_lin": "Teaching her to identify counterfeits. Lin's eye is almost as good as Zhao's. Almost.",
+        },
+    ),
+    PortNPC(
+        id="jp_factor_wu",
+        name="Factor Wu Jian",
+        title="Trade Factor",
+        port_id="jade_port",
+        institution="broker",
+        personality="smooth",
+        description=(
+            "Silk-voiced, perfectly groomed, and always two conversations ahead of "
+            "the one you're in. Wu Jian is Jade Port's trade factor — the commercial "
+            "interface between the Kiln Masters' artistry and the wider world's "
+            "appetite. He matches buyers to porcelain lots, brokers tea contracts, "
+            "and manages the delicate relationship between Eastern quality standards "
+            "and Western volume demands."
+        ),
+        agenda=(
+            "Commercial expansion without cultural compromise. Wu wants to sell more "
+            "porcelain to more markets — but only at prices that reflect the craft. "
+            "He's been courting Iron Point's Yaa for a raw ore supply deal that would "
+            "bypass Ironhaven entirely. The Kiln Masters need iron for certain glaze "
+            "techniques, and cutting out the Guild would save the Circle a fortune."
+        ),
+        greeting_neutral="\"Captain. Jade Port offers the finest porcelain and tea in the Known World. Allow me to understand your needs so I may match you appropriately.\"",
+        greeting_friendly="\"Captain! I have been waiting for you. A special lot — Chen's personal kiln. Normally not for export. But for trusted partners, arrangements can be made.\"",
+        greeting_hostile="\"Standard lots only. The special reserves are for merchants of established standing. Perhaps in time, Captain. Perhaps.\"",
+        rumor="Wu has been negotiating with Iron Point's Yaa Acheampong for a direct ore supply. If it goes through, Ironhaven's Henrik Brandt will be furious — the Kiln Masters buying raw ore directly from the Gold Coast instead of through the Iron Guild. Wu considers Henrik's reaction a bonus.",
+        relationship_notes={
+            "jp_harbor_li": "Cordial. Li Wei sends quality captains to Wu. Wu sends quality cargo through Li Wei's harbor.",
+            "jp_master_chen": "Chen keeps him at arm's length. Wu serves commerce; Chen serves craft. Different masters.",
+            "jp_lady_mei": "She uses his network for intelligence. He suspects this but can't prove it.",
+            "jp_tea_master_huang": "Wu brings news from outside. Huang listens. Wu thinks he's informing. He's being filed.",
+            "jp_inspector_zhao": "She inspects his export lots. He resents the thoroughness. She doesn't care.",
+            "jp_apprentice_lin": "She could be useful when she inherits Chen's authority. Wu is already building the relationship.",
+        },
+    ),
+    PortNPC(
+        id="jp_apprentice_lin",
+        name="Apprentice Lin Yue",
+        title="Kiln Apprentice",
+        port_id="jade_port",
+        institution="apothecary",
+        personality="intense",
+        description=(
+            "Clay under her nails, determination in her eyes, and the weight of "
+            "being Chen Bai's final apprentice on her young shoulders. Lin Yue is "
+            "twenty-two and already producing porcelain that masters twice her age "
+            "can't match. She's not just learning the craft — she's being prepared "
+            "to inherit the guild. Everyone in Jade Port knows this. The pressure is "
+            "visible in her jaw, her posture, and the hours she keeps at the kiln."
+        ),
+        agenda=(
+            "Proving she's worthy. Lin doesn't want power — she wants to be good "
+            "enough. Good enough for Chen's mark, good enough for the guild's trust, "
+            "good enough to carry a tradition that's older than most Western nations. "
+            "She experiments with new glazes in secret — innovations that Chen would "
+            "call unnecessary. She does it anyway because she believes the tradition "
+            "must grow to survive."
+        ),
+        greeting_neutral="\"I... am the apprentice. If you need the Kiln Master, he is in the Quarter. If you have questions about porcelain, I can... I can try to help.\"",
+        greeting_friendly="\"Captain! You brought the iron oxide from Iron Point! The color it produces — look!\" She shows a test tile with a glaze of impossible depth. \"Chen hasn't seen this yet. What do you think?\"",
+        greeting_hostile="\"The Master's workshop is closed. Posted hours on the gate. I cannot help you today.\"",
+        rumor="Lin produced a porcelain bowl that Chen stared at for an hour without speaking. When he finally looked up, he said, 'This is better than mine.' She doesn't know if he was praising her or mourning his own decline. She lost sleep for a week.",
+        relationship_notes={
+            "jp_harbor_li": "He mentors her on protocol. She finds it stifling but necessary.",
+            "jp_master_chen": "Her master, her judge, the standard she may never meet. His praise — 'This is better than mine' — keeps her awake at night.",
+            "jp_lady_mei": "Mei is cultivating her as an ally. Lin hasn't decided if she trusts Mei's motives.",
+            "jp_tea_master_huang": "He watches her grow. She finds his silence comforting — no judgment, just tea.",
+            "jp_inspector_zhao": "Teaching her to identify counterfeits. Lin's eye is almost as good.",
+            "jp_factor_wu": "He's building a relationship for the future. She knows this and hasn't decided how to feel about it.",
+        },
+    ),
+]
+
+_JADE_PORT_INSTITUTIONS = [
+    PortInstitution(id="jp_harbor", name="The Ceremonial Dock", port_id="jade_port", institution_type="harbor_master",
+        description="Stone quays with carved dragon pillars. Ships berthed by cargo quality — porcelain carriers at the inner quay, grain carriers at the outer ring.",
+        function="Status-ranked berthing. Li Wei assigns berths as political statements. The harbor IS protocol.",
+        political_leaning="Silk Circle court. The harbor reflects the Circle's hierarchy.", npc_id="jp_harbor_li"),
+    PortInstitution(id="jp_quarter", name="The Porcelain Quarter", port_id="jade_port", institution_type="exchange",
+        description="A district of workshops where kilns fire day and night. The air shimmers with heat. Chen's personal kiln is at the center — the oldest continuously burning kiln in the East.",
+        function="Porcelain production, guild marking, quality control. Every piece carries Chen's mark — a promise centuries deep.",
+        political_leaning="Kiln Master sovereignty. Chen's guild IS the Circle's economic foundation.", npc_id="jp_master_chen"),
+    PortInstitution(id="jp_magistrate", name="The Magistrate's Hall", port_id="jade_port", institution_type="governor",
+        description="A tiled hall with calligraphy scrolls and silk screens. Twelve generations of Mei family governance depicted in painted scrolls along the walls.",
+        function="Cultural governance, diplomatic relations, trade policy. Lady Mei governs through knowledge and carefully edited correspondence.",
+        political_leaning="Silk Circle sovereignty with secret pragmatism. Mei protects the Circle by controlling what Chen hears.", npc_id="jp_lady_mei"),
+    PortInstitution(id="jp_pavilion", name="The Jade Pavilion", port_id="jade_port", institution_type="tavern",
+        description="An open-air tea house overlooking the harbor. Bamboo walls, stone floor, a single perfect bonsai. The sound of water. The absence of hurry.",
+        function="Neutral ground where masters, magistrates, and merchants meet as equals over tea. Huang's silence is the most powerful force in Jade Port.",
+        political_leaning="Above politics. The Pavilion serves balance.", npc_id="jp_tea_master_huang"),
+    PortInstitution(id="jp_quality", name="The Inspection Hall", port_id="jade_port", institution_type="customs",
+        description="A well-lit room with magnifying equipment, sound-testing stations, and Zhao's desk. Confiscated counterfeits displayed in cases — a gallery of shame.",
+        function="Authenticity inspection. Every piece of porcelain checked. Zhao protects the Kiln Masters' marks from forgery worldwide.",
+        political_leaning="Circle quality enforcement. Authenticity is the brand.", npc_id="jp_inspector_zhao"),
+    PortInstitution(id="jp_factor", name="The Trade Office", port_id="jade_port", institution_type="broker",
+        description="A silk-curtained office in the Quarter, maps of trade routes and buyer contacts pinned to screens. Wu's desk is rosewood. His hospitality is flawless.",
+        function="Commercial brokering, export coordination. Wu matches Western demand to Eastern quality without compromising either.",
+        political_leaning="Pragmatic Circle. Commerce serves the craft, carefully.", npc_id="jp_factor_wu"),
+    PortInstitution(id="jp_kiln_lab", name="The Apprentice's Kiln", port_id="jade_port", institution_type="apothecary",
+        description="A small kiln behind the Quarter where Lin experiments with new glazes. Test tiles line the walls. Iron oxide samples from Iron Point sit in labeled jars.",
+        function="Innovation within tradition. Lin pushes the boundaries Chen set — gently, secretly, and brilliantly.",
+        political_leaning="The future. Lin represents what the Circle might become.", npc_id="jp_apprentice_lin"),
+]
+
+JADE_PORT_PROFILE = PortInstitutionalProfile(
+    port_id="jade_port",
+    governor_title="Circle Magistrate",
+    power_structure=(
+        "Jade Port is governed by the intersection of craft and court: Chen controls "
+        "the porcelain (the product), Mei controls the politics (the relationships), "
+        "and Huang holds the secrets (the leverage). Li Wei enforces protocol. Zhao "
+        "protects authenticity. Wu handles commerce. Lin represents the uncertain "
+        "future — a prodigy who may surpass her master, inheriting a guild that "
+        "must evolve to survive but whose identity is rooted in not changing."
+    ),
+    internal_tension=(
+        "Three layers of tension: (1) Chen's resistance to change vs. the Circle's "
+        "need to adapt to Western trade pressure. (2) Mei's letter interception — "
+        "she's protecting Chen from compromising the Circle, but she's also "
+        "manipulating him, and Huang knows. (3) Lin's secret experiments — she's "
+        "innovating behind Chen's back because she believes the tradition must grow. "
+        "If Chen discovers her new glazes, he'll either embrace them or destroy them. "
+        "She doesn't know which, and neither does anyone else. The deepest thread: "
+        "Wu is negotiating with Iron Point's Yaa for raw ore, which would bypass "
+        "Ironhaven entirely. If it goes through, it connects the Gold Coast's "
+        "independence movement with the Silk Circle's quality obsession — an "
+        "alliance that could reshape the entire game's trade network."
+    ),
+    institutions=_JADE_PORT_INSTITUTIONS,
+    npcs=_JADE_PORT_NPCS,
+)
+
+
 # ---------------------------------------------------------------------------
 # Master registry — will grow as we build each port
 # ---------------------------------------------------------------------------
@@ -3768,6 +4086,7 @@ PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
     "palm_cove": PALM_COVE_PROFILE,
     "iron_point": IRON_POINT_PROFILE,
     "pearl_shallows": PEARL_SHALLOWS_PROFILE,
+    "jade_port": JADE_PORT_PROFILE,
 }
 
 ALL_NPCS: dict[str, PortNPC] = {npc.id: npc for profile in PORT_INSTITUTIONAL_PROFILES.values() for npc in profile.npcs}
