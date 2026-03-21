@@ -17,6 +17,7 @@ from portlight.engine.models import (
     Captain,
     CargoItem,
     CombatGear,
+    CrewRoster,
     CulturalState,
     EncounterState,
     InstalledUpgrade,
@@ -64,7 +65,7 @@ from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"
-CURRENT_SAVE_VERSION = 8
+CURRENT_SAVE_VERSION = 9
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +187,29 @@ def _migrate_v7_to_v8(data: dict) -> dict:
     return data
 
 
+def _migrate_v8_to_v9(data: dict) -> dict:
+    """v8 → v9: Add crew roster to ships."""
+    captain = data.get("captain", {})
+    ship = captain.get("ship")
+    if ship:
+        crew_count = ship.get("crew", 0)
+        ship.setdefault("roster", {
+            "sailors": crew_count, "gunners": 0, "navigators": 0,
+            "surgeons": 0, "marines": 0, "quartermasters": 0,
+        })
+    # Also add roster to fleet ships
+    for owned in captain.get("fleet", []):
+        fleet_ship = owned.get("ship", {})
+        if fleet_ship:
+            fc = fleet_ship.get("crew", 0)
+            fleet_ship.setdefault("roster", {
+                "sailors": fc, "gunners": 0, "navigators": 0,
+                "surgeons": 0, "marines": 0, "quartermasters": 0,
+            })
+    data["version"] = 9
+    return data
+
+
 _MIGRATIONS = [
     (1, 2, _migrate_v1_to_v2),
     (2, 3, _migrate_v2_to_v3),
@@ -194,6 +218,7 @@ _MIGRATIONS = [
     (5, 6, _migrate_v5_to_v6),
     (6, 7, _migrate_v6_to_v7),
     (7, 8, _migrate_v7_to_v8),
+    (8, 9, _migrate_v8_to_v9),
 ]
 
 
@@ -241,6 +266,14 @@ def _ship_to_dict(ship: Ship) -> dict:
             for u in (ship.upgrades or [])
         ],
         "upgrade_slots": getattr(ship, "upgrade_slots", 2),
+        "roster": {
+            "sailors": ship.roster.sailors,
+            "gunners": ship.roster.gunners,
+            "navigators": ship.roster.navigators,
+            "surgeons": ship.roster.surgeons,
+            "marines": ship.roster.marines,
+            "quartermasters": ship.roster.quartermasters,
+        } if hasattr(ship, "roster") else None,
     }
 
 
@@ -261,6 +294,14 @@ def _ship_from_dict(d: dict) -> Ship:
             upgrades.append(InstalledUpgrade(upgrade_id=item, installed_day=0))
     d["upgrades"] = upgrades
     d.setdefault("upgrade_slots", 2)
+    # Deserialize roster
+    raw_roster = d.pop("roster", None)
+    if raw_roster and isinstance(raw_roster, dict):
+        roster = CrewRoster(**raw_roster)
+    else:
+        # Legacy: create roster with all current crew as sailors
+        roster = CrewRoster(sailors=d.get("crew", 0))
+    d["roster"] = roster
     return Ship(**d)
 
 
