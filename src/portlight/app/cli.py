@@ -36,12 +36,15 @@ def _session() -> GameSession:
 @app.command()
 def new(
     name: str = typer.Argument("Captain", help="Captain name"),
-    captain_type: str = typer.Option("merchant", "--type", "-t", help="Captain type: merchant, smuggler, navigator"),
+    captain_type: str = typer.Option("merchant", "--type", "-t",
+        help="Captain type: merchant, smuggler, navigator, privateer, corsair, scholar, merchant_prince, dockhand, custom"),
 ) -> None:
     """Start a new game. Choose your captain type to shape your career."""
-    if captain_type not in ("merchant", "smuggler", "navigator"):
+    from portlight.engine.captain_identity import CaptainType
+    valid_types = {ct.value for ct in CaptainType}
+    if captain_type not in valid_types:
         console.print(f"[red]Unknown captain type: {captain_type}[/red]")
-        console.print("Choose: [bold]merchant[/bold], [bold]smuggler[/bold], or [bold]navigator[/bold]")
+        console.print(f"Choose: {', '.join(sorted(valid_types))}")
         raise typer.Exit(1)
     s = GameSession()
     s.new(name, captain_type=captain_type)
