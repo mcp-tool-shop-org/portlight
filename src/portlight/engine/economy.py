@@ -275,3 +275,31 @@ def execute_sell(
         stock_before=stock_before,
         stock_after=slot.stock_current,
     )
+
+
+# ---------------------------------------------------------------------------
+# Anti-soft-lock: dock work and gear sell-back
+# ---------------------------------------------------------------------------
+
+def work_docks(captain: "Captain", rng: random.Random) -> int:
+    """Work the docks for a day. Returns silver earned (3-5).
+
+    This is a safety valve for players stranded with no silver and no
+    tradeable cargo at the current port.
+    """
+    earned = rng.randint(3, 5)
+    captain.silver += earned
+    captain.day += 1
+    return earned
+
+
+def sell_gear_value(item_id: str, weapon_tables: dict[str, object]) -> int | None:
+    """Get sell-back price for a weapon/armor item (50% of buy price).
+
+    Returns None if item not found in tables.
+    """
+    weapon = weapon_tables.get(item_id)
+    if weapon is None:
+        return None
+    price = getattr(weapon, "silver_cost", None) or getattr(weapon, "cost", 0)
+    return max(1, price // 2)

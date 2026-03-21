@@ -198,6 +198,31 @@ class TestBuySell:
             f"Avg cost changed from {original_cost_per_unit} to {new_cost_per_unit} after partial sell"
         )
 
+    def test_work_docks_earns_silver(self):
+        """Working the docks should earn 3-5 silver."""
+        import random
+        from portlight.engine.economy import work_docks
+        world = new_game()
+        silver_before = world.captain.silver
+        day_before = world.captain.day
+        earned = work_docks(world.captain, random.Random(42))
+        assert 3 <= earned <= 5
+        assert world.captain.silver == silver_before + earned
+        assert world.captain.day == day_before + 1
+
+    def test_sell_gear_value_returns_half(self):
+        """Gear sell-back should be 50% of buy price."""
+        from portlight.engine.economy import sell_gear_value
+        from portlight.content.melee_weapons import MELEE_WEAPONS
+        cutlass = MELEE_WEAPONS.get("cutlass")
+        assert cutlass is not None
+        value = sell_gear_value("cutlass", MELEE_WEAPONS)
+        assert value == cutlass.silver_cost // 2
+
+    def test_sell_gear_value_unknown_item(self):
+        from portlight.engine.economy import sell_gear_value
+        assert sell_gear_value("mythril_sword", {}) is None
+
     def test_buy_reduces_port_stock(self):
         world = new_game()
         port = world.ports["porto_novo"]

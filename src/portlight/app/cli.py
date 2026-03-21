@@ -314,6 +314,26 @@ def repair(amount: int = typer.Argument(None, help="Hull points to repair (defau
 
 
 # ---------------------------------------------------------------------------
+# Work the docks (anti-soft-lock)
+# ---------------------------------------------------------------------------
+
+@app.command()
+def work() -> None:
+    """Work the docks for a day to earn silver. Safety valve when stranded."""
+    import random as _rng_mod
+    from portlight.engine.economy import work_docks
+    s = _session()
+    if not s.current_port:
+        console.print("[yellow]Must be docked to work the docks.[/yellow]")
+        return
+    earned = work_docks(s.captain, s._rng)
+    console.print(f"\n[bold]Day's work on the {s.current_port.name} docks.[/bold]")
+    console.print(f"  Hauled crates, mended rope, cleaned bilges.")
+    console.print(f"  Earned [green]{earned} silver[/green]. Day {s.captain.day}.")
+    s._save()
+
+
+# ---------------------------------------------------------------------------
 # Hire
 # ---------------------------------------------------------------------------
 
@@ -858,6 +878,53 @@ def merchant(
         f"\n[green]Bought {result['item_name']} from {m.name} "
         f"for {silver(result['total_cost'])}[/green]"
     )
+    s._save()
+
+
+# ---------------------------------------------------------------------------
+# Sell gear (anti-soft-lock)
+# ---------------------------------------------------------------------------
+
+@app.command(name="sell-gear")
+def sell_gear(item_id: str = typer.Argument(..., help="Weapon or armor ID to sell back")) -> None:
+    """Sell a weapon or armor back to the port for 50% of its value."""
+    from portlight.engine.economy import sell_gear_value
+    s = _session()
+    if not s.current_port:
+        console.print("[yellow]Must be docked to sell gear.[/yellow]")
+        return
+
+    gear = s.captain.combat_gear
+    # Build a lookup of what we can sell
+    sellable: dict[str, str] = {}  # item_id -> field_name
+    if gear.melee_weapon:
+        sellable[gear.melee_weapon] = "melee_weapon"
+    if gear.firearm:
+        sellable[gear.firearm] = "firearm"
+    if gear.mechanical_weapon:
+        sellable[gear.mechanical_weapon] = "mechanical_weapon"
+    if gear.armor:
+        sellable[gear.armor] = "armor"
+
+    if item_id not in sellable:
+        console.print(f"[yellow]You don't have '{item_id}' equipped. Sellable: {', '.join(sellable) or 'nothing'}[/yellow]")
+        return
+
+    # Get price from weapon/armor tables
+    from portlight.content.melee_weapons import MELEE_WEAPONS
+    from portlight.content.armor import ARMOR
+    tables: dict[str, object] = {}
+    tables.update(MELEE_WEAPONS)
+    tables.update(ARMOR)
+    price = sell_gear_value(item_id, tables)
+    if price is None:
+        console.print(f"[red]Cannot determine value of {item_id}.[/red]")
+        return
+
+    # Remove the item and pay the captain
+    setattr(gear, sellable[item_id], None)
+    s.captain.silver += price
+    console.print(f"\n[green]Sold {item_id} for {price} silver.[/green]")
     s._save()
 
 
