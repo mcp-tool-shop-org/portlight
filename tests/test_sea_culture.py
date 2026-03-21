@@ -8,11 +8,13 @@ from portlight.content.sea_culture import (
     REGION_ENCOUNTERS,
     ROUTE_ENCOUNTERS,
     SEA_SUPERSTITIONS,
+    WEATHER_NARRATIVES,
     get_crew_moods,
     get_npc_sightings,
     get_region_encounters,
     get_route_encounters,
     get_superstitions,
+    get_weather_narrative,
 )
 
 
@@ -151,3 +153,54 @@ class TestCrewMoods:
         assert "carrying_contraband" in mood_ids
         assert "first_voyage" in mood_ids
         assert "veteran" in mood_ids
+
+
+class TestWeatherNarratives:
+    """Seasonal weather narratives for all 20 region/season combos."""
+
+    REGIONS = ["Mediterranean", "North Atlantic", "West Africa", "East Indies", "South Seas"]
+    SEASONS = ["spring", "summer", "autumn", "winter"]
+
+    def test_all_20_combinations_defined(self):
+        for region in self.REGIONS:
+            for season in self.SEASONS:
+                narrative = get_weather_narrative(region, season)
+                assert narrative is not None, f"Missing weather narrative: {region}/{season}"
+
+    def test_twenty_total(self):
+        assert len(WEATHER_NARRATIVES) == 20
+
+    def test_all_have_departure_text(self):
+        for key, n in WEATHER_NARRATIVES.items():
+            assert n.departure_text, f"{key} missing departure_text"
+
+    def test_all_have_mid_voyage_texts(self):
+        for key, n in WEATHER_NARRATIVES.items():
+            assert len(n.mid_voyage_texts) >= 3, f"{key} needs >= 3 mid_voyage_texts"
+
+    def test_all_have_arrival_text(self):
+        for key, n in WEATHER_NARRATIVES.items():
+            assert n.arrival_text, f"{key} missing arrival_text"
+
+    def test_all_have_night_text(self):
+        for key, n in WEATHER_NARRATIVES.items():
+            assert n.night_text, f"{key} missing night_text"
+
+    def test_all_have_crew_reaction(self):
+        for key, n in WEATHER_NARRATIVES.items():
+            assert n.crew_weather_reaction, f"{key} missing crew_weather_reaction"
+
+    def test_winter_atlantic_is_dramatic(self):
+        n = get_weather_narrative("North Atlantic", "winter")
+        assert n is not None
+        assert len(n.mid_voyage_texts) >= 4, "Winter Atlantic should be the most described"
+
+    def test_monsoon_is_dramatic(self):
+        n = get_weather_narrative("East Indies", "summer")
+        assert n is not None
+        assert len(n.mid_voyage_texts) >= 4, "Monsoon should be extensively described"
+
+    def test_south_seas_winter_is_peaceful(self):
+        n = get_weather_narrative("South Seas", "winter")
+        assert n is not None
+        assert "peace" in n.crew_weather_reaction.lower() or "rest" in n.crew_weather_reaction.lower()
