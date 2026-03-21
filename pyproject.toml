@@ -26,6 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+tui = ["textual>=0.85.0"]
 xrpl = ["xrpl-py>=2.0"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0"]
 

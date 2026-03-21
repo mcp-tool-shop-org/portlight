@@ -144,6 +144,23 @@ def _create_custom_game(name: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Textual TUI
+# ---------------------------------------------------------------------------
+
+@app.command()
+def tui() -> None:
+    """Launch interactive terminal UI."""
+    try:
+        from portlight.app.tui.app import PortlightApp
+    except ImportError:
+        console.print("[red]Textual not installed.[/red] Install with: [bold]pip install portlight[tui][/bold]")
+        raise typer.Exit(1)
+    s = GameSession(slot=_active_slot)
+    tui_app = PortlightApp(session=s)
+    tui_app.run()
+
+
+# ---------------------------------------------------------------------------
 # Captain identity
 # ---------------------------------------------------------------------------
 
