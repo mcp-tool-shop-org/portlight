@@ -264,3 +264,56 @@ def select_casualty(
     roles = list(weights.keys())
     w = [weights[r] for r in roles]
     return rng.choices(roles, weights=w, k=1)[0]
+
+
+# ---------------------------------------------------------------------------
+# Crew morale
+# ---------------------------------------------------------------------------
+
+def morale_speed_modifier(morale: int) -> float:
+    """Speed multiplier based on crew morale.
+
+    High morale (>70): +10% speed (crew works hard)
+    Normal (30-70): no effect
+    Low morale (<30): -20% speed (crew drags feet)
+    """
+    if morale > 70:
+        return 1.10
+    elif morale < 30:
+        return 0.80
+    return 1.0
+
+
+def tick_morale_at_sea(
+    ship: Ship,
+    wages_paid: bool,
+    provisions_ok: bool,
+    days_since_port: int,
+) -> int:
+    """Update morale for one day at sea. Returns new morale value.
+
+    Positive: wages paid (+1), provisions ok (no change)
+    Negative: unpaid wages (-5), no provisions (-3), long voyage (-1 after day 10)
+    """
+    delta = 0
+    if wages_paid:
+        delta += 1
+    else:
+        delta -= 5
+    if not provisions_ok:
+        delta -= 3
+    if days_since_port > 10:
+        delta -= 1  # crew gets restless
+    new_morale = max(0, min(100, ship.morale + delta))
+    return new_morale
+
+
+def tick_morale_at_port(ship: Ship, has_officers_cabin: bool = False) -> int:
+    """Update morale when arriving at port. Always positive.
+
+    Base: +5, Officer's Cabin: +5 extra
+    """
+    bonus = 5
+    if has_officers_cabin:
+        bonus += 5
+    return max(0, min(100, ship.morale + bonus))

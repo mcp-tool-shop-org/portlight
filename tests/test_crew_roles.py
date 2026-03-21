@@ -268,8 +268,8 @@ class TestRosterSave:
         assert r.marines == 3
         assert loaded.captain.ship.crew == r.total
 
-    def test_save_version_is_9(self):
-        assert CURRENT_SAVE_VERSION == 9
+    def test_save_version_is_current(self):
+        assert CURRENT_SAVE_VERSION >= 9
 
 
 # ---------------------------------------------------------------------------

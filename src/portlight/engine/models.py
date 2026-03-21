@@ -176,6 +176,7 @@ class Ship:
     upgrades: list[InstalledUpgrade] = field(default_factory=list)
     upgrade_slots: int = 2           # set from UPGRADE_SLOTS at creation
     roster: "CrewRoster" = field(default_factory=lambda: CrewRoster())
+    morale: int = 50                 # crew morale (0-100)
 
     def sync_crew(self) -> None:
         """Keep crew field in sync with roster total."""
@@ -328,6 +329,10 @@ class Captain:
     active_style: str | None = None
     combat_gear: CombatGear = field(default_factory=CombatGear)
     injuries: list[ActiveInjury] = field(default_factory=list)
+    # Skills
+    skills: dict[str, int] = field(default_factory=dict)  # skill_id → level (0-3)
+    # Companions
+    party: dict = field(default_factory=lambda: {"companions": [], "max_size": 2, "departed": []})
     # Fleet (Phase 7+)
     fleet: list[OwnedShip] = field(default_factory=list)
 

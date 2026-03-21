@@ -614,12 +614,21 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     # Add docked fleet crew wages
     from portlight.engine.fleet import fleet_daily_wages
     wage_cost += fleet_daily_wages(captain)
+    wages_paid = True
     if wage_cost > 0 and captain.silver >= wage_cost:
         captain.silver -= wage_cost
     elif wage_cost > 0:
+        wages_paid = False
         # Can't pay crew - morale hit
         events.append(VoyageEvent(EventType.NOTHING,
             "Can't pay crew wages! Morale drops.", crew_delta=-1))
+
+    # Tick crew morale
+    from portlight.engine.ship_stats import tick_morale_at_sea, morale_speed_modifier
+    provisions_ok = captain.provisions > 0
+    captain.ship.morale = tick_morale_at_sea(
+        captain.ship, wages_paid, provisions_ok, voyage.days_elapsed,
+    )
 
     # Route event
     route = find_route(world, voyage.origin_id, voyage.destination_id)
@@ -701,6 +710,9 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
             ship_speed = resolve_speed(owned.ship, UPGRADES)
             base_speed = min(base_speed, ship_speed)
 
+    # Morale speed modifier
+    base_speed *= morale_speed_modifier(captain.ship.morale)
+
     # Seasonal speed modifier
     if _season_profile:
         base_speed *= _season_profile.speed_mult
@@ -735,6 +747,12 @@ def arrive(world: "WorldState") -> str | None:
     if voyage is None or voyage.status != VoyageStatus.ARRIVED:
         return "Not arrived yet"
     voyage.status = VoyageStatus.IN_PORT
+
+    # Morale boost on port arrival
+    from portlight.engine.ship_stats import tick_morale_at_port, has_special
+    from portlight.content.upgrades import UPGRADES as _UPG
+    has_cabin = has_special(world.captain.ship, "morale_bonus", _UPG)
+    world.captain.ship.morale = tick_morale_at_port(world.captain.ship, has_cabin)
 
     # Convoy: dock in-transit fleet ships at destination
     for owned in world.captain.fleet:

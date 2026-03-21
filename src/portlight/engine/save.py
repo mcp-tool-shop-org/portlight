@@ -64,7 +64,7 @@ from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"
-CURRENT_SAVE_VERSION = 9
+CURRENT_SAVE_VERSION = 10
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +221,24 @@ _MIGRATIONS = [
 ]
 
 
+def _migrate_v9_to_v10(data: dict) -> dict:
+    """v9 → v10: Add morale to ships."""
+    captain = data.get("captain", {})
+    ship = captain.get("ship")
+    if ship:
+        ship.setdefault("morale", 50)
+    for owned in captain.get("fleet", []):
+        fleet_ship = owned.get("ship", {})
+        if fleet_ship:
+            fleet_ship.setdefault("morale", 50)
+    data["version"] = 10
+    return data
+
+
+# Add v9→v10 to migration chain
+_MIGRATIONS.append((9, 10, _migrate_v9_to_v10))
+
+
 def migrate_save(data: dict) -> dict:
     """Apply all necessary migrations to bring save data to current version.
 
@@ -273,6 +291,7 @@ def _ship_to_dict(ship: Ship) -> dict:
             "marines": ship.roster.marines,
             "quartermasters": ship.roster.quartermasters,
         } if hasattr(ship, "roster") else None,
+        "morale": getattr(ship, "morale", 50),
     }
 
 
@@ -301,6 +320,7 @@ def _ship_from_dict(d: dict) -> Ship:
         # Legacy: create roster with all current crew as sailors
         roster = CrewRoster(sailors=d.get("crew", 0))
     d["roster"] = roster
+    d.setdefault("morale", 50)
     return Ship(**d)
 
 
@@ -456,8 +476,46 @@ def _captain_to_dict(captain: Captain) -> dict:
         "active_style": captain.active_style,
         "combat_gear": _combat_gear_to_dict(captain.combat_gear),
         "injuries": [_injury_to_dict(i) for i in captain.injuries],
+        "skills": captain.skills,
+        "party": _party_to_dict(captain.party),
         "fleet": [_owned_ship_to_dict(o) for o in captain.fleet],
     }
+
+
+def _party_to_dict(party_data) -> dict:
+    """Serialize party state. Accepts either PartyState or raw dict."""
+    from portlight.engine.companion_engine import CompanionState, PartyState
+    if isinstance(party_data, PartyState):
+        return {
+            "companions": [
+                {"companion_id": c.companion_id, "role_id": c.role_id,
+                 "morale": c.morale, "joined_day": c.joined_day, "personality": c.personality}
+                for c in party_data.companions
+            ],
+            "max_size": party_data.max_size,
+            "departed": party_data.departed,
+        }
+    if isinstance(party_data, dict):
+        return party_data  # already serialized
+    return {"companions": [], "max_size": 2, "departed": []}
+
+
+def _party_from_dict(d: dict):
+    """Deserialize party state. Returns PartyState."""
+    from portlight.engine.companion_engine import CompanionState, PartyState
+    companions = [
+        CompanionState(
+            companion_id=c["companion_id"], role_id=c["role_id"],
+            morale=c.get("morale", 70), joined_day=c.get("joined_day", 0),
+            personality=c.get("personality", "pragmatic"),
+        )
+        for c in d.get("companions", [])
+    ]
+    return PartyState(
+        companions=companions,
+        max_size=d.get("max_size", 2),
+        departed=d.get("departed", []),
+    )
 
 
 def _cargo_from_dict(c: dict) -> CargoItem:
@@ -488,6 +546,8 @@ def _captain_from_dict(d: dict) -> Captain:
         active_style=d.get("active_style"),
         combat_gear=gear,
         injuries=injuries,
+        skills=d.get("skills", {}),
+        party=_party_to_dict(_party_from_dict(d.get("party", {}))) if "party" in d else {"companions": [], "max_size": 2, "departed": []},
         fleet=[_owned_ship_from_dict(o) for o in d.get("fleet", [])],
     )
 
