@@ -19,7 +19,7 @@ Every core system is implemented, tested, and stress-verified:
 
 ## Verification
 
-- **609 tests** across 24 test files
+- **1039 tests** across 24 test files
 - **14 cross-system invariants** (laws that must hold under any game state)
 - **9 compound stress scenarios** — debt spiral, warehouse neglect, insured luxury loss, contract expiry under pressure, heat/license conflict, legitimization pivot, oceanic overextension, victory-then-stress, save/load mid-crisis
 - **Balance harness** — 7 policy bots, 7 scenario packs, 3 captain types, structured report generation

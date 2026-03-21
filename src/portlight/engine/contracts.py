@@ -149,6 +149,7 @@ class ContractOutcome:
     heat_delta: int
     completion_day: int
     summary: str
+    family: ContractFamily | None = None  # canonical contract family for victory path evaluation
 
 
 # ---------------------------------------------------------------------------
@@ -487,6 +488,7 @@ def resolve_completed(
                 completion_day=day,
                 summary=f"Delivered {contract.delivered_quantity} {contract.good_id} to {contract.destination_port_id}"
                 + (f" (early bonus: +{bonus} silver)" if bonus > 0 else ""),
+                family=contract.family,
             )
             contract.status = ContractStatus.COMPLETED
             outcomes.append(outcome)
@@ -517,7 +519,7 @@ def tick_contracts(
             if partial:
                 # Partial payout
                 partial_pct = contract.delivered_quantity / contract.required_quantity
-                payout = int(contract.reward_silver * partial_pct * 0.5)  # 50% of pro-rata
+                payout = round(contract.reward_silver * partial_pct * 0.5)  # 50% of pro-rata
                 outcome = ContractOutcome(
                     contract_id=contract.offer_id,
                     outcome_type="expired",
@@ -527,6 +529,7 @@ def tick_contracts(
                     heat_delta=1,
                     completion_day=day,
                     summary=f"Contract expired: delivered {contract.delivered_quantity}/{contract.required_quantity} {contract.good_id} (partial payout: {payout} silver)",
+                    family=contract.family,
                 )
             else:
                 outcome = ContractOutcome(
@@ -538,6 +541,7 @@ def tick_contracts(
                     heat_delta=2,
                     completion_day=day,
                     summary=f"Contract defaulted: failed to deliver {contract.good_id} to {contract.destination_port_id}",
+                    family=contract.family,
                 )
             contract.status = ContractStatus.EXPIRED
             outcomes.append(outcome)
@@ -572,6 +576,7 @@ def abandon_contract(
         heat_delta=1,
         completion_day=day,
         summary=f"Abandoned contract: {contract.title}",
+        family=contract.family,
     )
     contract.status = ContractStatus.ABANDONED
     board.active = [c for c in board.active if c.offer_id != offer_id]

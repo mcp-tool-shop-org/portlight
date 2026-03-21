@@ -223,19 +223,20 @@ def lease_warehouse(
         active=True,
     )
 
-    # Transfer old inventory (drop excess if downgrading, which shouldn't happen but be safe)
-    transferred = 0
+    # Transfer old inventory — refuse if downgrade would lose goods
+    old_total = sum(lot.quantity for lot in old_inventory)
+    if old_total > lease.capacity:
+        # Undo: reactivate old warehouse, refund
+        if existing:
+            existing.active = True
+        captain.silver += tier_spec.lease_cost
+        return (
+            f"Cannot downgrade: {old_total} units in storage exceeds "
+            f"{tier_spec.name} capacity ({lease.capacity}). "
+            f"Withdraw goods first."
+        )
     for lot in old_inventory:
-        if transferred + lot.quantity <= lease.capacity:
-            lease.inventory.append(lot)
-            transferred += lot.quantity
-        else:
-            # Partial transfer
-            remaining = lease.capacity - transferred
-            if remaining > 0:
-                lot.quantity = remaining
-                lease.inventory.append(lot)
-            break
+        lease.inventory.append(lot)
 
     state.warehouses.append(lease)
     return lease

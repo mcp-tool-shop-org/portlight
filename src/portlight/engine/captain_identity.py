@@ -244,3 +244,44 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
 def get_captain_template(captain_type: CaptainType) -> CaptainTemplate:
     """Get template for a captain type. Raises KeyError if unknown."""
     return CAPTAIN_TEMPLATES[captain_type]
+
+
+# ---------------------------------------------------------------------------
+# Authoritative effects reference — all captain identity modifiers in one place
+# ---------------------------------------------------------------------------
+# Scattered across: economy.py (pricing), voyage.py (voyage mods),
+# reputation.py (inspection/trust), captain_identity.py (templates).
+# This index exists so there's ONE place to audit what each type does.
+
+CAPTAIN_EFFECTS_REFERENCE: dict[str, dict[str, str]] = {
+    "merchant": {
+        "buy_price_mult": "0.92 (8% cheaper buys)",
+        "sell_price_mult": "1.05 (5% better sells)",
+        "port_fee_mult": "0.7 (30% cheaper port fees)",
+        "inspection_chance_mult": "0.5 (50% fewer inspections)",
+        "fine_mult": "0.6 (lower fines)",
+        "trust_bonus": "+1 extra trust on clean profitable trades (reputation.py:191)",
+        "starting_trust": "15",
+        "starting_med_standing": "10",
+    },
+    "smuggler": {
+        "luxury_sell_bonus": "0.25 (25% bonus on luxury goods)",
+        "sell_price_mult": "0.97 (3% worse on staples)",
+        "provision_burn": "0.9 (10% less provisions)",
+        "cargo_damage_mult": "0.8 (20% less cargo damage)",
+        "inspection_chance_mult": "1.5 (50% more inspections)",
+        "seizure_risk": "0.07 (7% cargo seizure chance per inspection)",
+        "fine_mult": "1.3 (higher fines)",
+        "contraband_detect_bonus": "-0.15 detection chance (voyage.py:208)",
+        "suspicion_bonus": "+1 suspicion on sells (reputation.py:127)",
+        "starting_heat": "10",
+    },
+    "navigator": {
+        "buy_price_mult": "1.05 (5% more expensive buys)",
+        "provision_burn": "0.7 (30% less provision use)",
+        "speed_bonus": "+1.5 flat speed",
+        "storm_resist_bonus": "+0.15 storm resistance",
+        "cargo_damage_mult": "0.7 (30% less cargo damage)",
+        "starting_ei_standing": "5 (East Indies familiarity)",
+    },
+}

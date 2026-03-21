@@ -271,14 +271,17 @@ def tick_reputation(rep: "ReputationState") -> None:
     Heat decays fastest (hot situations cool).
     Standing and trust are stable (you don't lose reputation from inaction).
     """
-    # Heat decays: -1 per day if >= 5, slower below
+    # Heat decays: -2/day above 20, -1/day from 5-19.
+    # Below 5: no time-based decay (intentional baseline friction).
+    # Low heat (1-4) only decays via port arrival (-10%, min 1).
+    # This means a player who earned minor heat will carry a small residual
+    # unless they visit ports to trigger arrival decay.
     for region in rep.customs_heat:
         heat = rep.customs_heat[region]
         if heat >= 20:
             rep.customs_heat[region] = heat - 2
         elif heat >= 5:
             rep.customs_heat[region] = heat - 1
-        # Below 5: no decay (baseline friction)
 
 
 # ---------------------------------------------------------------------------

@@ -265,13 +265,12 @@ def _completed_contracts(snap: SessionSnapshot) -> list:
 
 
 def _completed_contract_families(snap: SessionSnapshot) -> dict[str, int]:
-    """Count completed contracts by template family."""
+    """Count completed contracts by contract family."""
     counts: dict[str, int] = {}
     for c in snap.board.completed:
-        if c.outcome_type in ("completed", "completed_bonus"):
-            # We don't store family on outcome, but we can infer from template
-            # For now count by outcome_type
-            counts[c.outcome_type] = counts.get(c.outcome_type, 0) + 1
+        if c.outcome_type in ("completed", "completed_bonus") and c.family is not None:
+            key = c.family.value
+            counts[key] = counts.get(key, 0) + 1
     return counts
 
 
@@ -363,6 +362,7 @@ def _eval_presence_two_regions(snap: SessionSnapshot) -> tuple[bool, str]:
 
 
 def _eval_sustained_three_regions(snap: SessionSnapshot) -> tuple[bool, str]:
+    """Registered evaluator with no milestone spec yet — reserved for future use."""
     regions = _regions_with_standing(snap, 10)
     if len(regions) >= 3:
         return True, "Standing 10+ in all three regions"
@@ -417,15 +417,14 @@ def _eval_low_heat_scaling(snap: SessionSnapshot) -> tuple[bool, str]:
 # --- Shadow network ---
 
 def _eval_first_discreet_success(snap: SessionSnapshot) -> tuple[bool, str]:
-    # luxury_discreet contracts show in completed outcomes
-    # We check for any completed contract where the summary contains "discreet" or template family
+    from portlight.engine.contracts import ContractFamily
     for o in snap.board.completed:
         if o.outcome_type in ("completed", "completed_bonus"):
-            # Best heuristic: check if any active/completed contract had luxury_discreet family
-            # Since outcome doesn't store family, check for keyword in summary
-            if "luxury" in o.summary.lower() or "discreet" in o.summary.lower():
+            # Use canonical family field when available, fall back to summary heuristic
+            if o.family == ContractFamily.LUXURY_DISCREET:
                 return True, "First discreet luxury delivery"
-    # Fallback: check for elevated heat + profitability
+            if o.family is None and ("luxury" in o.summary.lower() or "discreet" in o.summary.lower()):
+                return True, "First discreet luxury delivery"
     return False, ""
 
 
@@ -438,10 +437,10 @@ def _eval_elevated_heat_sustained(snap: SessionSnapshot) -> tuple[bool, str]:
 
 
 def _eval_shadow_profitability(snap: SessionSnapshot) -> tuple[bool, str]:
-    """Net profit > 2000 while having sustained heat."""
+    """Net profit >= 2000 while having sustained heat."""
     profit = snap.ledger.net_profit
     max_h = _max_heat(snap)
-    if profit > 2000 and max_h >= 10:
+    if profit >= 2000 and max_h >= 10:
         return True, f"Profit {profit} with heat {max_h}"
     return False, ""
 
@@ -921,11 +920,15 @@ def _req(
 
 
 def _discreet_completions(snap: SessionSnapshot) -> int:
-    """Count completed contracts with discreet/luxury keywords."""
+    """Count completed contracts in the luxury_discreet family."""
+    from portlight.engine.contracts import ContractFamily
     count = 0
     for o in snap.board.completed:
         if o.outcome_type in ("completed", "completed_bonus"):
-            if "luxury" in o.summary.lower() or "discreet" in o.summary.lower():
+            # Use canonical family field when available, fall back to summary heuristic
+            if o.family == ContractFamily.LUXURY_DISCREET:
+                count += 1
+            elif o.family is None and ("luxury" in o.summary.lower() or "discreet" in o.summary.lower()):
                 count += 1
     return count
 
@@ -1043,8 +1046,8 @@ def _evaluate_shadow_network(snap: SessionSnapshot) -> VictoryPathStatus:
             blocker=max_h > T["heat_ceiling"],
         ),
         _req(
-            f"Profitable under pressure (profit > {T['profit_under_heat']})",
-            profit > T["profit_under_heat"] and max_h >= T["heat_floor"],
+            f"Profitable under pressure (profit >= {T['profit_under_heat']})",
+            profit >= T["profit_under_heat"] and max_h >= T["heat_floor"],
             f"Profit: {profit}, heat: {max_h}",
             "Build profitability while maintaining shadow operations",
         ),
@@ -1066,7 +1069,7 @@ def _evaluate_shadow_network(snap: SessionSnapshot) -> VictoryPathStatus:
     base_ratio = sum(1 for r in reqs if r.met) / len(reqs) * 100
     strength = base_ratio
     strength += discreet * boosts["discreet_bonus_per"]
-    if profit > T["profit_under_heat"] and max_h >= T["heat_floor"]:
+    if profit >= T["profit_under_heat"] and max_h >= T["heat_floor"]:
         strength += boosts["heat_resilience_bonus"]
     if seizures > 0 and snap.captain.silver >= 200:
         strength += boosts["seizure_survival_bonus"]

@@ -81,13 +81,9 @@ def pick_opponent_stance(
         if last_two[0] == last_two[1]:
             # Player is repeating — counter it
             repeated = last_two[0]
-            # Find what beats the repeated stance
-            for stance, beats in _BEATS.items():
-                if beats == repeated:
-                    # This stance loses to repeated, so repeated's counter wins
-                    pass
-            # The stance that beats the repeated one:
-            counter_idx = {"thrust": 2, "slash": 0, "parry": 1}  # parry beats thrust, etc.
+            # Map repeated stance to counter index: parry beats thrust (idx 2),
+            # thrust beats slash (idx 0), slash beats parry (idx 1)
+            counter_idx = {"thrust": 2, "slash": 0, "parry": 1}
             if repeated in counter_idx:
                 idx = counter_idx[repeated]
                 base_weights[idx] += 0.30  # heavy bias toward counter

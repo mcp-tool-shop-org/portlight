@@ -586,7 +586,8 @@ def evaluate_narrative(
     if ledger.total_sells > 0:
         _fire("first_trade", region=region)
 
-    if world.day > 1 and ledger.total_sells == 0 and world.voyage:
+    from portlight.engine.models import VoyageStatus
+    if world.voyage and world.voyage.status != VoyageStatus.IN_PORT:
         _fire("first_voyage")
 
     if ledger.net_profit > 0:
@@ -601,7 +602,7 @@ def evaluate_narrative(
     if len(regions_visited) >= 2:
         _fire("new_region", region=region)
 
-    if board.completed:
+    if any(o.outcome_type in ("completed", "completed_bonus") for o in board.completed):
         _fire("first_contract")
 
     from portlight.content.ships import SHIPS
@@ -709,11 +710,8 @@ def evaluate_narrative(
     if len(high_standing) >= 3:
         _fire("cultural_bridge")
 
-    # Festival patron: active_festivals counter — fire after 3+ festivals experienced
-    # We approximate by checking port_visits in ports that had festivals
-    festival_ports = {af.port_id for af in culture.active_festivals}
-    festivals_experienced = sum(1 for pid in festival_ports if culture.port_visits.get(pid, 0) > 0)
-    if festivals_experienced >= 3:
+    # Festival patron: lifetime festival arrivals (tracked in CulturalState)
+    if culture.festivals_visited >= 3:
         _fire("festival_patron")
 
     # Known world culture: cultural encounters in all 5 regions

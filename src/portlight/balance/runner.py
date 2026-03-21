@@ -32,8 +32,10 @@ def run_balance_simulation(config: BalanceRunConfig) -> RunMetrics:
         session = GameSession(Path(tmp))
         session.new("BalanceBot", captain_type=config.captain_type)
 
-        # Override seed for reproducibility
+        # Override seed for reproducibility — both the session RNG and
+        # module-level random (used by contract destination selection)
         import random
+        random.seed(config.seed)
         session._rng = random.Random(config.seed)
         session.world.seed = config.seed
 
@@ -57,6 +59,32 @@ def run_balance_simulation(config: BalanceRunConfig) -> RunMetrics:
             elif session.at_sea:
                 # At sea — just advance
                 session.advance()
+
+            # Auto-resolve pending duels (bots can't respond to duel prompts)
+            if session.world.pirates.pending_duel is not None:
+                from portlight.engine.duel import resolve_duel
+                from portlight.engine.models import PirateEncounterRecord
+                pd = session.world.pirates.pending_duel
+                # Bot fights with random stances
+                stances = [session._rng.choice(["thrust", "slash", "parry"]) for _ in range(5)]
+                result = resolve_duel(
+                    player_stances=stances,
+                    opponent_id=pd.captain_id, opponent_name=pd.captain_name,
+                    opponent_personality=pd.personality, opponent_strength=pd.strength,
+                    rng=session._rng,
+                    player_crew=session.captain.ship.crew if session.captain.ship else 5,
+                )
+                session.captain.silver = max(0, session.captain.silver + result.silver_delta)
+                outcome_str = "duel_win" if result.player_won else ("duel_draw" if result.draw else "duel_loss")
+                session.world.pirates.encounters.append(PirateEncounterRecord(
+                    captain_id=pd.captain_id, faction_id=pd.faction_id,
+                    day=session.world.day, outcome=outcome_str, region=pd.region,
+                ))
+                if result.player_won:
+                    session.world.pirates.duels_won += 1
+                elif not result.draw:
+                    session.world.pirates.duels_lost += 1
+                session.world.pirates.pending_duel = None
 
             # Track timing events
             update_timing(timing, session, session.world.day)
@@ -95,7 +123,11 @@ def _execute_actions(
     for action in actions:
         try:
             _execute_one(session, action, route_tracker)
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).debug(
+                "Policy bot action %s failed: %s", action.action, exc,
+            )
             continue  # policy bots shouldn't crash the harness
 
 

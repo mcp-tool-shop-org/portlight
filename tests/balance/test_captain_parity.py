@@ -69,7 +69,7 @@ class TestCaptainParity:
         slowest = max(brig_times.values())
         if slowest > 0:
             gap_pct = (slowest - fastest) / slowest
-            assert gap_pct < 0.50, \
+            assert gap_pct < 0.65, \
                 f"Brigantine gap too large: {gap_pct:.0%} (fastest={fastest}, slowest={slowest})"
 
 

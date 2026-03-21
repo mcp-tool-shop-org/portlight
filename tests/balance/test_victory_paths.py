@@ -88,7 +88,7 @@ class TestVictoryPathHealth:
                 policy_id=PolicyId.LONG_HAUL_OPTIMIZER,
                 max_days=80,
             ))
-            for s in (42, 137, 256, 512, 777)
+            for s in (42, 137, 256, 512, 777, 999, 1234, 2048)
         ]
 
         oceanic_count = sum(

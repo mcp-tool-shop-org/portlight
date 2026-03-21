@@ -1361,7 +1361,19 @@ def naval(
     if result["enemy_sunk"]:
         console.print("\n[bold green]Enemy ship sinks beneath the waves![/bold green]")
         s.world.pirates.naval_victories += 1
-        _active_encounter = None
+        # Check if capture is possible
+        from portlight.engine.encounter import can_capture_prize
+        from portlight.engine.models import max_fleet_size
+        trust = s.captain.standing.commercial_trust
+        can_cap, reason = can_capture_prize(s.captain, enc, max_fleet_size(trust))
+        if can_cap:
+            enc.phase = "capture_available"
+            console.print("\n[bold yellow]You can capture this ship as a prize![/bold yellow]")
+            console.print(f"  Enemy ship: {enc.enemy_captain_name}'s vessel")
+            console.print(f"  Use: [cyan]portlight capture <crew_to_assign>[/cyan]")
+        else:
+            console.print(f"\n[dim]Cannot capture: {reason}[/dim]")
+            _active_encounter = None
     elif result["boarding_triggered"]:
         console.print("\n[bold yellow]Boarding action![/bold yellow]")
         boarding = resolve_boarding_phase(enc, s.captain.ship.crew, s._rng)
@@ -1381,6 +1393,58 @@ def naval(
             enc.boarding_progress, enc.boarding_threshold, enc.naval_turns,
         ))
 
+    s._save()
+
+
+@app.command()
+def capture(
+    crew_to_assign: int = typer.Argument(..., help="Number of crew to assign to prize ship"),
+) -> None:
+    """Capture a defeated enemy ship as a prize."""
+    global _active_encounter
+    s = _session()
+    if _active_encounter is None or _active_encounter.phase != "capture_available":
+        console.print("[yellow]No ship available to capture.[/yellow]")
+        return
+
+    enc = _active_encounter
+    from portlight.engine.encounter import can_capture_prize, capture_prize, prize_template_id
+    from portlight.engine.models import max_fleet_size
+    from portlight.content.ships import SHIPS
+
+    trust = s.captain.standing.commercial_trust
+    can_cap, reason = can_capture_prize(s.captain, enc, max_fleet_size(trust))
+    if not can_cap:
+        console.print(f"[red]Cannot capture: {reason}[/red]")
+        return
+
+    # Validate crew assignment
+    prize_tid = prize_template_id(enc.enemy_strength)
+    prize_tmpl = SHIPS.get(prize_tid)
+    prize_min = prize_tmpl.crew_min if prize_tmpl else 3
+    current_tmpl = SHIPS.get(s.captain.ship.template_id)
+    current_min = current_tmpl.crew_min if current_tmpl else 3
+
+    if crew_to_assign < prize_min:
+        console.print(f"[red]Need at least {prize_min} crew for the prize ship.[/red]")
+        return
+    if s.captain.ship.crew - crew_to_assign < current_min:
+        console.print(f"[red]Would leave your flagship with {s.captain.ship.crew - crew_to_assign} crew (need {current_min}).[/red]")
+        return
+
+    # Capture the prize
+    owned = capture_prize(s.captain, enc, crew_to_assign)
+    # Set docked port to current voyage destination (or origin if not sailing)
+    if s.world.voyage:
+        owned.docked_port_id = s.world.voyage.destination_id
+    else:
+        owned.docked_port_id = s.current_port_id or "porto_novo"
+    s.captain.fleet.append(owned)
+    _active_encounter = None
+
+    console.print(f"\n[bold green]Prize captured![/bold green] {owned.ship.name} added to your fleet.")
+    console.print(f"  Crew split: {s.captain.ship.crew} on flagship, {crew_to_assign} on prize")
+    console.print(views.fleet_view(s.captain))
     s._save()
 
 
@@ -1696,6 +1760,111 @@ def injuries() -> None:
                 "treated": inj.treated,
             })
     console.print(combat_views.injuries_view(injury_data))
+
+
+# ---------------------------------------------------------------------------
+# Weapon quality commands
+# ---------------------------------------------------------------------------
+
+@app.command()
+def maintain(
+    weapon: str = typer.Argument(None, help="Weapon ID to maintain (e.g. cutlass, matchlock_pistol)"),
+) -> None:
+    """Maintain a weapon to prevent quality degradation."""
+    from portlight.engine.weapon_quality import (
+        get_maintenance_cost,
+        get_weapon_summary,
+        maintain_weapon,
+    )
+
+    s = _session()
+    port = s.current_port
+    if not port:
+        console.print("[yellow]Must be docked to maintain weapons.[/yellow]")
+        return
+
+    gear = s.captain.combat_gear
+
+    if weapon is None:
+        # Show all weapons and their quality/usage
+        weapons_to_show = []
+        if gear.melee_weapon:
+            weapons_to_show.append((gear.melee_weapon, "melee"))
+        if gear.firearm:
+            weapons_to_show.append((gear.firearm, "firearm"))
+        if gear.mechanical_weapon:
+            weapons_to_show.append((gear.mechanical_weapon, "mechanical"))
+        if gear.armor:
+            weapons_to_show.append((gear.armor, "armor"))
+
+        if not weapons_to_show:
+            console.print("[dim]No weapons to maintain.[/dim]")
+            return
+
+        from rich.table import Table
+        table = Table(title="Weapon Condition")
+        table.add_column("Weapon")
+        table.add_column("Quality")
+        table.add_column("Usage")
+        table.add_column("Maint. Cost")
+        for wid, wtype in weapons_to_show:
+            summary = get_weapon_summary(wid, wid.replace("_", " ").title(), gear.weapon_quality, gear.weapon_usage, wtype)
+            warn = " [red]!!![/red]" if summary["near_degradation"] else ""
+            cost = get_maintenance_cost(wid, gear.weapon_quality)
+            table.add_row(
+                summary["name"],
+                f"[{summary['quality_color']}]{summary['quality_label']}[/{summary['quality_color']}]",
+                f"{summary['usage']}/{summary['uses_until_degrade'] + summary['usage']}{warn}",
+                f"{cost} silver",
+            )
+        console.print(table)
+        return
+
+    # Maintain specific weapon
+    remaining, error = maintain_weapon(weapon, gear.weapon_quality, gear.weapon_usage, s.captain.silver)
+    if error:
+        console.print(f"[red]{error}[/red]")
+        return
+    s.captain.silver = remaining
+    console.print(f"[green]{weapon.replace('_', ' ').title()} maintained — usage reset, quality preserved.[/green]")
+    s._save()
+
+
+@app.command()
+def smith(
+    weapon: str = typer.Argument(..., help="Weapon ID to upgrade (e.g. cutlass, rapier)"),
+) -> None:
+    """Upgrade a weapon's quality at a smith (requires shipyard port)."""
+    from portlight.engine.models import PortFeature
+    from portlight.engine.weapon_quality import can_upgrade, get_quality_effects, upgrade_weapon
+
+    s = _session()
+    port = s.current_port
+    if not port:
+        console.print("[yellow]Must be docked to visit a smith.[/yellow]")
+        return
+
+    has_shipyard = PortFeature.SHIPYARD in port.features
+    gear = s.captain.combat_gear
+
+    error = can_upgrade(weapon, gear.weapon_quality, s.captain.silver, at_smith=has_shipyard)
+    if error:
+        console.print(f"[red]{error}[/red]")
+        return
+
+    new_quality, remaining_silver, days = upgrade_weapon(weapon, gear.weapon_quality, gear.weapon_usage, s.captain.silver)
+    s.captain.silver = remaining_silver
+    # Training days advance the clock
+    for _ in range(days):
+        s.advance()
+
+    effects = get_quality_effects(new_quality)
+    console.print(
+        f"\n[bold green]Upgraded![/bold green] {weapon.replace('_', ' ').title()} is now "
+        f"[{effects.color}]{effects.label}[/{effects.color}] quality. "
+        f"({days} days, {s.captain.silver} silver remaining)"
+    )
+    s._save()
 
 
 if __name__ == "__main__":
