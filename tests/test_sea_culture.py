@@ -1,11 +1,18 @@
-"""Tests for sea culture — route encounters, region defaults."""
+"""Tests for sea culture — route encounters, NPC sightings, lore, crew morale."""
 
+from portlight.content.ports import PORTS
 from portlight.content.routes import ROUTES
 from portlight.content.sea_culture import (
+    CREW_MOODS,
+    NPC_SIGHTINGS,
     REGION_ENCOUNTERS,
     ROUTE_ENCOUNTERS,
+    SEA_SUPERSTITIONS,
+    get_crew_moods,
+    get_npc_sightings,
     get_region_encounters,
     get_route_encounters,
+    get_superstitions,
 )
 
 
@@ -65,3 +72,82 @@ class TestEncounterVariety:
             if len(table.encounters) >= 5:
                 cats = {e.category for e in table.encounters}
                 assert len(cats) >= 3, f"'{name}' has {len(table.encounters)} encounters but only {len(cats)} categories"
+
+
+class TestNPCSightings:
+    """NPC sightings at sea for all 5 regions."""
+
+    REGIONS = ["Mediterranean", "North Atlantic", "West Africa", "East Indies", "South Seas"]
+
+    def test_all_regions_have_sightings(self):
+        for region in self.REGIONS:
+            sightings = get_npc_sightings(region)
+            assert len(sightings) >= 3, f"'{region}' needs >= 3 NPC sightings"
+
+    def test_sightings_reference_valid_ports(self):
+        for region, sightings in NPC_SIGHTINGS.items():
+            for s in sightings:
+                assert s.port_id in PORTS, f"Sighting for '{s.npc_name}' references unknown port '{s.port_id}'"
+
+    def test_sightings_have_text(self):
+        for region, sightings in NPC_SIGHTINGS.items():
+            for s in sightings:
+                assert s.text, f"Empty text for '{s.npc_name}' sighting"
+                assert s.npc_name, f"Empty npc_name in {region}"
+
+    def test_sightings_match_region(self):
+        for region, sightings in NPC_SIGHTINGS.items():
+            for s in sightings:
+                assert s.region == region, f"'{s.npc_name}' region mismatch: {s.region} != {region}"
+
+    def test_total_sightings(self):
+        total = sum(len(s) for s in NPC_SIGHTINGS.values())
+        assert total >= 20, f"Need >= 20 total sightings, have {total}"
+
+
+class TestSeaSuperstitions:
+    """Sea lore and superstitions."""
+
+    def test_superstitions_exist(self):
+        assert len(get_superstitions()) >= 10
+
+    def test_superstitions_have_text(self):
+        for s in SEA_SUPERSTITIONS:
+            assert s.text, f"Empty text for superstition '{s.id}'"
+            assert s.crew_reaction, f"Empty crew_reaction for '{s.id}'"
+            assert s.trigger, f"Empty trigger for '{s.id}'"
+
+    def test_superstition_ids_unique(self):
+        ids = [s.id for s in SEA_SUPERSTITIONS]
+        assert len(ids) == len(set(ids))
+
+    def test_first_region_superstitions(self):
+        """Key regions should have first-entry superstitions."""
+        triggers = {s.trigger for s in SEA_SUPERSTITIONS}
+        assert "first_region_East Indies" in triggers
+        assert "first_region_South Seas" in triggers
+
+
+class TestCrewMoods:
+    """Crew morale and voice system."""
+
+    def test_moods_exist(self):
+        assert len(get_crew_moods()) >= 8
+
+    def test_moods_have_text(self):
+        for mood in CREW_MOODS:
+            assert mood.condition, f"Empty condition for '{mood.id}'"
+            assert len(mood.flavor_texts) >= 1, f"'{mood.id}' needs at least 1 flavor text"
+
+    def test_mood_ids_unique(self):
+        ids = [m.id for m in CREW_MOODS]
+        assert len(ids) == len(set(ids))
+
+    def test_key_moods_exist(self):
+        """Essential moods should be defined."""
+        mood_ids = {m.id for m in CREW_MOODS}
+        assert "prosperous" in mood_ids
+        assert "struggling" in mood_ids
+        assert "carrying_contraband" in mood_ids
+        assert "first_voyage" in mood_ids
+        assert "veteran" in mood_ids

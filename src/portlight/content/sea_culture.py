@@ -274,3 +274,219 @@ def get_route_encounters(lore_name: str) -> RouteEncounterTable | None:
 def get_region_encounters(region: str) -> RouteEncounterTable | None:
     """Get default encounters for a region (unnamed routes)."""
     return REGION_ENCOUNTERS.get(region)
+
+
+# ---------------------------------------------------------------------------
+# NPC Sightings at Sea
+# ---------------------------------------------------------------------------
+# When traveling through a region, you might spot NPCs from nearby ports
+# going about their business. Non-interactive — passing ships, not meetings.
+# Each sighting is region-locked so you only see local NPCs.
+
+@dataclass(frozen=True)
+class NPCSighting:
+    """A named NPC spotted at sea — flavor, not interaction."""
+    npc_name: str
+    port_id: str
+    region: str
+    text: str
+
+
+NPC_SIGHTINGS: dict[str, list[NPCSighting]] = {
+    "Mediterranean": [
+        NPCSighting("Dimitri Andros", "silva_bay", "Mediterranean",
+            "A Silva Bay hull — unmistakable lines — cuts across your bow. Dimitri Andros stands at the prow, examining the waterline of a new build. He's testing it himself. He always does."),
+        NPCSighting("Marta Soares", "porto_novo", "Mediterranean",
+            "A Porto Novo grain barge passes with the Exchange Guild flag. On the quarterdeck, Marta Soares scans the horizon with a spyglass — checking the competition's cargo, no doubt."),
+        NPCSighting("Scarlet Ana", "corsairs_rest", "Mediterranean",
+            "Crimson pennants on the horizon. Scarlet Ana's flagship passes at distance — she sees you, tips her hat, and sails on. Business elsewhere today."),
+        NPCSighting("Inspector Salva", "porto_novo", "Mediterranean",
+            "A Porto Novo customs cutter crosses your wake. Inspector Salva stands at the rail with a manifest in hand, heading to intercept someone else. You're glad it's not you."),
+        NPCSighting("Ghost", "corsairs_rest", "Mediterranean",
+            "A ship passes in the early hours — no lights, no flag, loaded heavy. Ghost's crew, running cargo. By the time you blink, they've vanished into the dark."),
+    ],
+    "North Atlantic": [
+        NPCSighting("The Smith", "ironhaven", "North Atlantic",
+            "An Ironhaven supply boat passes carrying a crate marked with the Smith's personal seal. Whatever's inside, it was built by the best hands in the north. Someone ordered something special."),
+        NPCSighting("Sergeant Kruze", "ironhaven", "North Atlantic",
+            "A grey-hulled ship cuts through the fog — Iron Wolves. Sergeant Kruze stands at the helm, scanning methodically. He spots you, holds your gaze for three seconds, then turns away. Assessment complete."),
+        NPCSighting("Siv Lindgren", "stormwall", "North Atlantic",
+            "A small trade vessel flying Stormwall colors passes. Siv Lindgren waves energetically from the deck — she's heading to recruit merchants for the garrison's supply contracts. Her enthusiasm is visible from a league away."),
+        NPCSighting("Bones Thorsen", "thornport", "North Atlantic",
+            "A converted whaler — Bones Thorsen's fishing fleet — trawls the northern waters. The whale skeleton mounted on the bow catches the light. Bones raises a hand in silent greeting."),
+    ],
+    "West Africa": [
+        NPCSighting("Ama Mensah", "sun_harbor", "West Africa",
+            "A Gold Coast trading vessel passes with the Compact flag. On deck, Chief Weigher Ama stands with her counting staff, supervising a cotton shipment. Even at sea, her standards travel with her."),
+        NPCSighting("Old Cassius", "palm_cove", "West Africa",
+            "A Palm Cove rum boat passes close enough that you can smell the cargo. Old Cassius himself sits on a barrel, waving a bottle. 'BEST RUM ON THE COAST!' he shouts. Some things don't need a harbor."),
+        NPCSighting("Yaa Acheampong", "iron_point", "West Africa",
+            "An Iron Point ore barge passes, Yaa Acheampong standing on a crate of raw iron, negotiating by signal flag with a ship heading east. She's cutting deals even in transit."),
+        NPCSighting("Elder Ama Diallo", "pearl_shallows", "West Africa",
+            "A canoe of Breath-Holder divers glides past, heading for the outer reef. Elder Ama sits at the stern, eyes closed, breathing slowly. The morning dive is sacred. You pass in silence."),
+    ],
+    "East Indies": [
+        NPCSighting("Factor Wu Jian", "jade_port", "East Indies",
+            "A Jade Port silk-and-porcelain convoy passes — three junks in formation. Factor Wu stands on the lead ship, silk robes immaculate even at sea. He bows precisely as you pass. Fifteen degrees."),
+        NPCSighting("Brother Anand", "monsoon_reach", "East Indies",
+            "A small boat with a saffron sail drifts past the Wind Temple headland. Brother Anand sits cross-legged on the deck, eyes closed, reading the wind by feel. His forecast will be posted at dawn."),
+        NPCSighting("Typhoon Mei", "spice_narrows", "East Indies",
+            "A ship erupts from behind an island at impossible speed. Typhoon Mei stands on the bowsprit, laughing into the wind. She sees you, waves wildly, and vanishes around the next headland. Chaos in human form."),
+        NPCSighting("Master Ink", "silk_haven", "East Indies",
+            "A sampan drifts past Silk Haven's harbor. Master Ink sits cross-legged, painting the sea. He doesn't look up. A perfect brushstroke captures a wave that no longer exists. The painting will outlast the ocean."),
+        NPCSighting("Apprentice Lin Yue", "jade_port", "East Indies",
+            "A small kiln-boat from Jade Port passes — Apprentice Lin testing a new glaze in sea air. She holds a tile up to the light, frowns, adjusts something, holds it up again. Obsession at twenty-two."),
+    ],
+    "South Seas": [
+        NPCSighting("Storm Chief Rangi", "typhoon_anchorage", "South Seas",
+            "An outrigger war canoe slices through the swell — Storm Chief Rangi at the helm, reading the weather through the spray. Seven typhoons survived. She's watching the horizon for the eighth."),
+        NPCSighting("Dive Boss Moana", "typhoon_anchorage", "South Seas",
+            "A diving boat surfaces nearby — Moana's crew returning from the deep reef. Moana herself emerges glistening, a pouch of pearls tied to her wrist. She dives where others won't."),
+        NPCSighting("Reef Pilot Iti", "coral_throne", "South Seas",
+            "A pilot canoe approaches from the reef. Iti stands at the bow, reading the coral by water color. Twelve generations of reef knowledge in one pair of eyes."),
+        NPCSighting("War Chief Tane", "coral_throne", "South Seas",
+            "War canoes appear — painted to match the coral, nearly invisible until they're alongside. War Chief Tane's escort. They watch you pass. The spears stay lowered. Today."),
+        NPCSighting("Healer Sera", "ember_isle", "South Seas",
+            "An Ember Isle medicine boat passes, volcanic-stone hull and eucalyptus smoke trailing behind. Head Herbalist Sera waves from the deck, surrounded by crates of freshly harvested remedies."),
+    ],
+}
+
+
+def get_npc_sightings(region: str) -> list[NPCSighting]:
+    """Get possible NPC sightings for a region."""
+    return NPC_SIGHTINGS.get(region, [])
+
+
+# ---------------------------------------------------------------------------
+# Sea Lore & Superstitions
+# ---------------------------------------------------------------------------
+# First-time experiences that trigger crew stories and beliefs.
+# Each fires once per game — tracked by the narrative system.
+
+@dataclass(frozen=True)
+class SeaSuperstition:
+    """A crew belief or story triggered by a specific condition."""
+    id: str
+    trigger: str                     # what triggers it: "first_region_X", "first_storm", etc.
+    text: str
+    crew_reaction: str               # how the crew responds
+
+
+SEA_SUPERSTITIONS: list[SeaSuperstition] = [
+    # First-time region entries
+    SeaSuperstition("first_east_indies", "first_region_East Indies",
+        "The old hands gather the new crew at the bow. 'The East Indies,' the bosun says. 'Everything here is older than us. Older than our ships. Older than our countries. Show respect and the waters will let you pass.'",
+        "The crew moves more quietly. Voices lower. Something has shifted."),
+    SeaSuperstition("first_south_seas", "first_region_South Seas",
+        "The lookout calls 'Reef!' and the crew rushes to the rail. Below the hull, the coral glows in colors nobody has words for. Your navigator whispers: 'The charts are wrong here. The reef moves. Trust your eyes, not the paper.'",
+        "Wonder. Genuine, wide-eyed wonder. Even the veterans stare."),
+    SeaSuperstition("first_north_atlantic", "first_region_North Atlantic",
+        "The temperature drops. The Mediterranean warmth fades like a memory. An old sailor wraps himself in a wool coat and says: 'The Atlantic doesn't warn you. It just hits. Keep your head down and your hull tight.'",
+        "The crew gets serious. Joking stops. Preparation begins."),
+    SeaSuperstition("first_west_africa", "first_region_West Africa",
+        "Warm rain — the first the crew has felt. It tastes of earth and growing things. A sailor who's been here before says: 'The Gold Coast gives freely. But it remembers what you give back. Trade honestly here.'",
+        "Relaxation. Shoulders drop. Someone laughs. The coast has a way."),
+
+    # Voyage events
+    SeaSuperstition("first_storm_survived", "survived_storm",
+        "After the storm passes, the crew is silent for a long time. Then someone starts bailing, and everyone follows. The bosun says: 'She held. The ship held.' It sounds like a prayer.",
+        "Bond. The crew who survives a storm together is a different crew afterward."),
+    SeaSuperstition("first_pirate_encounter", "survived_pirates",
+        "The pirate ship fades behind you. Hands are shaking. Someone laughs — the high, thin laugh of relief. 'That was close,' the helmsman says. Nobody disagrees.",
+        "Alertness. Every sail on the horizon gets a long look from now on."),
+    SeaSuperstition("passing_wreck", "wreck_sighted",
+        "A wrecked hull drifts past — no mast, no crew, barnacles thick on the waterline. The crew watches in silence. Someone removes their hat. 'Could've been us,' the bosun says. Nobody argues.",
+        "Mortality. The sea reminds you what happens when luck runs out."),
+    SeaSuperstition("becalmed_first", "first_calm",
+        "No wind. The sails hang like wet laundry. The sea is a mirror. Time stops. After two hours, the crew starts making up games. After six, they start telling truths they'd never say on land.",
+        "Honesty. There's nothing to do but wait and talk. The truths come out."),
+
+    # Cargo and trade
+    SeaSuperstition("sacred_cargo", "carrying_sacred_good",
+        "The old hands treat the cargo differently — more carefully, more quietly. 'This is what they revere,' the bosun explains. 'Handle it with respect and the port will remember. Handle it badly and so will the sea.'",
+        "Reverence. The cargo becomes more than weight. It becomes responsibility."),
+    SeaSuperstition("contraband_nerves", "carrying_contraband",
+        "Nobody says the word. They call it 'the special cargo' or 'the extra provisions' or just nod toward the hold. The crew avoids the inspector's eye even when there isn't one. Contraband changes how people breathe.",
+        "Tension. Jokes become quieter. Laughter becomes shorter. Everyone watches the horizon."),
+
+    # Milestones
+    SeaSuperstition("hundredth_day", "day_100",
+        "Day one hundred. The navigator marks it in the log with a small ceremony — a tradition older than anyone aboard can explain. A cup of the best drink is poured into the sea. 'For the water that carried us,' the navigator says.",
+        "Pride. A hundred days of voyaging. Not everyone can say that."),
+    SeaSuperstition("fifth_region", "visited_all_regions",
+        "The crew realizes, quietly, that they've sailed every water the charts show. Mediterranean, Atlantic, Gold Coast, East Indies, South Seas. The Known World, all of it, beneath their keel. A sailor says: 'What's left?' Nobody answers. Nobody needs to.",
+        "Completion. And the strange emptiness that follows. What do you seek when you've seen everything?"),
+]
+
+
+# ---------------------------------------------------------------------------
+# Crew Morale & Voice
+# ---------------------------------------------------------------------------
+# Crew reactions based on game state — the emotional mirror of the voyage.
+
+@dataclass(frozen=True)
+class CrewMood:
+    """Crew mood triggered by game state conditions."""
+    id: str
+    condition: str                   # what triggers this mood
+    flavor_texts: list[str]          # random selection from these
+
+
+CREW_MOODS: list[CrewMood] = [
+    CrewMood("prosperous", "silver > 2000",
+        ["The crew walks taller. When the hold is full and the silver heavy, even the sea looks friendly.",
+         "Someone's whistling at the helm. The cook made extra tonight. Prosperity makes generous sailors.",
+         "The crew discusses what they'll spend their shares on. Houses, farms, a boat of their own. Silver breeds dreams."]),
+
+    CrewMood("struggling", "silver < 100",
+        ["The crew eats quietly. Nobody complains — but nobody laughs either. Thin times make thin smiles.",
+         "Whispered conversations below deck. 'How long can we keep sailing?' your bosun hears. He doesn't repeat it.",
+         "The cook stretches the provisions. Watered rum, thinner stew. The crew notices but says nothing. Loyalty has limits."]),
+
+    CrewMood("first_voyage", "day < 10",
+        ["Everything is new. The crew leans over the rail watching the wake. Even the seagulls are fascinating. This won't last, but right now, the world is enormous.",
+         "Your navigator explains the stars to a young sailor. The old hands pretend not to listen. They listen anyway.",
+         "The smell of the sea — salt, kelp, distance. For the crew, this is the smell of possibility. For the captain, it's the smell of responsibility."]),
+
+    CrewMood("veteran", "day > 200",
+        ["The crew moves like a machine — sails adjusted before you call for it, rigging checked without orders. Two hundred days builds instinct.",
+         "Your bosun can read your expression from the helm. You don't need to give orders anymore. A glance at the sails is enough.",
+         "The crew has its own language now — gestures, looks, half-sentences that carry complete meanings. They're not a crew. They're a crew."]),
+
+    CrewMood("after_big_trade", "recent_profit > 500",
+        ["The hold is lighter and the silver heavier. The crew celebrates with an extra ration. Your bosun says: 'That's a trade they'll talk about at port.'",
+         "Word travels fast on a ship. Everyone knows the margin you made. Respect comes in the form of sharper salutes and louder songs."]),
+
+    CrewMood("after_loss", "recent_loss",
+        ["Silence on deck. The cargo is gone — seized, sunk, or sold at a loss. The crew doesn't blame you. Not out loud. The sea takes what it takes.",
+         "Your bosun finds you at the helm after dark. 'It happens to every captain,' he says. 'The ones who quit are the ones who deserved to.' Then he leaves."]),
+
+    CrewMood("new_ship", "just_upgraded",
+        ["The crew explores the new ship like children in a new house — opening every hatch, testing every line, arguing about which berth is best.",
+         "The new ship creaks differently. The old hands listen, learning her voice. Every ship has one. This one hasn't told them yet."]),
+
+    CrewMood("carrying_contraband", "has_contraband",
+        ["Nobody talks about it. The hold is rearranged so the 'special cargo' is behind the legitimate goods. The crew avoids eye contact when inspectors are mentioned.",
+         "Your lookout watches the horizon with unusual intensity. Every sail could be a patrol. Every sail probably isn't. But every sail gets watched.",
+         "A nervous joke from the galley: 'What's the difference between a merchant and a smuggler? The smuggler knows when to shut up.' Nobody laughs. Then everyone laughs."]),
+
+    CrewMood("in_storm", "during_storm",
+        ["Rain. Wind. The deck tilts at angles that make standing an act of faith. The crew works in silence because the storm takes every word.",
+         "The ship groans. The crew listens. You learn to read a hull's voice — complaint vs. warning vs. surrender. This groan is complaint. You hope.",
+         "Someone prays. Someone else checks the bilge pump. Both are acts of faith."]),
+
+    CrewMood("calm_seas", "extended_calm",
+        ["The sea is glass. The sky is empty. The wind is a memory. Your crew invents entertainment: card games, fishing, arguments about whose home port has better food.",
+         "Day three of calm. The cook runs a fishing line. The catch is better than anything in the provisions. 'I should do this for a living,' he says. Nobody points out that he does.",
+         "Becalmed. The old hands say it's the sea's way of making you think. What you think about depends on what you carry — in the hold and in the heart."]),
+]
+
+
+def get_crew_moods() -> list[CrewMood]:
+    """Get all crew mood definitions."""
+    return CREW_MOODS
+
+
+def get_superstitions() -> list[SeaSuperstition]:
+    """Get all sea superstitions."""
+    return SEA_SUPERSTITIONS
