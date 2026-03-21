@@ -445,6 +445,56 @@ class GameSession:
         self._save()
         return (amount, cost)
 
+    def dry_dock(self, ship_name: str | None = None) -> tuple[int, int] | str:
+        """Fully restore hull_max at a shipyard. Costs 5x repair rate per point.
+
+        Returns (points_restored, cost) or error string.
+        """
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked"
+        from portlight.engine.models import PortFeature
+        if PortFeature.SHIPYARD not in port.features:
+            return f"{port.name} has no shipyard"
+
+        from portlight.content.ships import SHIPS
+        if ship_name:
+            # Dry dock a fleet ship
+            for owned in self.world.captain.fleet:
+                if owned.docked_port_id == port.id and (
+                    owned.ship.name.lower() == ship_name.lower()
+                    or owned.ship.template_id.lower() == ship_name.lower()
+                ):
+                    return self._do_dry_dock(owned.ship, port)
+            return f"No ship named '{ship_name}' docked at this port"
+        else:
+            ship = self.world.captain.ship
+            if not ship:
+                return "No ship"
+            return self._do_dry_dock(ship, port)
+
+    def _do_dry_dock(self, ship, port) -> tuple[int, int] | str:
+        """Internal: restore hull_max and hull to template values."""
+        from portlight.content.ships import SHIPS
+        template = SHIPS.get(ship.template_id)
+        if not template:
+            return "Unknown ship template"
+        degradation = template.hull_max - ship.hull_max
+        if degradation <= 0:
+            return "Ship hull is not degraded"
+        svc_mult = self._service_mult()
+        cost_per = max(1, int(port.repair_cost * svc_mult * 5))  # 5x normal repair
+        cost = degradation * cost_per
+        if cost > self.world.captain.silver:
+            return f"Need {cost} silver for dry dock ({degradation} points at {cost_per}/point), have {self.world.captain.silver}"
+        self.world.captain.silver -= cost
+        ship.hull_max = template.hull_max
+        ship.hull = min(ship.hull + degradation, ship.hull_max)
+        self._save()
+        return (degradation, cost)
+
     # --- Shipyard ---
 
     def buy_ship(self, ship_id: str) -> str | None:

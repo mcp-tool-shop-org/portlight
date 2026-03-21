@@ -711,6 +711,17 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     world.day += 1
     captain.day += 1
 
+    # Hull degradation: every 20 days at sea, hull_max drops by 1 (wear and tear)
+    if voyage.days_elapsed > 0 and voyage.days_elapsed % 20 == 0:
+        if captain.ship.hull_max > 20:  # floor at 20 hull_max
+            captain.ship.hull_max -= 1
+            captain.ship.hull = min(captain.ship.hull, captain.ship.hull_max)
+        # Convoy ships degrade too
+        for owned in [o for o in captain.fleet if o.docked_port_id == ""]:
+            if owned.ship.hull_max > 20:
+                owned.ship.hull_max -= 1
+                owned.ship.hull = min(owned.ship.hull, owned.ship.hull_max)
+
     # Check arrival
     if voyage.progress >= voyage.distance:
         voyage.status = VoyageStatus.ARRIVED

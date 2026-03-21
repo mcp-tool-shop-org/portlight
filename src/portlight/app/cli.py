@@ -750,6 +750,21 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
 
 
 @app.command()
+def drydock(
+    ship: str = typer.Option(None, "--ship", "-s", help="Fleet ship name (default: flagship)"),
+) -> None:
+    """Restore degraded hull_max at a shipyard. Costs 5x normal repair rate."""
+    s = _session()
+    result = s.dry_dock(ship)
+    if isinstance(result, str):
+        console.print(f"[red]{result}[/red]")
+    else:
+        restored, cost = result
+        console.print(f"[green]Dry dock complete! Restored {restored} hull points for {cost} silver.[/green]")
+        console.print(views.status_view(s.world, s.ledger, s.infra))
+
+
+@app.command()
 def rename(
     new_name: str = typer.Argument(..., help="New name for the ship"),
     ship: str = typer.Option(None, "--ship", "-s", help="Name of fleet ship to rename (default: flagship)"),
@@ -2117,6 +2132,143 @@ def field_repair_cmd(
         return
     console.print(f"[green]{weapon.replace('_', ' ').title()} repaired at sea — usage reset.[/green]")
     s._save()
+
+
+# ---------------------------------------------------------------------------
+# Companion commands
+# ---------------------------------------------------------------------------
+
+def _get_party():
+    """Get the captain's party as a PartyState object."""
+    from portlight.engine.companion_engine import CompanionState, PartyState
+    s = _session()
+    pd = s.captain.party
+    if isinstance(pd, dict):
+        companions = [
+            CompanionState(
+                companion_id=c["companion_id"], role_id=c["role_id"],
+                morale=c.get("morale", 70), joined_day=c.get("joined_day", 0),
+                personality=c.get("personality", "pragmatic"),
+            ) for c in pd.get("companions", [])
+        ]
+        return PartyState(companions=companions, max_size=pd.get("max_size", 2), departed=pd.get("departed", []))
+    return pd
+
+
+def _save_party(s, party):
+    """Save party state back to captain."""
+    s.captain.party = {
+        "companions": [
+            {"companion_id": c.companion_id, "role_id": c.role_id,
+             "morale": c.morale, "joined_day": c.joined_day, "personality": c.personality}
+            for c in party.companions
+        ],
+        "max_size": party.max_size,
+        "departed": party.departed,
+    }
+    s._save()
+
+
+@app.command(name="recruit")
+def recruit_cmd(
+    companion_id: str = typer.Argument(None, help="Companion ID to recruit"),
+) -> None:
+    """Recruit a companion at this port."""
+    from portlight.content.companions import COMPANIONS, get_companions_at_port
+    from portlight.engine.companion_engine import can_recruit, recruit
+
+    s = _session()
+    port = s.current_port
+    if not port:
+        console.print("[yellow]Must be docked to recruit companions.[/yellow]")
+        return
+
+    party = _get_party()
+
+    if companion_id is None:
+        available = get_companions_at_port(port.id)
+        if not available:
+            console.print("[dim]No companions available at this port.[/dim]")
+            return
+        from rich.table import Table
+        table = Table(title=f"Available Companions — {port.name}")
+        table.add_column("Name")
+        table.add_column("Role")
+        table.add_column("Cost")
+        table.add_column("Req. Standing")
+        for c in available:
+            already = any(p.companion_id == c.id for p in party.companions)
+            departed = c.id in party.departed
+            status = " [green](in party)[/green]" if already else " [red](departed)[/red]" if departed else ""
+            table.add_row(c.name + status, c.role_id.title(), f"{c.hire_cost} silver", f"{c.required_standing} {c.region}")
+        console.print(table)
+        for c in available:
+            console.print(f"\n  {c.greeting}")
+            console.print(f"  [dim]{c.description}[/dim]")
+        return
+
+    error = can_recruit(party, companion_id, s.captain.silver, s.captain.standing.regional_standing, port.id)
+    if error:
+        console.print(f"[red]{error}[/red]")
+        return
+
+    comp = COMPANIONS[companion_id]
+    s.captain.silver -= comp.hire_cost
+    recruit(party, companion_id, s.world.day)
+    _save_party(s, party)
+    console.print(f"\n[bold green]{comp.name} joins your crew![/bold green]")
+    console.print(f"  {comp.hire_dialog}")
+
+
+@app.command(name="dismiss-companion")
+def dismiss_cmd(
+    companion_id: str = typer.Argument(..., help="Companion ID to dismiss"),
+) -> None:
+    """Dismiss a companion from your party."""
+    from portlight.content.companions import COMPANIONS
+    from portlight.engine.companion_engine import dismiss
+
+    s = _session()
+    party = _get_party()
+    error = dismiss(party, companion_id)
+    if error:
+        console.print(f"[red]{error}[/red]")
+        return
+    comp = COMPANIONS.get(companion_id)
+    name = comp.name if comp else companion_id
+    _save_party(s, party)
+    console.print(f"[yellow]{name} leaves your crew.[/yellow]")
+
+
+@app.command()
+def party() -> None:
+    """Show your companion party."""
+    from portlight.engine.companion_engine import get_cohesion, get_party_summary
+
+    s = _session()
+    p = _get_party()
+    summary = get_party_summary(p)
+
+    if not summary:
+        console.print("[dim]No companions. Visit ports to recruit crew members.[/dim]")
+        return
+
+    from rich.table import Table
+    table = Table(title=f"Your Party (cohesion: {get_cohesion(p)}%)")
+    table.add_column("Name")
+    table.add_column("Role")
+    table.add_column("Morale")
+    table.add_column("Status")
+    table.add_column("Personality")
+    for cs in summary:
+        morale_color = "green" if cs["morale"] >= 60 else "yellow" if cs["morale"] >= 30 else "red"
+        table.add_row(
+            cs["name"], cs["role"],
+            f"[{morale_color}]{cs['morale']}[/{morale_color}]",
+            cs["morale_status"],
+            cs["personality"],
+        )
+    console.print(table)
 
 
 if __name__ == "__main__":
