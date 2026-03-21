@@ -2683,6 +2683,1075 @@ THORNPORT_PROFILE = PortInstitutionalProfile(
 )
 
 
+
+# =========================================================================
+# SUN HARBOR — The Compact's Voice
+# =========================================================================
+
+_SUN_HARBOR_NPCS = [
+    PortNPC(
+        id="sh_adama",
+        name="Adama Keita",
+        title="Harbor Elder",
+        port_id="sun_harbor",
+        institution="harbor_master",
+        personality="welcoming",
+        description=(
+            "A broad man with a booming laugh and skin darkened by decades of "
+            "waterfront sun. Adama greets every arriving ship personally — not with "
+            "paperwork but with a handshake and a question about the voyage. He "
+            "assigns berths by conversation, not manifest. He remembers every captain "
+            "who has ever docked, what they carried, and how they treated his porters."
+        ),
+        agenda=(
+            "Hospitality as policy. Adama believes a well-greeted captain trades "
+            "more generously than one who was processed like cargo. He's right — "
+            "Sun Harbor's repeat trade rate is the highest on the coast. He sees his "
+            "harbor as the Compact's front door and takes personal pride in every "
+            "welcome."
+        ),
+        greeting_neutral="\"Welcome, Captain! The Gold Coast is glad to see you. Come — tell me about your voyage while I find you a berth.\"",
+        greeting_friendly="\"CAPTAIN! You return! The harbor sings! Come, come — your usual berth is waiting. My cousin has been asking about you.\"",
+        greeting_hostile="\"...Captain. You may dock. But I should tell you — the coast remembers your last visit. Trade carefully today.\"",
+        rumor="Adama once welcomed a pirate fleet by mistake — greeted them as merchants, assigned berths, and offered refreshments. By the time he realized, the pirates were so charmed they traded legitimately and left without incident. He claims it was intentional. Nobody's sure.",
+        relationship_notes={
+            "sh_ama": "Deep respect. The Chief Weigher is the port's soul. He serves her authority gladly.",
+            "sh_kofi": "Friends. Kofi's cotton warehouse is the first thing captains see. Adama sends them there with a smile.",
+            "sh_grandmother_binta": "Devoted. She appointed him because he reminded her of her late husband. He lives up to it.",
+            "sh_yusuf": "Fond. Yusuf cures the meats that Adama serves arriving captains. A partnership of hospitality.",
+            "sh_inspector_amara": "Supportive. Amara's light touch keeps captains coming back.",
+            "sh_broker_fatou": "Proud of her. She's young and capable. He tells every captain to visit her desk.",
+        },
+    ),
+    PortNPC(
+        id="sh_ama",
+        name="Ama Mensah",
+        title="Chief Weigher",
+        port_id="sun_harbor",
+        institution="exchange",
+        personality="authoritative",
+        description=(
+            "Tall, regal, and draped in indigo cloth so deep it looks like night sky. "
+            "Ama is the Chief Weigher — the woman whose word on quality is final in "
+            "all four Compact ports. When she touches a cotton bale, she knows its "
+            "grade. When she speaks at trade councils, the other ports listen. She "
+            "carries the counting staff — a carved wooden rod that represents the "
+            "Compact's commercial authority."
+        ),
+        agenda=(
+            "The Compact's unity and fair trade. Ama wants every transaction on the "
+            "Gold Coast to be honest, equitable, and remember that trade is "
+            "relationship, not extraction. She distrusts the Iron Pact's industrial "
+            "approach — buying raw ore at bottom prices and selling refined at "
+            "triple markup. She blocked the Pact's attempt to buy Iron Point. "
+            "The coast remembers."
+        ),
+        greeting_neutral="\"You come to trade? Good. Bring your goods to the Steps. I will weigh them myself, and the count will be true.\"",
+        greeting_friendly="\"Captain — a friend of the coast returns. The counting staff welcomes you. Bring your best goods — I have set aside my best prices.\"",
+        greeting_hostile="\"I weigh honestly for all. Even those who have taken more than they gave. But the coast remembers, Captain. The count is always true.\"",
+        rumor="Ama once weighed a cotton shipment from Porto Novo and declared it twenty percent lighter than the manifest claimed. The Porto Novo merchant accused her of bias. She invited him to re-weigh on his own scales. He was twenty-two percent short. He never questioned her again.",
+        relationship_notes={
+            "sh_adama": "He serves her authority. She appreciates his warmth — it softens her severity.",
+            "sh_kofi": "Her most trusted cotton assessor. His grades match hers — the highest compliment she gives.",
+            "sh_grandmother_binta": "The Elder appointed her. Ama carries the counting staff as a sacred trust.",
+            "sh_yusuf": "Cordial. He trades in provisions, not cotton. Different worlds, same coast.",
+            "sh_inspector_amara": "Allies. Amara catches the frauds; Ama catches the inflated counts. Together, nothing slips.",
+            "sh_broker_fatou": "Mentoring her. Fatou will carry the counting staff someday. Ama is preparing her.",
+        },
+    ),
+    PortNPC(
+        id="sh_grandmother_binta",
+        name="Grandmother Binta",
+        title="Port Elder",
+        port_id="sun_harbor",
+        institution="governor",
+        personality="wise",
+        description=(
+            "White-haired, small, and seated on a carved wooden throne under the "
+            "great acacia tree at the harbor's edge. Grandmother Binta has governed "
+            "Sun Harbor for thirty years — not by decree but by the weight of her "
+            "experience. She speaks last at every council meeting, and by the time "
+            "she speaks, everyone already knows what she'll say, because she's been "
+            "guiding the conversation toward it for an hour."
+        ),
+        agenda=(
+            "The Compact's survival across generations. Binta thinks in lifetimes, "
+            "not trade seasons. She blocked the Iron Pact's mining consortium because "
+            "she saw it as the first step toward losing Iron Point's independence. "
+            "She nurtured the relationship with the Coral Crown because she "
+            "recognized kinship across the water. She wants the Gold Coast to "
+            "remain a place where trade serves community, not the other way around."
+        ),
+        greeting_neutral="\"Sit with me, Captain. Under this tree, we are all equal. Tell me — not what you carry, but why you sail.\"",
+        greeting_friendly="\"Ah, my child — you return. The tree has grown since your last visit. So have you, I think. Sit. There is tea.\"",
+        greeting_hostile="\"I am old enough to say what others won't: the coast is disappointed in you, Captain. But we do not close our doors. Come. Let us talk about how to make it right.\"",
+        rumor="Grandmother Binta planted the great acacia tree herself — sixty years ago, as a young bride. She says she planted it for shade. The elders say she planted it because she knew she'd need a throne that grew with the coast. Both are probably true.",
+        relationship_notes={
+            "sh_adama": "Appointed him because he reminded her of her late husband. She doesn't tell him this.",
+            "sh_ama": "Appointed her. The counting staff was Binta's before it was Ama's. The succession is deliberate.",
+            "sh_kofi": "His grandfather worked the cotton steps. Binta remembers. Continuity is her currency.",
+            "sh_yusuf": "He brings her the first portion of every new batch. It's tradition. She tastes, nods, and the market opens.",
+            "sh_inspector_amara": "Trusted. Amara's fairness is exactly what Binta wants from the position.",
+            "sh_broker_fatou": "Watching her closely. Fatou may be the next generation's leader. Binta is deciding.",
+        },
+    ),
+    PortNPC(
+        id="sh_kofi",
+        name="Kofi Asante",
+        title="Cotton Master",
+        port_id="sun_harbor",
+        institution="shipyard",
+        personality="proud",
+        description=(
+            "Broad-chested, with hands stained indigo from handling dyed cotton, and "
+            "a voice that rises into song when he's counting bales. Kofi runs the "
+            "Cotton Steps — the great stone stairs where cotton is displayed and "
+            "auctioned. His family has worked the Steps for four generations. He "
+            "grades every bale by touch and knows the difference between coastal "
+            "cotton and inland cotton by the way it folds."
+        ),
+        agenda=(
+            "Cotton quality and the Steps' prestige. Kofi wants Sun Harbor's cotton "
+            "to be the standard the world measures against — the way Jade Port's "
+            "porcelain sets the standard in the East. He invests in better seeds, "
+            "better dyes, and better presentation. The Cotton Steps aren't just a "
+            "marketplace — they're a stage."
+        ),
+        greeting_neutral="\"Come to the Steps! See the cotton — feel it. No other coast produces this quality. I'll let the cloth speak for itself.\"",
+        greeting_friendly="\"Captain! I saved the best bales for you — coastal cotton, hand-picked, dyed in the old way. Touch it. You'll feel the difference.\"",
+        greeting_hostile="\"Cotton is cotton. The price is on the board. I won't waste the good bales on someone who doesn't appreciate them.\"",
+        rumor="Kofi once challenged a Porto Novo textile merchant to identify Sun Harbor cotton by touch alone. The merchant failed. Kofi identified fourteen different cotton origins blindfolded. The merchant now buys exclusively from the Steps.",
+        relationship_notes={
+            "sh_adama": "Friends. Adama sends captains to the Steps. Kofi makes sure they leave impressed.",
+            "sh_ama": "His grades match hers. The highest compliment on the coast.",
+            "sh_grandmother_binta": "His grandfather worked these Steps. Binta remembers. That history is everything.",
+            "sh_yusuf": "Neighboring operations. Kofi's cotton and Yusuf's provisions share the dockside.",
+            "sh_inspector_amara": "She verifies his export counts. He's never had a discrepancy. He's proud of that.",
+            "sh_broker_fatou": "She sells his cotton to the wider world. He gives her the best lots to work with.",
+        },
+    ),
+    PortNPC(
+        id="sh_yusuf",
+        name="Yusuf Diallo",
+        title="Provisions Master",
+        port_id="sun_harbor",
+        institution="tavern",
+        personality="generous",
+        description=(
+            "A round man who cooks, smokes meat, and runs Sun Harbor's dockside "
+            "eating hall with the conviction that every problem starts with an empty "
+            "stomach. Yusuf's place isn't a tavern — it's a communal table. Twenty "
+            "people at once, shared dishes, and the understanding that the first "
+            "meal is always free. He manages provisions for the port and cures the "
+            "meats and fish that make Sun Harbor's supplies famous."
+        ),
+        agenda=(
+            "Nobody goes hungry. Yusuf's generosity isn't naive — it's strategic. "
+            "The captain who eats well trades well. The crew that's fed doesn't "
+            "steal. He runs the cheapest provisions on the coast (after Palm Cove's "
+            "rum-fueled hospitality) and considers it an investment in the port's "
+            "reputation. He sources grain from the interior, fish from the coast, "
+            "and spice from anyone who brings it."
+        ),
+        greeting_neutral="\"Hungry? Of course you are — you've been at sea. Sit. The first plate is free. We'll talk business after you've eaten.\"",
+        greeting_friendly="\"Captain! I've been smoking a rack of bush meat for three days — saved it for someone who deserves it. EAT. Then we talk.\"",
+        greeting_hostile="\"Everyone eats. That is the rule. Sit. Eat. Then leave. We can talk about what you did wrong after you're fed.\"",
+        rumor="Yusuf's smoked fish once cured a case of scurvy on a merchant ship. He claims it was the marinade. The ship's doctor claims it was the vitamin content. Yusuf doesn't know what vitamins are and doesn't care. The fish works.",
+        relationship_notes={
+            "sh_adama": "Partners in hospitality. Adama greets; Yusuf feeds. The one-two punch of Sun Harbor's welcome.",
+            "sh_ama": "He brings her the first portion of every new batch. She tastes, nods, and the market opens.",
+            "sh_grandmother_binta": "Tradition. The first plate goes to the Elder. Always has. Always will.",
+            "sh_kofi": "Neighboring operations. Cotton and provisions share the dockside. Friendly territory.",
+            "sh_inspector_amara": "She eats at his table every day. He doesn't charge port officials. It's his way of keeping peace.",
+            "sh_broker_fatou": "He sends her hungry captains. Captains who've eaten well sign contracts more easily.",
+        },
+    ),
+    PortNPC(
+        id="sh_inspector_amara",
+        name="Inspector Amara",
+        title="Trade Inspector",
+        port_id="sun_harbor",
+        institution="customs",
+        personality="fair",
+        description=(
+            "Young, sharp, and utterly committed to the Compact's principle of honest "
+            "trade. Amara doesn't look for contraband — she looks for fraud. Short "
+            "weights, inflated counts, goods that don't match their description. "
+            "She trained under Ama's eye and carries the same obsession with accuracy, "
+            "applied to the customs desk."
+        ),
+        agenda=(
+            "Honest trade. Amara wants every transaction on the Gold Coast to be "
+            "exactly what it claims to be. She doesn't harass captains — she welcomes "
+            "them and checks their goods with a smile. Cheats get a different smile. "
+            "The coast doesn't jail frauds; it remembers them. Amara keeps the memory."
+        ),
+        greeting_neutral="\"Welcome! Quick check — I just want to make sure everything matches your manifest. The coast trusts honest captains.\"",
+        greeting_friendly="\"Captain! No need for inspection — I know your goods are clean. Go straight to the Steps. Ama is expecting you.\"",
+        greeting_hostile="\"Full verification today, Captain. Every count, every weight. The coast remembers discrepancies, and I've found some.\"",
+        rumor="Amara caught a merchant selling dyed sand as exotic spice. She didn't arrest him. She invited every buyer he'd cheated to watch while she weighed the real goods against the fake. He left the coast and never came back. More effective than any prison.",
+        relationship_notes={
+            "sh_adama": "He supports her work. A fair inspector keeps captains coming back.",
+            "sh_ama": "Trained under her. Carries the same obsession with accuracy.",
+            "sh_grandmother_binta": "Trusted by the Elder. Amara's fairness is exactly what Binta wants.",
+            "sh_kofi": "She verifies his export counts. He's never had a discrepancy.",
+            "sh_yusuf": "Eats at his table daily. He doesn't charge. She doesn't owe. It works.",
+            "sh_broker_fatou": "Allies. They both want the coast's reputation to shine.",
+        },
+    ),
+    PortNPC(
+        id="sh_broker_fatou",
+        name="Fatou Ndiaye",
+        title="Contract Broker",
+        port_id="sun_harbor",
+        institution="broker",
+        personality="rising",
+        description=(
+            "Young, determined, and carrying the weight of being Ama's chosen "
+            "successor without anyone officially saying it. Fatou runs Sun Harbor's "
+            "contract desk — matching Compact goods to buyers across the Known World. "
+            "She's the first broker in Gold Coast history to negotiate directly with "
+            "the Silk Circle, and the contract she brokered for cotton-to-silk exchange "
+            "is the Compact's most profitable trade agreement."
+        ),
+        agenda=(
+            "The Compact's prosperity and her own rise. Fatou wants the Gold Coast "
+            "to trade on equal terms with every bloc — not as a raw materials supplier "
+            "but as a valued partner. She's ambitious but channeling it into the "
+            "Compact's benefit, which is why Binta watches her closely and Ama is "
+            "preparing her for the counting staff."
+        ),
+        greeting_neutral="\"Captain — the Gold Coast has contracts. Cotton, dyes, pearls. All honest goods, all fair terms. What are you looking for?\"",
+        greeting_friendly="\"Captain! I've been holding a contract for you — cotton to the Mediterranean, premium rates. The Exchange Alliance is buying, and I want OUR captains to carry it.\"",
+        greeting_hostile="\"I have nothing suitable for your... profile today. The Compact values relationships, Captain. You might want to rebuild yours.\"",
+        rumor="Fatou negotiated a direct trade agreement with a Silk Circle official in Jade Port — the first Gold Coast broker to do so. She traveled there alone, spoke no Eastern language, and came back with a signed contract. Ama said nothing. She didn't need to — the pride was visible.",
+        relationship_notes={
+            "sh_adama": "He tells every captain to visit her desk. She appreciates the referrals.",
+            "sh_ama": "Mentoring her for the counting staff. Fatou carries the weight of succession.",
+            "sh_grandmother_binta": "Being watched. Binta is deciding if she's the next generation's leader.",
+            "sh_kofi": "He gives her the best cotton lots. She sells them to the world.",
+            "sh_yusuf": "He sends hungry captains. Fed captains sign more easily.",
+            "sh_inspector_amara": "Allies. Both want the coast's reputation to grow.",
+        },
+    ),
+]
+
+_SUN_HARBOR_INSTITUTIONS = [
+    PortInstitution(id="sh_harbor", name="The Welcome Dock", port_id="sun_harbor", institution_type="harbor_master",
+        description="A wide stone dock where Adama greets every ship personally. No clipboard — just a handshake and a question about the voyage.",
+        function="Hospitality-first harbor. Berths assigned by conversation. Repeat trade rate is the highest on the coast.",
+        political_leaning="Gold Coast Compact. The harbor IS the welcome.", npc_id="sh_adama"),
+    PortInstitution(id="sh_steps", name="The Cotton Steps", port_id="sun_harbor", institution_type="exchange",
+        description="Wide stone stairs where cotton bales are displayed and auctioned. Women in indigo oversee the weighing, their voices carrying the count in song.",
+        function="Cotton grading, pricing, and auction. Ama's word on quality is final across all four Compact ports.",
+        political_leaning="Compact economic heart. The Steps set the standard.", npc_id="sh_ama"),
+    PortInstitution(id="sh_acacia", name="The Acacia Throne", port_id="sun_harbor", institution_type="governor",
+        description="A carved wooden throne under a sixty-year-old acacia tree at the harbor's edge. Binta planted the tree herself.",
+        function="Governance by wisdom. Binta speaks last and guides conversations toward consensus.",
+        political_leaning="Compact elder authority. Binta's decisions shape the entire Gold Coast.", npc_id="sh_grandmother_binta"),
+    PortInstitution(id="sh_cotton_house", name="The Cotton House", port_id="sun_harbor", institution_type="shipyard",
+        description="A multi-story warehouse where cotton is stored, graded, and prepared for export. Kofi's family has run it for four generations.",
+        function="Cotton storage, grading, and preparation. The closest thing Sun Harbor has to a shipyard — but for cargo, not ships.",
+        political_leaning="Compact tradition. Four generations of quality.", npc_id="sh_kofi"),
+    PortInstitution(id="sh_table", name="Yusuf's Table", port_id="sun_harbor", institution_type="tavern",
+        description="A communal dockside eating hall — not a tavern. Twenty seats, shared dishes, first meal free. The smell of smoked fish and spice carries across the harbor.",
+        function="Communal dining, crew recruitment, social hub. The first plate is always free. Business comes after eating.",
+        political_leaning="Compact hospitality. Nobody goes hungry at the coast.", npc_id="sh_yusuf"),
+    PortInstitution(id="sh_customs", name="The Honest Scale", port_id="sun_harbor", institution_type="customs",
+        description="A desk near the Steps with a set of precision scales and Amara's warm smile. She looks for fraud, not contraband.",
+        function="Quality verification, honest-trade enforcement. The coast doesn't jail frauds — it remembers them.",
+        political_leaning="Compact values. Honesty is the only currency that doesn't devalue.", npc_id="sh_inspector_amara"),
+    PortInstitution(id="sh_broker", name="The Contract Mat", port_id="sun_harbor", institution_type="broker",
+        description="A woven mat under a canopy near the Steps where Fatou sits cross-legged with her contracts. No desk — business done at eye level.",
+        function="Contract brokering, Compact trade diplomacy. Fatou negotiated the first direct Gold Coast-Silk Circle agreement.",
+        political_leaning="Rising Compact. Fatou wants equal partnership, not supplier status.", npc_id="sh_broker_fatou"),
+]
+
+SUN_HARBOR_PROFILE = PortInstitutionalProfile(
+    port_id="sun_harbor",
+    governor_title="Port Elder",
+    power_structure=(
+        "Sun Harbor is governed by Grandmother Binta from under the acacia tree — "
+        "consensus leadership through wisdom, not decree. Ama's counting staff is "
+        "the Compact's commercial authority. Kofi runs the Cotton Steps. Adama "
+        "welcomes everyone. Yusuf feeds everyone. The port runs on relationships "
+        "and memory rather than paperwork and hierarchy."
+    ),
+    internal_tension=(
+        "The tension is between tradition and ambition — but unlike Porto Novo, "
+        "here they're not enemies. Fatou's ambition (Silk Circle contracts, equal "
+        "partnership status) serves the Compact's interests. The question is pace: "
+        "Binta wants to move slowly, Fatou wants to move now. Ama is preparing "
+        "Fatou for the counting staff, which means Ama is preparing to step down. "
+        "The transition hasn't been discussed openly. Nobody on the Gold Coast "
+        "discusses succession openly — it happens when the elders decide it's time. "
+        "The deeper tension: the Iron Pact's failed bid to buy Iron Point left "
+        "scars. The Compact blocked it, but the industrial pressure hasn't gone away."
+    ),
+    institutions=_SUN_HARBOR_INSTITUTIONS,
+    npcs=_SUN_HARBOR_NPCS,
+)
+
+
+# =========================================================================
+# PALM COVE — The Seven Houses
+# =========================================================================
+
+_PALM_COVE_NPCS = [
+    PortNPC(
+        id="pc_captain_abel",
+        name="Captain Abel",
+        title="Harbor Chief",
+        port_id="palm_cove",
+        institution="harbor_master",
+        personality="easygoing",
+        description=(
+            "A former rum runner who got too old and too fat for the open sea but "
+            "never lost the grin. Captain Abel runs Palm Cove's harbor from a hammock "
+            "strung between two palm trees, pointing at open berths with a rum bottle. "
+            "He's the most relaxed harbor master in the Known World — even more than "
+            "Ake in Thornport, because Ake has the dignity of silence. Abel has the "
+            "dignity of not caring."
+        ),
+        agenda=(
+            "A quiet life. Abel wants ships to dock, crews to drink rum, and nobody "
+            "to bother him about manifests. He files paperwork when he remembers, "
+            "which is rarely. The Compact tolerates him because Palm Cove's trade "
+            "happens despite his management, not because of it."
+        ),
+        greeting_neutral="\"Dock wherever. The rum's free for the first hour. After that, it's cheap. Welcome to the Cove!\"",
+        greeting_friendly="\"CAPTAIN! My friend! The BEST berth for you — right there, under the palms. RUM! Someone bring rum! This captain is FAMILY!\"",
+        greeting_hostile="\"...Dock over there. Away from the distilleries. And don't start anything — I'm too old to break up fights and too fat to run.\"",
+        rumor="Captain Abel once outran a navy patrol in a leaking sloop loaded with rum. He claims the rum made the sloop faster. The physics don't support this. Nobody argues.",
+        relationship_notes={
+            "pc_old_cassius": "Drinking partners since forever. They argue about whose rum is better. It's the same rum. Neither admits this.",
+            "pc_mama_joy": "She keeps the peace; he keeps the harbor. It's a loose partnership that works because neither tries too hard.",
+            "pc_elder_kwame": "Kwame governs; Abel doesn't. Kwame has stopped expecting Abel to attend council meetings.",
+            "pc_dock_master_esi": "She actually runs the harbor. Abel takes the credit. She lets him because the alternative is responsibility.",
+            "pc_customs_abu": "Abu handles the paperwork Abel ignores. A necessary relationship.",
+            "pc_broker_chioma": "She brings business. Abel appreciates business because it means more rum gets sold.",
+        },
+    ),
+    PortNPC(
+        id="pc_old_cassius",
+        name="Old Cassius",
+        title="Master Distiller",
+        port_id="palm_cove",
+        institution="exchange",
+        personality="boastful",
+        description=(
+            "The third distillery's patriarch — a white-bearded man who claims his "
+            "rum can cure fever, heal wounds, and make you invisible to customs "
+            "inspectors. Two of those are probably true. Cassius is the eldest of "
+            "the Seven Houses' master distillers, and he sets rum prices by the "
+            "ancient method of tasting every batch and declaring what it's worth."
+        ),
+        agenda=(
+            "His rum's supremacy. Cassius has been in a friendly war with the other "
+            "six distilleries for forty years. He considers his recipe sacred, his "
+            "copper stills superior, and his aging barrels irreplaceable. He's not "
+            "wrong about the barrels — the wood came from a shipwreck, and nobody "
+            "knows what species it is."
+        ),
+        greeting_neutral="\"Taste this. TASTE IT. Tell me — is that not the finest rum you have ever put in your mouth? The answer is yes. Now, how much are you buying?\"",
+        greeting_friendly="\"Ah, a captain with TASTE! Come to the distillery — I have a special barrel. Twenty years old. I was saving it for a king, but you'll do.\"",
+        greeting_hostile="\"Rum is rum. Posted prices on the board. I won't waste the special barrels on someone who can't appreciate them.\"",
+        rumor="Cassius's rum DID cure a fever outbreak three years ago. Nobody knows what's in it. Cassius says the secret ingredient is 'sixty years of expertise.' The Physician at Corsair's Rest suspects it's actually a medicinal herb. Cassius would rather die than confirm.",
+        relationship_notes={
+            "pc_captain_abel": "Drinking partners. They argue about whose rum is better. Same rum. Neither admits it.",
+            "pc_mama_joy": "She serves his rum at her bar. He considers this validation. She considers it inventory.",
+            "pc_elder_kwame": "Kwame tried to standardize rum pricing. Cassius threatened to stop production. Kwame backed down. The Seven Houses price their own.",
+            "pc_dock_master_esi": "She ensures his barrels get loaded first. He ensures she gets a bottle every week.",
+            "pc_customs_abu": "Rum doesn't need customs inspection. Cassius reminds Abu of this frequently.",
+            "pc_broker_chioma": "She sells his rum worldwide. He takes the credit for the quality. She takes the commission.",
+        },
+    ),
+    PortNPC(
+        id="pc_elder_kwame",
+        name="Elder Kwame",
+        title="Council Elder",
+        port_id="palm_cove",
+        institution="governor",
+        personality="patient",
+        description=(
+            "A thin, patient man who governs Palm Cove by the strategy of waiting "
+            "until everyone else has finished talking and then saying the thing "
+            "everyone was thinking but nobody wanted to say first. Kwame's authority "
+            "is not in his title but in his timing. He governs the most ungovernable "
+            "port on the Gold Coast with the lightest touch possible."
+        ),
+        agenda=(
+            "Peace among the Seven Houses. The distillery families have been rivals "
+            "for a century and allies for longer, and keeping them in balance is "
+            "Kwame's life's work. He also manages Palm Cove's position within the "
+            "Compact — the cove that doesn't do politics but benefits from the "
+            "Compact's trade protection."
+        ),
+        greeting_neutral="\"Welcome to Palm Cove. We don't have much in the way of formality, but we have rum, and that covers most situations.\"",
+        greeting_friendly="\"Captain — sit with me. The evening is warm and the rum is good. Tell me your troubles — or don't. Either way, the rum helps.\"",
+        greeting_hostile="\"Palm Cove holds no grudges. This is not because we forgive — it is because anger is too much work. Drink your rum and behave. Simple.\"",
+        rumor="Kwame once resolved a dispute between two distillery families by locking them in a warehouse with nothing but each other's rum. They emerged three days later, arm in arm, having discovered their recipes were nearly identical. The truce has held for eleven years.",
+        relationship_notes={
+            "pc_captain_abel": "Has stopped expecting Abel to attend council meetings. Governs around him.",
+            "pc_old_cassius": "Tried to standardize pricing. Cassius won that argument. Kwame remembers and smiles.",
+            "pc_mama_joy": "Allies. She keeps the social peace; he keeps the political peace. Different tools, same goal.",
+            "pc_dock_master_esi": "Grateful. She runs the harbor that Abel won't. The Cove functions because of Esi.",
+            "pc_customs_abu": "Appointed him specifically because Abu understands that in Palm Cove, 'customs' means 'suggestions.'",
+            "pc_broker_chioma": "Supports her ambitions. A broker who can sell rum worldwide serves the whole Cove.",
+        },
+    ),
+    PortNPC(
+        id="pc_mama_joy",
+        name="Mama Joy",
+        title="Tavern Keeper",
+        port_id="palm_cove",
+        institution="tavern",
+        personality="radiant",
+        description=(
+            "A woman who laughs like thunder and pours like rain. Mama Joy runs the "
+            "Rum House — not the most sophisticated establishment in the Known World, "
+            "but possibly the happiest. Every visiting captain leaves with a story "
+            "about Mama Joy. She dances between tables, sings with the rum, and "
+            "has an unerring instinct for who needs a drink, who needs a meal, and "
+            "who needs to be thrown into the harbor."
+        ),
+        agenda=(
+            "Joy. Not the name — the concept. Mama Joy believes trade should be "
+            "celebration. She provides the atmosphere that makes Palm Cove famous: "
+            "the port where even pirates smile. Her rum house is neutral ground — "
+            "Seven Houses, Compact officials, foreign captains, everyone drinks together."
+        ),
+        greeting_neutral="\"WELCOME! Sit, sit, sit! Rum for the captain! Rum for the crew! First round — FREE! Life is SHORT!\"",
+        greeting_friendly="\"MY CAPTAIN! You came BACK! I KNEW you would! DANCING tonight! You, me, the whole harbor! RUM!\"",
+        greeting_hostile="\"You can drink. EVERYONE can drink. But you BEHAVE. Mama Joy throws harder than she hugs, and she hugs VERY HARD.\"",
+        rumor="Mama Joy once served rum to a Porto Novo customs inspector who arrived to investigate smuggling. He left three days later with no report, a hangover, and a marriage proposal. She declined the proposal but kept the story. She tells it at least once a week.",
+        relationship_notes={
+            "pc_captain_abel": "She keeps the peace; he keeps the harbor. A loose partnership.",
+            "pc_old_cassius": "She serves his rum. He considers this validation. She considers it good business.",
+            "pc_elder_kwame": "Allies in peace-keeping. Different tools, same goal.",
+            "pc_dock_master_esi": "Mama Joy's rum house is where Esi relaxes after doing Abel's job for him.",
+            "pc_customs_abu": "Abu drinks here on Fridays. He doesn't inspect on Fridays. Nobody connects these facts officially.",
+            "pc_broker_chioma": "Like a daughter. Mama Joy tells every captain to see Chioma. Chioma tells every captain to visit Mama Joy. The circle feeds itself.",
+        },
+    ),
+    PortNPC(
+        id="pc_dock_master_esi",
+        name="Esi Owusu",
+        title="Dock Master",
+        port_id="palm_cove",
+        institution="shipyard",
+        personality="capable",
+        description=(
+            "The person who actually runs Palm Cove's harbor while Captain Abel "
+            "drinks in his hammock. Esi coordinates rum barrel loading, fishing "
+            "boat repairs, and cargo logistics with quiet efficiency. She learned "
+            "dockwork from her mother, who learned from her grandmother. Three "
+            "generations of women who've kept Palm Cove's harbor from chaos."
+        ),
+        agenda=(
+            "Getting the work done. Esi has no political ambitions — she wants "
+            "barrels loaded, boats repaired, and tides respected. She lets Abel "
+            "take the credit because taking credit would mean taking meetings, and "
+            "meetings take time away from the dock."
+        ),
+        greeting_neutral="\"Need loading or repairs? I can have your cargo moved by tide change. Abel might say something about berths, but I'll handle the actual work.\"",
+        greeting_friendly="\"Captain! I had a feeling you'd arrive today. Your berth's ready, and I've cleared the loading team for your cargo. Let's get you turned around fast.\"",
+        greeting_hostile="\"Work is work. I'll load your cargo and patch your hull. But you pay upfront and you don't touch my dock equipment.\"",
+        rumor="Esi once loaded an entire rum shipment during a storm because the tide was right and waiting meant three more days. She worked the dock in driving rain with a crew of five. The shipment arrived on time. Abel slept through the whole thing.",
+        relationship_notes={
+            "pc_captain_abel": "She does his job. He takes the credit. She lets him because the alternative is responsibility.",
+            "pc_old_cassius": "She loads his barrels first. He gives her a bottle weekly. A fair arrangement.",
+            "pc_elder_kwame": "He's grateful she exists. Without Esi, the harbor would be Abel-shaped chaos.",
+            "pc_mama_joy": "She relaxes at the Rum House after doing Abel's job. Mama Joy pours double for her.",
+            "pc_customs_abu": "They coordinate dock logistics. A clean working relationship.",
+            "pc_broker_chioma": "Esi loads what Chioma sells. Simple chain, no friction.",
+        },
+    ),
+    PortNPC(
+        id="pc_customs_abu",
+        name="Customs Officer Abu",
+        title="Customs Officer",
+        port_id="palm_cove",
+        institution="customs",
+        personality="relaxed",
+        description=(
+            "A man who treats customs inspection the way Palm Cove treats everything: "
+            "as a suggestion, not a requirement. Abu stamps manifests, checks the "
+            "occasional barrel, and considers his job done when nobody complains. "
+            "Elder Kwame appointed him specifically because he understands that in "
+            "Palm Cove, enforcement is the enemy of happiness."
+        ),
+        agenda=(
+            "Compliance without conflict. Abu does enough to keep the Alliance from "
+            "sending someone stricter. He stamps, he smiles, he doesn't look too "
+            "hard. He's aware that some rum shipments are... creative in their "
+            "descriptions. He's aware that awareness and investigation are different things."
+        ),
+        greeting_neutral="\"Manifest? Sure, sure — let me stamp it. Everything looks good. Welcome to the Cove!\"",
+        greeting_friendly="\"Captain! Already stamped — I did it when I saw your sails. Go enjoy yourself. Life's too short for paperwork.\"",
+        greeting_hostile="\"I... should probably do a proper inspection today. Alliance policy. Sorry — I'll be quick. Quicker if you have rum.\"",
+        rumor="Abu once stamped a manifest that listed 'thirty barrels of water' when everyone in the harbor could smell the rum. He said his nose had a cold. It was the dry season. Nobody pressed the issue.",
+        relationship_notes={
+            "pc_captain_abel": "Abel ignores paperwork; Abu handles it. A necessary pairing.",
+            "pc_old_cassius": "Cassius reminds him that rum doesn't need customs. Frequently.",
+            "pc_elder_kwame": "Appointed by Kwame. Abu understands his mandate: enough, not more.",
+            "pc_mama_joy": "Drinks there on Fridays. Doesn't inspect on Fridays.",
+            "pc_dock_master_esi": "They coordinate dock logistics without drama.",
+            "pc_broker_chioma": "Stamps her contracts. No questions. She doesn't give him reasons to ask.",
+        },
+    ),
+    PortNPC(
+        id="pc_broker_chioma",
+        name="Chioma Obi",
+        title="Broker",
+        port_id="palm_cove",
+        institution="broker",
+        personality="savvy",
+        description=(
+            "The sharpest business mind in a port that pretends business isn't "
+            "important. Chioma runs rum contracts, tobacco orders, and the occasional "
+            "bulk provision deal from a table at Mama Joy's — because in Palm Cove, "
+            "every business meeting is also a party. She's the one who turned Palm "
+            "Cove's rum from a local drink into a Mediterranean export commodity."
+        ),
+        agenda=(
+            "Making Palm Cove matter. Chioma loves the Cove but sees it clearly — "
+            "it's a beautiful, happy place that could be washed away by one bad "
+            "season. She's building export contracts to make the rum trade resilient. "
+            "If she succeeds, Palm Cove stops being charming and becomes necessary. "
+            "Necessary is safer than charming."
+        ),
+        greeting_neutral="\"Rum contract? Tobacco? Provisions? I've got all three. Sit down, have a drink — we'll work out the terms before the second glass.\"",
+        greeting_friendly="\"Captain! I have something special — a bulk rum order for the North Atlantic. Stormwall's garrison is buying. Margin is beautiful. You want in?\"",
+        greeting_hostile="\"I don't have anything for captains with... complicated histories. Try the other coast. Or fix your reputation. Then come back.\"",
+        rumor="Chioma negotiated a rum supply contract with Stormwall's Quartermaster Maren — the first direct Gold Coast-to-North Atlantic trade agreement. She sealed it over a bottle of Cassius's twenty-year reserve. Maren said it was the best deal she'd ever made. Chioma said the same thing. Both meant it.",
+        relationship_notes={
+            "pc_captain_abel": "He appreciates business because it means more rum gets sold.",
+            "pc_old_cassius": "She sells his rum worldwide. He takes credit for quality; she takes commission. Fair.",
+            "pc_elder_kwame": "He supports her ambitions. A worldwide rum trade serves the whole Cove.",
+            "pc_mama_joy": "Like a daughter. They refer captains to each other. The circle feeds itself.",
+            "pc_dock_master_esi": "Esi loads what Chioma sells. Clean chain.",
+            "pc_customs_abu": "Stamps her contracts without questions. She gives him no reasons to ask.",
+        },
+    ),
+]
+
+_PALM_COVE_INSTITUTIONS = [
+    PortInstitution(id="pc_harbor", name="The Hammock Dock", port_id="palm_cove", institution_type="harbor_master",
+        description="A palm-shaded dock where Abel points at berths from a hammock. No clipboard. No system. It works anyway, because Esi does the actual work.",
+        function="Berth assignment by gesture. Cheapest port fees on the coast (3 silver). Welcome includes free rum.",
+        political_leaning="Compact by default. Palm Cove doesn't do politics.", npc_id="pc_captain_abel"),
+    PortInstitution(id="pc_distillery", name="The Third Distillery", port_id="palm_cove", institution_type="exchange",
+        description="One of seven rum houses lining the hillside. Copper stills, aging barrels of mysterious wood, and the smell of molasses thick enough to taste.",
+        function="Rum pricing, production, and tasting. Cassius sets prices by tasting every batch. The Seven Houses compete on quality.",
+        political_leaning="Seven Houses tradition. Each distillery is sovereign.", npc_id="pc_old_cassius"),
+    PortInstitution(id="pc_council_shade", name="The Council Shade", port_id="palm_cove", institution_type="governor",
+        description="A palm-frond canopy over a circle of logs. That's the government building. Kwame sits on the tallest log.",
+        function="Governance by patience. Kwame waits until everyone's talked, then says what they were all thinking.",
+        political_leaning="Compact member by convenience. Palm Cove's real politics is rum.", npc_id="pc_elder_kwame"),
+    PortInstitution(id="pc_rum_house", name="The Rum House", port_id="palm_cove", institution_type="tavern",
+        description="An open-air bar under the palms — driftwood tables, barrel stools, and a dance floor that's really just the beach. Mama Joy's kingdom.",
+        function="Social hub, neutral ground, the reason captains visit Palm Cove. First round free. Always.",
+        political_leaning="Aggressively joyful. Mama Joy's politics is celebration.", npc_id="pc_mama_joy"),
+    PortInstitution(id="pc_dock", name="The Working Dock", port_id="palm_cove", institution_type="shipyard",
+        description="The actual operational dock that keeps Palm Cove functioning. Esi's domain. Barrel loading ramps, basic repair equipment, and tide tables.",
+        function="Cargo logistics and basic repairs. Esi runs it while Abel sleeps. Three generations of women keeping the harbor from chaos.",
+        political_leaning="Practical. The dock serves the work, not the politics.", npc_id="pc_dock_master_esi"),
+    PortInstitution(id="pc_customs", name="The Stamp Table", port_id="palm_cove", institution_type="customs",
+        description="A table with a stamp pad, a manifest book, and a half-empty rum glass. The most permissive customs in the Alliance.",
+        function="Minimal inspection. Abu stamps, smiles, and doesn't look too hard. Enough to keep the Alliance from sending someone stricter.",
+        political_leaning="Compliance by vibes. Enough, not more.", npc_id="pc_customs_abu"),
+    PortInstitution(id="pc_broker", name="Chioma's Table", port_id="palm_cove", institution_type="broker",
+        description="A table at Mama Joy's bar. No office needed — in Palm Cove, every business meeting is also a party.",
+        function="Rum contracts, tobacco orders, bulk provisions. Chioma turned Palm Cove's rum from local drink to Mediterranean export.",
+        political_leaning="Pragmatic Compact. Making Palm Cove necessary, not just charming.", npc_id="pc_broker_chioma"),
+]
+
+PALM_COVE_PROFILE = PortInstitutionalProfile(
+    port_id="palm_cove",
+    governor_title="Council Elder",
+    power_structure=(
+        "Palm Cove is governed by Elder Kwame's patience, Mama Joy's warmth, and "
+        "the Seven Houses' competitive pride. Captain Abel is technically in charge "
+        "of the harbor but Esi actually runs it. Cassius sets rum prices by tasting. "
+        "It's the most informal power structure in the Known World, and it works "
+        "because everyone in Palm Cove has the same agenda: rum, happiness, and "
+        "being left alone by people with clipboards."
+    ),
+    internal_tension=(
+        "Palm Cove has no internal tension — and that IS the tension. Every other "
+        "port in the Known World has competing factions, power struggles, and "
+        "political ambitions. Palm Cove's lack of ambition is both its charm and "
+        "its vulnerability. Chioma sees this: she's building export contracts to "
+        "make the Cove economically necessary, because 'charming' doesn't survive "
+        "a trade war. The deeper worry: the Seven Houses have been balanced for a "
+        "century, but rum trends change. If one house finds a better recipe or a "
+        "bigger buyer, the balance shifts. Cassius is getting old. His secret "
+        "recipe — whatever it actually is — will pass to someone. Who inherits it "
+        "will determine whether Palm Cove's century of peace continues."
+    ),
+    institutions=_PALM_COVE_INSTITUTIONS,
+    npcs=_PALM_COVE_NPCS,
+)
+
+
+# =========================================================================
+# IRON POINT — The Red Hand
+# =========================================================================
+
+_IRON_POINT_NPCS = [
+    PortNPC(
+        id="ip_foreman_kofi",
+        name="Foreman Kofi Mensah",
+        title="Mine Foreman",
+        port_id="iron_point",
+        institution="governor",
+        personality="determined",
+        description=(
+            "Hands permanently stained with iron oxide — the mark of the Red Hand. "
+            "Kofi runs Iron Point's mines and, by extension, the town. He's not an "
+            "elder like Binta or a commissioner like Astrid — he's a working man "
+            "whose authority comes from being first into the shaft every morning "
+            "and last out every night."
+        ),
+        agenda=(
+            "Fair prices for Iron Point's ore. Kofi is tired of Ironhaven buying "
+            "raw at bottom prices and selling refined at triple markup. He dreams "
+            "of building a smelter at Iron Point — cutting out the middleman entirely. "
+            "The Compact supports him in principle. The Iron Pact would consider it "
+            "an act of war."
+        ),
+        greeting_neutral="\"Iron? We have iron. Best raw ore on the coast. The price is fair — fairer than what Ironhaven charges for the same metal with a Guild stamp on it.\"",
+        greeting_friendly="\"Captain! You buy from the source, not the middleman. I respect that. Come — I'll show you the new vein. The quality will make Ironhaven weep.\"",
+        greeting_hostile="\"We sell to anyone. Even people I don't like. The ore doesn't care who carries it. But I set the price, and today the price is higher for you.\"",
+        rumor="Kofi sent a sample of Iron Point ore to a Silk Circle metallurgist for independent grading. It came back rated higher than Ironhaven's refined iron. Kofi hasn't told anyone yet. He's waiting for the right moment — and the right audience.",
+        relationship_notes={
+            "ip_river_dock": "His dock supervisor. They coordinate shipments daily.",
+            "ip_mama_adwoa": "She feeds the miners. He makes sure she's supplied. The mine runs on her cooking.",
+            "ip_assayer_mensah": "His cousin. Grades every ore sample. Family trust is the only trust that works underground.",
+            "ip_customs_kwesi": "Necessary Alliance presence. Kofi tolerates him because the alternative is worse.",
+            "ip_broker_yaa": "She finds buyers who'll pay what the ore is worth. He gives her the best lots.",
+        },
+    ),
+    PortNPC(
+        id="ip_river_dock",
+        name="Dock Boss Adjei",
+        title="Dock Supervisor",
+        port_id="iron_point",
+        institution="harbor_master",
+        personality="tough",
+        description=(
+            "A compact, muscular woman who runs the river mouth dock with the "
+            "efficiency of someone who's loaded ore carts since she could walk. "
+            "Adjei coordinates between the mine carts coming down from the cliffs "
+            "and the ships waiting at the river mouth. She's covered in red dust "
+            "by noon every day."
+        ),
+        agenda="Getting ore from mine to ship without losing a gram. Everything else is someone else's problem.",
+        greeting_neutral="\"Loading or unloading? Ore goes out on the morning tide. Everything else fits when it fits.\"",
+        greeting_friendly="\"Captain — good timing. I've got a fresh load coming down the carts. Priority berth for you. Let's move fast.\"",
+        greeting_hostile="\"You can dock. But you wait. Ore shipments first. That's the rule.\"",
+        rumor="Adjei once loaded an ore shipment during a flash flood — the river was rising, the dock was underwater, and she stood waist-deep directing cart traffic. Not a single crate was lost. The miners carved her name into the cliff face afterward.",
+        relationship_notes={
+            "ip_foreman_kofi": "Daily coordination. She's his logistics arm.",
+            "ip_mama_adwoa": "Adjei eats standing up. Mama Adwoa brings food to the dock. It works.",
+            "ip_assayer_mensah": "He grades it; she ships it. Clean chain.",
+            "ip_customs_kwesi": "Works alongside him at the dock. Professional, no friction.",
+            "ip_broker_yaa": "Yaa brings buyers; Adjei loads their ships. Simple.",
+        },
+    ),
+    PortNPC(
+        id="ip_mama_adwoa",
+        name="Mama Adwoa",
+        title="Mine Cook",
+        port_id="iron_point",
+        institution="tavern",
+        personality="tireless",
+        description=(
+            "A woman who feeds two hundred miners every day from a kitchen carved "
+            "into the cliff face. Mama Adwoa's food is fuel — heavy, rich, and "
+            "designed to keep men and women working underground for twelve-hour "
+            "shifts. Her cook fire never goes out. She says it's been burning "
+            "continuously for nineteen years."
+        ),
+        agenda="Feeding the mine. Mama Adwoa doesn't care about politics, trade, or the wider world. She cares about her stew, her fire, and her miners.",
+        greeting_neutral="\"Sit. Eat. You look thin. The sea doesn't feed properly — let me fix that.\"",
+        greeting_friendly="\"Captain! You came at the right time — the goat stew is fresh. I made extra because I had a feeling.\"",
+        greeting_hostile="\"Everyone eats. Even people I don't like. The stew doesn't judge. But I'm watching your portion size.\"",
+        rumor="Mama Adwoa's stew recipe hasn't changed in nineteen years. The miners say it's because perfection doesn't need improvement. She says it's because she wrote the recipe on a rock and lost the rock. She hasn't found it. The stew tastes the same every day anyway.",
+        relationship_notes={
+            "ip_foreman_kofi": "She feeds his miners. He supplies her kitchen. The mine runs on her cooking.",
+            "ip_river_dock": "Brings food to the dock. Adjei eats standing up. Neither slows down.",
+            "ip_assayer_mensah": "Feeds him twice — once for the morning shift, once for the evening analysis.",
+            "ip_customs_kwesi": "Feeds him because he's there. No favoritism. No shortchanging either.",
+            "ip_broker_yaa": "Yaa sometimes brings spices from visiting ships. Mama Adwoa accepts them gravely, as if receiving tribute.",
+        },
+    ),
+    PortNPC(
+        id="ip_assayer_mensah",
+        name="Assayer Mensah",
+        title="Ore Assayer",
+        port_id="iron_point",
+        institution="exchange",
+        personality="precise",
+        description=(
+            "Kofi's cousin — a quiet man with iron-stained hands and magnifying "
+            "lenses he made himself from salvaged glass. Mensah grades every ore "
+            "sample that leaves Iron Point: iron content, impurities, smelting "
+            "suitability. His grades are the Red Hand's word — more trusted on the "
+            "coast than Ironhaven's Guild stamps."
+        ),
+        agenda="Accuracy. Mensah's only agenda is the truth of what's in the rock. His grades never inflate, never deflate, never lie. This is why the Red Hand trusts him and why Ironhaven fears him.",
+        greeting_neutral="\"Ore sample? I'll grade it within the hour. My assessment includes iron content, impurity ratio, and smelting notes. The truth is free.\"",
+        greeting_friendly="\"Captain — I have a graded batch ready. A-grade coastal vein, ninety-one percent iron content. Ironhaven wishes they could match this.\"",
+        greeting_hostile="\"I grade ore. I don't judge captains. Bring a sample and I'll tell you what it's worth. That's all I do.\"",
+        rumor="Mensah independently verified that Iron Point ore outgrades Ironhaven's refined iron — a finding that could destabilize the entire North Atlantic iron market. Kofi has the report. He's waiting for the right moment.",
+        relationship_notes={
+            "ip_foreman_kofi": "His cousin. Family trust runs the assay office. Kofi trusts his grades absolutely.",
+            "ip_river_dock": "He grades it; she ships it. Clean chain.",
+            "ip_mama_adwoa": "Feeds him twice daily. He barely notices — he's always looking at rock samples.",
+            "ip_customs_kwesi": "Kwesi defers to Mensah's grades. No customs officer argues with a Red Hand assayer.",
+            "ip_broker_yaa": "His grades are what makes Yaa's contracts credible. The assay is the product.",
+        },
+    ),
+    PortNPC(
+        id="ip_customs_kwesi",
+        name="Customs Officer Kwesi",
+        title="Customs Officer",
+        port_id="iron_point",
+        institution="customs",
+        personality="stoic",
+        description=(
+            "A quiet man who has learned that customs at a mining town means "
+            "standing in red dust all day and checking ore shipments against assay "
+            "grades. Kwesi doesn't inspect for contraband — there isn't any. "
+            "Iron Point is too busy mining to smuggle."
+        ),
+        agenda="Compliance. Kwesi does his job, files his reports, and doesn't interfere with the Red Hand's operations. The Compact doesn't need aggressive customs at a mining town.",
+        greeting_neutral="\"Manifest? Ore shipment? I'll cross-check against Mensah's grades and stamp you through.\"",
+        greeting_friendly="\"Captain — everything matches the assay report. You're clear. Good trading.\"",
+        greeting_hostile="\"Full inspection. The grades need to match the actual cargo. If they don't, we have a problem.\"",
+        rumor="Kwesi is the only customs officer in the Compact who's never found a single irregularity. Either Iron Point is the most honest port on the coast, or nobody smuggles through a mining town because there's nothing to smuggle. Both are probably true.",
+        relationship_notes={
+            "ip_foreman_kofi": "Tolerated. Kofi doesn't need customs but accepts the Alliance requirement.",
+            "ip_river_dock": "Works alongside Adjei at the dock. Professional.",
+            "ip_mama_adwoa": "Fed daily. No favoritism, but no complaints either.",
+            "ip_assayer_mensah": "Defers to his grades. The assayer's word is the only inspection that matters here.",
+            "ip_broker_yaa": "Stamps her export contracts. No issues.",
+        },
+    ),
+    PortNPC(
+        id="ip_broker_yaa",
+        name="Yaa Acheampong",
+        title="Ore Broker",
+        port_id="iron_point",
+        institution="broker",
+        personality="fierce",
+        description=(
+            "A woman with iron-oxide hands and the negotiating instinct of someone "
+            "who grew up watching her family's ore get bought at a fraction of its "
+            "worth. Yaa is Iron Point's broker — and her mission is revenge by "
+            "commerce. She finds buyers who'll pay what the ore is actually worth, "
+            "bypassing Ironhaven's markup whenever possible."
+        ),
+        agenda=(
+            "Direct sales. Yaa wants Iron Point ore in the hands of buyers who "
+            "appreciate it — Silk Circle metallurgists, South Seas weaponsmiths, "
+            "anyone except Ironhaven's middlemen. Every contract she brokers that "
+            "bypasses the Guild is a small victory. Henrik Brandt hates her. She "
+            "considers this a compliment."
+        ),
+        greeting_neutral="\"Looking for iron? Real iron — not Ironhaven's marked-up refined product. I have assayed lots ready to ship. Mensah's grades, coast's prices.\"",
+        greeting_friendly="\"Captain! I have a direct buyer in the East Indies — they want raw ore, no middleman. The margin is twice what Ironhaven pays. Interested?\"",
+        greeting_hostile="\"I sell ore to honest buyers. If you're buying for Ironhaven, the price doubles. Call it a convenience fee.\"",
+        rumor="Yaa negotiated a direct ore sale to a Silk Circle foundry in Jade Port. The Kiln Masters needed iron for a new porcelain glaze technique. Henrik Brandt found out and was reportedly so angry he cracked an anvil. Yaa framed the purchase order on her wall.",
+        relationship_notes={
+            "ip_foreman_kofi": "His broker. She finds buyers; he provides the ore. United by the dream of cutting out Ironhaven.",
+            "ip_river_dock": "Yaa brings buyers; Adjei loads their ships.",
+            "ip_mama_adwoa": "Yaa brings spices from visiting ships. Mama Adwoa accepts them as tribute.",
+            "ip_assayer_mensah": "His grades make her contracts credible. The assay is the product.",
+            "ip_customs_kwesi": "No issues. Clean paperwork, clean ore, clean conscience.",
+        },
+    ),
+]
+
+_IRON_POINT_INSTITUTIONS = [
+    PortInstitution(id="ip_river_dock_inst", name="The River Mouth Dock", port_id="iron_point", institution_type="harbor_master",
+        description="Where the river meets the sea and ore carts meet ships. Red dust covers everything. Adjei stands in the middle, directing traffic.",
+        function="Ore-first logistics. Mine carts to ships. Everything else waits.", political_leaning="Red Hand operations.", npc_id="ip_river_dock"),
+    PortInstitution(id="ip_assay", name="The Assay Office", port_id="iron_point", institution_type="exchange",
+        description="A rock-walled room near the mine entrance. Magnifying lenses, acid tests, and samples in labeled boxes. Mensah's grades are law.",
+        function="Ore grading, quality certification. Mensah's word is more trusted than Ironhaven's Guild stamps.",
+        political_leaning="Red Hand pride. The truth of the rock is the only politics.", npc_id="ip_assayer_mensah"),
+    PortInstitution(id="ip_mine_office", name="The Foreman's Post", port_id="iron_point", institution_type="governor",
+        description="A timber shack at the mine entrance. Maps of tunnel systems on the walls. Kofi's hard hat hangs on the door.",
+        function="Mine governance, town leadership. Kofi leads by being first in and last out.",
+        political_leaning="Gold Coast Compact with Iron Pact tensions. The dream of a smelter is political dynamite.", npc_id="ip_foreman_kofi"),
+    PortInstitution(id="ip_kitchen", name="The Mine Kitchen", port_id="iron_point", institution_type="tavern",
+        description="A cliff-face kitchen with a fire that hasn't gone out in nineteen years. Two hundred miners fed daily. The stew doesn't change. It doesn't need to.",
+        function="Feeding the mine. Social hub for miners. Mama Adwoa's fire is the town's heartbeat.",
+        political_leaning="Apolitical. Stew doesn't take sides.", npc_id="ip_mama_adwoa"),
+    PortInstitution(id="ip_customs_inst", name="The Dock Desk", port_id="iron_point", institution_type="customs",
+        description="A desk at the river mouth, covered in red dust. The most peaceful customs posting in the Compact.",
+        function="Ore shipment verification. Cross-check against assay grades. Nobody smuggles through a mining town.",
+        political_leaning="Compact compliance. Minimal and stoic.", npc_id="ip_customs_kwesi"),
+    PortInstitution(id="ip_broker_inst", name="Yaa's Wall", port_id="iron_point", institution_type="broker",
+        description="A section of the mine office wall where Yaa pins contracts, buyer inquiries, and one framed purchase order from a Silk Circle foundry.",
+        function="Ore brokering with a mission: bypass Ironhaven's markup. Every direct sale is revenge by commerce.",
+        political_leaning="Red Hand ambition. Direct sales are an act of independence.", npc_id="ip_broker_yaa"),
+]
+
+IRON_POINT_PROFILE = PortInstitutionalProfile(
+    port_id="iron_point",
+    governor_title="Mine Foreman",
+    power_structure=(
+        "Iron Point is a company town — the mine IS the town. Foreman Kofi leads "
+        "by working harder than anyone. Mensah's assays are the commercial foundation. "
+        "Adjei runs the dock. Mama Adwoa feeds the machine. Yaa fights the pricing "
+        "war against Ironhaven from her wall of contracts. There's no political "
+        "complexity because there's only one institution that matters: the mine."
+    ),
+    internal_tension=(
+        "The tension is external, not internal: Iron Point vs. Ironhaven. Kofi "
+        "dreams of a smelter that would let Iron Point sell refined iron directly. "
+        "The Compact supports the idea in principle. The Iron Pact would consider "
+        "it an act of war. Mensah's assay report — proving Iron Point ore outgrades "
+        "Ironhaven's refined product — is a weapon waiting to be deployed. The "
+        "question isn't whether Kofi will use it, but when, and whether the coast "
+        "is ready for the consequences."
+    ),
+    institutions=_IRON_POINT_INSTITUTIONS,
+    npcs=_IRON_POINT_NPCS,
+)
+
+
+# =========================================================================
+# PEARL SHALLOWS — The Breath-Holders
+# =========================================================================
+
+_PEARL_SHALLOWS_NPCS = [
+    PortNPC(
+        id="ps_elder_ama_d",
+        name="Elder Ama Diallo",
+        title="Dive Elder",
+        port_id="pearl_shallows",
+        institution="governor",
+        personality="serene",
+        description=(
+            "A woman of indeterminate age — she could be sixty or eighty, and the "
+            "reef doesn't tell. Elder Ama is the Breath-Holders' spiritual and "
+            "political leader. She governs Pearl Shallows from the Blessing Pool, "
+            "where she still dives every morning at dawn. Her breath-hold is over "
+            "five minutes. Nobody has ever exceeded it."
+        ),
+        agenda=(
+            "The reef's protection and the Breath-Holders' sacred traditions. Ama "
+            "views pearl diving as worship, not commerce. She sets the diving "
+            "seasons, blesses the divers, and declares which reefs are off-limits. "
+            "She despises Typhoon Anchorage's Storm Riders for poaching her reef — "
+            "a wound that hasn't healed and won't."
+        ),
+        greeting_neutral="\"The reef permits your visit, Captain. Trade honestly, and you are welcome. The pearls will choose their buyer.\"",
+        greeting_friendly="\"Captain — the reef remembers you. You traded with respect last time. Come to the Pool. I have pearls that have been waiting for someone worthy.\"",
+        greeting_hostile="\"The reef sees everything, Captain. It saw what you did. I will not refuse you trade — but the best pearls are not for you. The reef decides.\"",
+        rumor="Elder Ama once held her breath for seven minutes during a ceremony — or so the divers say. She says the reef held her, not the other way around. Nobody questions her on matters of the reef.",
+        relationship_notes={
+            "ps_harbor_nana": "Her appointed harbor keeper. Nana respects the traditions.",
+            "ps_pearl_grader": "The Grader works for her. Every pearl passes through Ama's hands before it's priced.",
+            "ps_dye_master": "The dye trade supports the divers. Ama values the economic balance.",
+            "ps_healer_abena": "The healer tends divers after deep dives. Ama considers Abena essential.",
+            "ps_broker_esi_p": "Esi sells what the reef provides. Ama watches to ensure she doesn't sell too much.",
+        },
+    ),
+    PortNPC(
+        id="ps_harbor_nana",
+        name="Harbor Keeper Nana",
+        title="Harbor Keeper",
+        port_id="pearl_shallows",
+        institution="harbor_master",
+        personality="quiet",
+        description=(
+            "A former diver who lost her hearing to depth — the pressure took it "
+            "on a deep dive when she was twenty. Nana runs the harbor in silence, "
+            "communicating with hand signals and written notes. She reads the water "
+            "better than anyone who can hear it."
+        ),
+        agenda="Protecting the reef approaches. Ships that anchor carelessly damage the shallow coral. Nana places every vessel by hand — literally pointing to the spot where the anchor must drop.",
+        greeting_neutral="She holds up a slate: 'ANCHOR HERE. NOWHERE ELSE. CORAL BELOW.' Then a smaller note: 'Welcome.'",
+        greeting_friendly="A warm smile. She touches your arm and points to a protected berth near the Blessing Pool. A note: 'Saved this for you.'",
+        greeting_hostile="A flat stare. She points to the outer anchorage, far from the reef. A note: 'Do not damage the coral. I am watching.'",
+        rumor="Nana reads the water's surface for current shifts that predict storm systems days before they arrive. The divers trust her weather instincts more than any barometer. She's never been wrong — but she can't explain how she knows.",
+        relationship_notes={
+            "ps_elder_ama_d": "Serves her without question. The Elder saved her life after the dive that took her hearing.",
+            "ps_pearl_grader": "They coordinate silently — hand signals developed over years of working the dock together.",
+            "ps_dye_master": "He loads his own barrels. She lets him. Dye doesn't damage coral.",
+            "ps_healer_abena": "Abena treated her after the dive. They share a bond of survival.",
+            "ps_broker_esi_p": "Esi handles the talking that Nana can't. A necessary partnership.",
+        },
+    ),
+    PortNPC(
+        id="ps_pearl_grader",
+        name="Grader Kweku",
+        title="Pearl Grader",
+        port_id="pearl_shallows",
+        institution="exchange",
+        personality="reverent",
+        description=(
+            "A man who holds each pearl up to the sunlight as if it were a holy "
+            "text. Kweku is the Breath-Holders' pearl grader — the person who "
+            "examines every pearl brought up from the reef and assigns its value. "
+            "His assessments are final. Pearls are never haggled over: the diver "
+            "names the price based on Kweku's grade. You pay or you leave."
+        ),
+        agenda="The pearls' honor. Every pearl is unique. Kweku won't let a flawed pearl be sold as perfect, and he won't let a perfect pearl be sold cheap. His grades serve the reef, not the market.",
+        greeting_neutral="\"You wish to buy pearls? I will show you what the reef has offered. Touch gently — these are gifts from the sea, not goods from a warehouse.\"",
+        greeting_friendly="\"Captain — I have set aside three pearls for you. Each is exceptional. The reef made them; I merely recognized their worth.\"",
+        greeting_hostile="\"I grade pearls. I do not grade captains. But the best pearls go to those who deserve them, and that is the Elder's decision, not mine.\"",
+        rumor="Kweku once graded a pearl and wept. He said it was perfect — not just in shape and luster, but in meaning. He wouldn't explain what he meant. Elder Ama kept the pearl and wore it. Nobody asked.",
+        relationship_notes={
+            "ps_elder_ama_d": "Every pearl passes through her hands after his. His grade, her blessing, then the sale.",
+            "ps_harbor_nana": "Silent coordination — hand signals developed over years.",
+            "ps_dye_master": "Different trades, shared respect for the reef's gifts.",
+            "ps_healer_abena": "She tends the divers who bring him the pearls. He treats each one as sacred.",
+            "ps_broker_esi_p": "She sells what he grades. He trusts her to present them with the dignity they deserve.",
+        },
+    ),
+    PortNPC(
+        id="ps_dye_master",
+        name="Dye Master Yaw",
+        title="Dye Master",
+        port_id="pearl_shallows",
+        institution="shipyard",
+        personality="artistic",
+        description=(
+            "Hands stained in impossible colors — indigo, ochre, violet from sea "
+            "urchins, green from reef algae. Yaw is Pearl Shallows' dye master, "
+            "producing pigments from reef organisms and coastal plants that no "
+            "other port can replicate. His dyes are as valued as the pearls — "
+            "less famous but no less remarkable."
+        ),
+        agenda="Color. Yaw sees the reef not as a pearl source but as a palette. He's constantly experimenting with new pigments, new combinations, new techniques. The textile merchants of the Mediterranean pay handsomely for his colors.",
+        greeting_neutral="\"Looking for dyes? I have colors you won't find anywhere else. This violet — from sea urchin shells. This green — reef algae, only grows here. Touch. Feel the pigment.\"",
+        greeting_friendly="\"Captain! I've created a new color — I don't even have a name for it yet. Take a sample to the Mediterranean. If the textile merchants want more, we'll talk price.\"",
+        greeting_hostile="\"Dyes are available at posted prices. I won't waste the rare pigments on someone who can't appreciate them.\"",
+        rumor="Yaw once created a dye that changed color with the light — blue in sunlight, green in shadow. The textile merchants in Porto Novo went mad for it. Yaw couldn't replicate it. He's been trying for three years. The original sample hangs in his workshop like a holy relic.",
+        relationship_notes={
+            "ps_elder_ama_d": "The dye trade supports the divers economically. Ama values the balance.",
+            "ps_harbor_nana": "He loads his own barrels. She lets him.",
+            "ps_pearl_grader": "Different trades, shared reverence for the reef's gifts.",
+            "ps_healer_abena": "She uses some of his dyes in medicine preparation. He's fascinated by the crossover.",
+            "ps_broker_esi_p": "She sells his dyes alongside the pearls. A complementary package.",
+        },
+    ),
+    PortNPC(
+        id="ps_healer_abena",
+        name="Healer Abena",
+        title="Dive Healer",
+        port_id="pearl_shallows",
+        institution="tavern",
+        personality="caring",
+        description=(
+            "A woman who sits at the Blessing Pool's edge with a medicine bag and "
+            "the patience of someone who has watched a thousand divers surface. "
+            "Healer Abena treats the injuries that pearl diving inflicts — burst "
+            "eardrums, pressure sickness, coral cuts, and the deep-dive headaches "
+            "that only she knows how to cure. Her 'tavern' is the Pool itself — "
+            "where divers rest, recover, and share stories."
+        ),
+        agenda="The divers' health. Every pearl costs the diver something — air, pressure, risk. Abena makes sure the cost doesn't become permanent. She's been lobbying Elder Ama to limit dive depths, which puts her at odds with the most ambitious divers.",
+        greeting_neutral="\"Are you well, Captain? The sea treats bodies roughly. If you need medicine, I have it. If you need rest, the Pool is open to all.\"",
+        greeting_friendly="\"Captain — you look well. The sea has been kind. Sit by the Pool. I'll bring tea, and we can watch the divers surface. It's the most peaceful hour.\"",
+        greeting_hostile="\"I heal all who ask. But I notice things, Captain. The divers talk. I listen. What they say about you concerns me.\"",
+        rumor="Healer Abena developed a breathing technique that adds thirty seconds to a diver's breath-hold. She taught it freely. The Storm Riders at Typhoon Anchorage learned it from a visiting diver. Abena doesn't mind — she says breath belongs to everyone. Elder Ama disagrees.",
+        relationship_notes={
+            "ps_elder_ama_d": "Ama considers her essential. Abena pushes back on dive depths. A tension born of mutual care.",
+            "ps_harbor_nana": "Treated Nana after the dive that took her hearing. They share a survivor's bond.",
+            "ps_pearl_grader": "He grades the pearls; she tends the divers who brought them. Sacred chain.",
+            "ps_dye_master": "She uses some of his dyes in medicine. He's fascinated.",
+            "ps_broker_esi_p": "Esi sometimes brings medicines from visiting ships. Abena is always grateful.",
+        },
+    ),
+    PortNPC(
+        id="ps_broker_esi_p",
+        name="Esi Kumi",
+        title="Pearl Broker",
+        port_id="pearl_shallows",
+        institution="broker",
+        personality="protective",
+        description=(
+            "The Breath-Holders' voice to the outside world. Esi handles pearl "
+            "sales, dye contracts, and the delicate diplomacy of ensuring the "
+            "reef's treasures reach buyers who'll pay what they're worth without "
+            "exploiting the divers. She doesn't haggle — she presents Kweku's "
+            "grades and the price. Take it or leave."
+        ),
+        agenda="Protecting the divers' value. Esi has seen what happens when outside merchants control pricing — the divers get squeezed. Her contracts ensure the Breath-Holders set terms, not buyers.",
+        greeting_neutral="\"Pearls? Dyes? The grades are set. The prices are fair. We don't negotiate — the reef's gifts speak for themselves.\"",
+        greeting_friendly="\"Captain — I have a pearl lot that I've been saving. Kweku graded them yesterday. Three are exceptional. Would you like to see?\"",
+        greeting_hostile="\"We sell to all. But the best lots go to trusted buyers. You are not yet trusted. Standard grades only.\"",
+        rumor="Esi refused a bulk purchase from a Porto Novo merchant who wanted to buy Pearl Shallows' entire season's output. She said, 'The reef doesn't produce in bulk, and we don't sell in bulk.' The merchant left empty-handed. Ama smiled.",
+        relationship_notes={
+            "ps_elder_ama_d": "The Elder watches to ensure she doesn't sell too much. Esi understands the constraint.",
+            "ps_harbor_nana": "Esi handles the talking that Nana can't. Necessary partnership.",
+            "ps_pearl_grader": "She sells what he grades. She presents them with the dignity they deserve.",
+            "ps_dye_master": "She packages dyes alongside pearls. A complementary offering.",
+            "ps_healer_abena": "Brings medicines from visiting ships. Small gestures that matter.",
+        },
+    ),
+]
+
+_PEARL_SHALLOWS_INSTITUTIONS = [
+    PortInstitution(id="ps_harbor", name="The Reef Approach", port_id="pearl_shallows", institution_type="harbor_master",
+        description="A coral-sand beach with mooring posts placed by Nana to protect the reef below. Canoes pulled up on shore. Silence except for the water.",
+        function="Anchor placement by hand — Nana points to the exact spot. No careless anchoring. The coral is sacred.",
+        political_leaning="Reef-first. The harbor serves the coral, not commerce.", npc_id="ps_harbor_nana"),
+    PortInstitution(id="ps_grading", name="The Grading Stone", port_id="pearl_shallows", institution_type="exchange",
+        description="A flat stone near the Blessing Pool where Kweku examines pearls in natural sunlight. No building — pearls are graded in the light they were born in.",
+        function="Pearl grading. No haggling. The diver names the price from Kweku's grade. Pay or leave.",
+        political_leaning="Sacred commerce. The reef's gifts are priced by their truth, not by supply and demand.", npc_id="ps_pearl_grader"),
+    PortInstitution(id="ps_pool", name="The Blessing Pool", port_id="pearl_shallows", institution_type="governor",
+        description="A tidal pool where divers pray before descending and where Elder Ama governs. The water is sacred. The governance is spiritual.",
+        function="Spiritual and political center. Ama sets diving seasons, blesses divers, declares reef closures.",
+        political_leaning="Breath-Holder tradition. The reef governs through Ama.", npc_id="ps_elder_ama_d"),
+    PortInstitution(id="ps_dye_workshop", name="The Color Workshop", port_id="pearl_shallows", institution_type="shipyard",
+        description="An open-air workshop where Yaw grinds pigments from reef organisms. Shells, algae, and sea urchins become impossible colors.",
+        function="Dye production from reef-exclusive organisms. Colors no other port can replicate.",
+        political_leaning="Artistic independence. Yaw answers to the palette.", npc_id="ps_dye_master"),
+    PortInstitution(id="ps_pool_rest", name="The Pool's Edge", port_id="pearl_shallows", institution_type="tavern",
+        description="The Blessing Pool's edge where divers rest, Abena tends wounds, and stories are shared over tea. Not a tavern — a recovery space.",
+        function="Diver recovery, social gathering, medicine. The Pool is where the community breathes.",
+        political_leaning="Community health. Abena serves the divers' bodies as Ama serves their spirits.", npc_id="ps_healer_abena"),
+    PortInstitution(id="ps_broker", name="The Pearl Mat", port_id="pearl_shallows", institution_type="broker",
+        description="A woven mat near the Grading Stone where Esi presents graded pearls and dye samples. Take it or leave it — no negotiation.",
+        function="Pearl and dye sales. Prices set by grade, not by market. The Breath-Holders control the terms.",
+        political_leaning="Protective Compact. Esi ensures the reef's value stays with the divers.", npc_id="ps_broker_esi_p"),
+]
+
+PEARL_SHALLOWS_PROFILE = PortInstitutionalProfile(
+    port_id="pearl_shallows",
+    governor_title="Dive Elder",
+    power_structure=(
+        "Pearl Shallows is governed by Elder Ama from the Blessing Pool — spiritual "
+        "authority merged with political governance. Kweku grades the pearls. Nana "
+        "protects the reef approaches. Yaw produces irreplaceable dyes. Abena "
+        "heals the divers. Esi sells to the world. The port runs on reverence: "
+        "the reef provides, the divers receive, the community protects."
+    ),
+    internal_tension=(
+        "Abena wants to limit dive depths to protect the divers. Ama wants to "
+        "maintain the tradition of deep dives that produce the finest pearls. Both "
+        "care about the divers — they disagree on what 'care' means. The external "
+        "wound is Typhoon Anchorage: the Storm Riders poached the reef three seasons "
+        "ago, and Abena's breathing technique leaked to them through a visiting diver. "
+        "Ama considers this a betrayal. Abena says breath belongs to everyone. "
+        "This philosophical disagreement — hoarding sacred knowledge vs. sharing it "
+        "freely — is Pearl Shallows' deepest fault line."
+    ),
+    institutions=_PEARL_SHALLOWS_INSTITUTIONS,
+    npcs=_PEARL_SHALLOWS_NPCS,
+)
+
+
 # ---------------------------------------------------------------------------
 # Master registry — will grow as we build each port
 # ---------------------------------------------------------------------------
@@ -2695,6 +3764,10 @@ PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
     "ironhaven": IRONHAVEN_PROFILE,
     "stormwall": STORMWALL_PROFILE,
     "thornport": THORNPORT_PROFILE,
+    "sun_harbor": SUN_HARBOR_PROFILE,
+    "palm_cove": PALM_COVE_PROFILE,
+    "iron_point": IRON_POINT_PROFILE,
+    "pearl_shallows": PEARL_SHALLOWS_PROFILE,
 }
 
 ALL_NPCS: dict[str, PortNPC] = {npc.id: npc for profile in PORT_INSTITUTIONAL_PROFILES.values() for npc in profile.npcs}
