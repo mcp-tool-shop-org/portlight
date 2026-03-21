@@ -467,9 +467,331 @@ SPICE_NARROWS_PROFILE = PortInstitutionalProfile(
 # Export all profiles from this file
 # =========================================================================
 
+
+# =========================================================================
+# EMBER ISLE — The Volcano's Children
+# =========================================================================
+
+_EMBER_ISLE_NPCS = [
+    PortNPC(
+        id="ei_elder_kai", name="Elder Kai", title="Keeper Elder",
+        port_id="ember_isle", institution="governor", personality="mystical",
+        description="A man whose skin carries the grey-brown of volcanic ash and whose eyes hold fire. Elder Kai leads the Ember Keepers — the herbalists who know the volcanic plants that produce medicines unmatched anywhere. He governs from the hot springs, where the volcano's warmth rises through stone older than human memory.",
+        agenda="The mountain's balance. Kai believes the volcano provides — medicines, minerals, dyes — and the Keepers receive. When outsiders try to take more than the mountain offers, Kai closes the paths. He refused the Iron Pact's demand for exclusive medicine rights because 'the mountain teaches us. It didn't teach you.'",
+        greeting_neutral="\"Welcome to Ember Isle. The mountain permits your visit. Place a stone at the base. It is how we greet those who come in peace.\"",
+        greeting_friendly="\"Captain — the mountain remembers you. Come to the springs. I have harvested something from the hot pools that I believe you need. The mountain provides for friends.\"",
+        greeting_hostile="\"You may dock. The mountain does not judge. But the paths to the upper slopes are closed to you today. The Keepers have decided.\"",
+        rumor="The volcano speaks more often now. Kai says it grumbles before a good harvest. The other Keepers aren't as certain. If the mountain is building toward an eruption, Kai will be the first to know — and the last to leave.",
+        relationship_notes={"ei_harbor_manu": "Manu runs the harbor. Kai runs the mountain. The boundary is the dock.", "ei_head_herbalist": "Sera is his successor. She knows the plants. He knows the mountain. Together, they ARE Ember Isle.", "ei_dye_keeper": "Volcanic dyes are the isle's second export. Kai approves the pigments.", "ei_spring_keeper": "The springs are sacred. Olo protects them for Kai.", "ei_broker_tia": "She sells what the mountain provides. Kai watches the balance."},
+    ),
+    PortNPC(
+        id="ei_harbor_manu", name="Harbor Chief Manu", title="Harbor Chief",
+        port_id="ember_isle", institution="harbor_master", personality="watchful",
+        description="A broad man with obsidian-dark skin who stands on the black sand beach watching every approaching ship through volcanic haze. Manu runs Ember Isle's harbor — not a dock but a beach approach where ships anchor and lighters bring cargo through the surf.",
+        agenda="Safe approach. The volcanic reef around Ember Isle shifts. Manu knows where it's safe this season and where it isn't. Captains who ignore his guidance lose their hulls.",
+        greeting_neutral="\"Anchor there. ONLY there. The reef has shifted since last season. My lighter will come for your cargo.\"",
+        greeting_friendly="\"Captain! The sand is steady today. Inner anchorage for you — I'll pilot you through the channel myself.\"",
+        greeting_hostile="\"Outer anchorage. Far from shore. Send your cargo by lighter. I'm not risking the channel for your reputation.\"",
+        rumor="Manu reads the reef by the color of the water — volcanic minerals change the hue where new rock has formed. He saved a merchant fleet from grounding by spotting a color shift invisible to everyone else.",
+        relationship_notes={"ei_elder_kai": "Kai runs the mountain. Manu runs the beach. Clear boundary.", "ei_head_herbalist": "Sera's medicine shipments get priority lighters.", "ei_dye_keeper": "Dye barrels are heavy. Manu's crew loads them carefully.", "ei_spring_keeper": "Olo's springs are uphill. Manu's harbor is at sea level. Different worlds.", "ei_broker_tia": "She needs efficient loading. He provides it."},
+    ),
+    PortNPC(
+        id="ei_head_herbalist", name="Head Herbalist Sera", title="Head Herbalist",
+        port_id="ember_isle", institution="exchange", personality="passionate",
+        description="A woman whose hands are perpetually stained green from plant work, with a mind that catalogs every medicinal species on the volcano's slopes. Sera is Kai's successor — the next Elder, though nobody says it aloud. She knows the hot-spring plants that produce Ember Isle's famous medicines: fever cures, wound salves, and the volcanic mineral compound that the entire Known World demands.",
+        agenda="Healing the world. Sera wants Ember Isle's medicines to reach every port — not for profit but because people are dying of things she can cure. She turned down the Iron Pact's exclusivity deal and would do it again. She sells at fair prices because she believes healing belongs to everyone.",
+        greeting_neutral="\"Medicines? I have fever cure, wound salve, and the mineral compound. All harvested this season, all potent. The prices are fair — I don't profit from suffering.\"",
+        greeting_friendly="\"Captain! You brought the southern root I asked for! Let me see — yes, YES! This changes everything. I've been trying to complete a compound for months. This is the missing piece!\"",
+        greeting_hostile="\"I sell medicines to all who need them. My oath doesn't come with exceptions. But I won't share my recipes with those who'd use them for profit over healing.\"",
+        rumor="Sera has been trying to recreate the legendary Ember Isle fever cure that works even on the monsoon plague. She's close — one ingredient short. She's been asking every visiting captain to search for a specific root from the deep South Seas. Nobody's found it yet.",
+        relationship_notes={"ei_elder_kai": "Her mentor, her predecessor, the standard she measures herself against.", "ei_harbor_manu": "Her medicine shipments get priority.", "ei_dye_keeper": "He uses some of her plant waste for pigments. Waste not.", "ei_spring_keeper": "The springs grow the plants she harvests. Sacred partnership.", "ei_broker_tia": "Tia sells the medicines. Sera sets the prices. Non-negotiable."},
+    ),
+    PortNPC(
+        id="ei_dye_keeper", name="Dye Keeper Lono", title="Dye Master",
+        port_id="ember_isle", institution="shipyard", personality="artistic",
+        description="A man whose entire body seems stained with volcanic pigments — ochre, deep violet from mineral deposits, and a green from hot-spring algae that no other island produces. Lono creates dyes from the volcano's gifts: ash, mineral springs, and organisms that thrive in extreme heat.",
+        agenda="Color from fire. Lono sees the volcano as a palette, not a threat. He's been developing new pigments from recently exposed mineral veins, and his latest creation — a deep volcanic red — has textile merchants from Porto Novo bidding against each other.",
+        greeting_neutral="\"Dyes? I have colors from the volcano itself. This ochre — ash from the eastern vent. This violet — mineral spring deposit. Touch carefully — the pigments stain.\"",
+        greeting_friendly="\"Captain! I've created something new — a red from the fresh lava deposits. The textile merchants will lose their minds. Be the first to carry it.\"",
+        greeting_hostile="\"Posted prices on the board. Standard pigments only. The rare colors go to those who appreciate them.\"",
+        rumor="Lono's volcanic red pigment was tested on silk in Silk Haven. Grand Weaver Seo-yeon saw it and went silent for ten minutes. Then she ordered her entire next collection based on it. Lono hasn't been told yet. He's going to be very surprised.",
+        relationship_notes={"ei_elder_kai": "The mountain provides pigments. Kai approves the harvesting.", "ei_harbor_manu": "Dye barrels are heavy. Manu's crew loads carefully.", "ei_head_herbalist": "He uses her plant waste for pigments. Efficient.", "ei_spring_keeper": "The springs produce the algae he uses for green. Sacred access.", "ei_broker_tia": "She sells his dyes alongside medicines. Complementary."},
+    ),
+    PortNPC(
+        id="ei_spring_keeper", name="Spring Keeper Olo", title="Hot Springs Guardian",
+        port_id="ember_isle", institution="tavern", personality="serene",
+        description="A woman who sits at the volcanic hot springs from dawn to dark, ensuring the sacred pools remain undisturbed. Olo is Ember Isle's 'tavern keeper' — but the springs aren't a tavern. They're a place of healing, rest, and community where visitors soak in mineral water while Olo shares the mountain's stories. No rum. No noise. Just hot water and quiet.",
+        agenda="The springs' sanctity. Olo protects the pools from overuse, contamination, and tourists who treat them as entertainment. The springs are medicine — for the body and the spirit. She rations access the way Kai rations the mountain's gifts.",
+        greeting_neutral="\"The springs are open to travelers. Remove your boots. Enter slowly. The mountain's heat takes getting used to. And please — no talking above a whisper.\"",
+        greeting_friendly="\"Captain — the private pool is ready. The minerals are strongest today. Soak. Rest. The mountain heals what the sea breaks.\"",
+        greeting_hostile="\"You may use the outer pools. The inner springs are for those the mountain trusts. Earn that trust. It takes time.\"",
+        rumor="Olo hasn't left the springs in seven years. She says the mountain speaks through the water, and if she leaves, she'll stop hearing it. Whether this is devotion or the mineral water affecting her mind is Ember Isle's gentlest debate.",
+        relationship_notes={"ei_elder_kai": "She protects the springs for him. Sacred duty.", "ei_harbor_manu": "Different worlds — beach and mountain. Respect at distance.", "ei_head_herbalist": "The springs grow Sera's plants. Sacred partnership.", "ei_dye_keeper": "Lono accesses the algae with Olo's permission. Always granted, never assumed.", "ei_broker_tia": "Tia doesn't sell the springs. They're not for sale."},
+    ),
+    PortNPC(
+        id="ei_broker_tia", name="Broker Tia", title="Island Broker",
+        port_id="ember_isle", institution="broker", personality="dedicated",
+        description="A young woman who handles Ember Isle's exports — medicines, dyes, and the volcanic minerals that captains increasingly seek. Tia is practical in a port that's mostly spiritual: she makes sure the mountain's gifts reach the world and that the island gets fair value in return.",
+        agenda="Fair trade for the island. Tia watches the medicine prices at other ports and adjusts to ensure Ember Isle isn't undervalued. She's been building relationships with brokers at every port — Fatou in Sun Harbor, Kamala in Monsoon Reach, even Fernanda in Porto Novo.",
+        greeting_neutral="\"Medicines, dyes, or minerals? I have export lots ready. The volcano's been generous this season.\"",
+        greeting_friendly="\"Captain! I've been holding a lot — Sera's best fever cure, Lono's new volcanic red, and a mineral sample that the Kiln Masters in Jade Port are desperate for. Interested?\"",
+        greeting_hostile="\"Standard lots at posted prices. The premium harvests go to captains the island trusts.\"",
+        rumor="Tia wrote to Fatou in Sun Harbor proposing a Gold Coast-South Seas medicine exchange: Ember Isle's fever cure for Pearl Shallows' reef compounds. If it works, it creates a medicine trade circuit that bypasses every major bloc. Grandmother Binta is considering it.",
+        relationship_notes={"ei_elder_kai": "She sells what the mountain provides. Kai watches the balance.", "ei_harbor_manu": "She needs efficient loading. He delivers.", "ei_head_herbalist": "Sera sets medicine prices. Non-negotiable. Tia respects this.", "ei_dye_keeper": "She packages dyes alongside medicines. Complementary.", "ei_spring_keeper": "The springs aren't for sale. Tia knows."},
+    ),
+]
+
+_EMBER_ISLE_INSTITUTIONS = [
+    PortInstitution(id="ei_beach", name="The Black Sand Harbor", port_id="ember_isle", institution_type="harbor_master",
+        description="Not a dock — a volcanic beach. Ships anchor offshore. Lighters bring cargo through surf. The reef shifts seasonally.",
+        function="Beach-approach harbor. Manu reads the reef by water color. Captains who ignore his guidance lose hulls.",
+        political_leaning="Coral Crown, with mountain independence.", npc_id="ei_harbor_manu"),
+    PortInstitution(id="ei_herb_garden", name="The Volcanic Garden", port_id="ember_isle", institution_type="exchange",
+        description="Terraced gardens on the volcano's lower slopes where hot-spring-fed plants produce irreplaceable medicines.",
+        function="Medicine production. Sera's compounds are unmatched. Fair prices because healing belongs to everyone.",
+        political_leaning="Humanitarian. The mountain doesn't profit.", npc_id="ei_head_herbalist"),
+    PortInstitution(id="ei_throne", name="The Hot Springs Throne", port_id="ember_isle", institution_type="governor",
+        description="The volcanic hot springs where Kai governs. Steam rises. The mountain rumbles. Policy is made in mineral water.",
+        function="Governance by the volcano's wisdom. Kai closes paths when the mountain says enough.",
+        political_leaning="Coral Crown with spiritual sovereignty.", npc_id="ei_elder_kai"),
+    PortInstitution(id="ei_pools", name="The Healing Springs", port_id="ember_isle", institution_type="tavern",
+        description="Sacred hot pools. No rum. No noise. Just mineral water and quiet. Olo guards the sanctity.",
+        function="Healing, rest, community. The springs are medicine — for body and spirit.",
+        political_leaning="Sacred. Not for sale.", npc_id="ei_spring_keeper"),
+    PortInstitution(id="ei_dye_works", name="The Pigment Cave", port_id="ember_isle", institution_type="shipyard",
+        description="A cave near the vents where Lono grinds volcanic pigments. Impossible colors from impossible heat.",
+        function="Dye production from volcanic sources — colors no other island can produce.",
+        political_leaning="Artistic. The volcano is the palette.", npc_id="ei_dye_keeper"),
+    PortInstitution(id="ei_broker_hut", name="The Export Hut", port_id="ember_isle", institution_type="broker",
+        description="A simple hut near the beach where Tia manages the island's exports. Functional, not fancy.",
+        function="Medicine, dye, and mineral brokering. Tia ensures the island gets fair value.",
+        political_leaning="Practical Coral Crown.", npc_id="ei_broker_tia"),
+]
+
+EMBER_ISLE_PROFILE = PortInstitutionalProfile(
+    port_id="ember_isle", governor_title="Keeper Elder",
+    power_structure="Ember Isle is governed by the mountain — through Kai, who interprets what the volcano provides. Sera harvests medicines. Lono creates dyes. Olo guards the springs. Manu manages the beach. Tia sells to the world. The power structure is spiritual: the mountain gives, the Keepers receive, and outsiders are guests.",
+    internal_tension="The volcano speaks more often. Kai says it grumbles before a good harvest. Others aren't sure. If the mountain is building toward eruption, Ember Isle's entire existence is at risk — and the Keepers would be the last to leave because leaving would mean abandoning the medicine plants that only grow here. Sera's quest for the missing fever-cure ingredient is the island's scientific hope: if she completes the compound, it could justify the Keepers' existence even without the mountain.",
+    institutions=_EMBER_ISLE_INSTITUTIONS, npcs=_EMBER_ISLE_NPCS,
+)
+
+
+# =========================================================================
+# TYPHOON ANCHORAGE — The Storm Riders
+# =========================================================================
+
+_TYPHOON_ANCHORAGE_NPCS = [
+    PortNPC(
+        id="ta_storm_chief", name="Storm Chief Rangi", title="Storm Chief",
+        port_id="typhoon_anchorage", institution="governor", personality="fearless",
+        description="A woman whose body is a map of typhoon survival — scars from flying debris, a missing ear from a grappling hook, and the calm eyes of someone who has stared into the eye of six storms and come out the other side. Rangi governs Typhoon Anchorage the way she sails: into the wind, never away from it.",
+        agenda="Survival as identity. Rangi doesn't want comfort — she wants the Anchorage to remain the place where only the strongest dock. The Storm Wall (built from wrecked hulls) is both monument and warning. She considers softness a greater threat than any typhoon.",
+        greeting_neutral="\"You're here. That means you survived the approach. Good start. Tie your ship properly — chains, not anchors. Anchors fail here.\"",
+        greeting_friendly="\"Captain! You sailed INTO that storm front? You earned this berth. Come — carve your ship's name into the Wall. You've earned it.\"",
+        greeting_hostile="\"Dock in the lee. Away from the Wall. You haven't earned a place here, and the storm doesn't care about your feelings.\"",
+        rumor="Rangi has carved her ship's name into the Storm Wall seven times — once for each typhoon survived. The seventh carving is the deepest. When asked about it, she says, 'That was the one that almost won.' She won't elaborate.",
+        relationship_notes={"ta_harbor_chains": "Koa chains the ships. Rangi decides who docks. Simple.", "ta_pearl_boss": "Moana's divers are the bravest. Rangi respects bravery above all.", "ta_shipwright_ahe": "Ahe builds ships that survive. Rangi tests them.", "ta_cook_hine": "Hine feeds the survivors. Rangi considers this essential.", "ta_broker_wiremu": "Wiremu sells what the reef provides. Rangi doesn't interfere with commerce."},
+    ),
+    PortNPC(
+        id="ta_harbor_chains", name="Harbor Master Koa", title="Chain Master",
+        port_id="typhoon_anchorage", institution="harbor_master", personality="methodical",
+        description="A man whose entire job is chains — not the fortress chains of Dragon's Gate, but survival chains. Koa ensures every ship at Typhoon Anchorage is chained to the cliff face, because anchors aren't enough here. He maintains the chain anchors carved into the rock, and he can chain a ship in under three minutes.",
+        agenda="No ship lost to storm. Koa has lost ships — early in his career, when the chains weren't deep enough. He re-carved every anchor point himself. The last ship lost at anchor was six years ago. He's aiming for ten.",
+        greeting_neutral="\"Chains. Not anchors. The reef will eat your anchor. My chains hold. Bow chain to port, stern to starboard. Do it now.\"",
+        greeting_friendly="\"Captain! The deep chains for you — the ones I carved into bedrock. Your ship will hold through anything. I guarantee it.\"",
+        greeting_hostile="\"Standard chains. Outer cliff. If your ship drags in a storm, that's your problem. I told you where to chain.\"",
+        rumor="Koa once swam to a dragging ship during a typhoon — in the dark, in thirty-foot swells — to re-attach a chain that had slipped. He saved the ship, its crew, and its cargo. He doesn't mention it because he considers it his job.",
+        relationship_notes={"ta_storm_chief": "Rangi decides who docks. Koa chains them. Simple division.", "ta_pearl_boss": "Moana's diving boats need special chains — lighter but secure.", "ta_shipwright_ahe": "Ahe builds; Koa secures. They coordinate on hull-chain interface design.", "ta_cook_hine": "Koa eats standing up between chain checks. Hine brings food to the dock.", "ta_broker_wiremu": "Wiremu's trade depends on Koa's chains keeping the fleet intact."},
+    ),
+    PortNPC(
+        id="ta_pearl_boss", name="Dive Boss Moana", title="Pearl Boss",
+        port_id="typhoon_anchorage", institution="exchange", personality="bold",
+        description="The Storm Riders' lead diver — a woman who dives deeper, longer, and in worse conditions than the Breath-Holders at Pearl Shallows. The rivalry between the two diving traditions is the oldest grudge in the South Seas. Moana considers the Breath-Holders' techniques sacred but outdated. They consider her reckless. Both produce extraordinary pearls.",
+        agenda="Better pearls from deeper water. Moana pushes the limits — deeper dives, longer breath-holds, worse conditions. She uses Abena's breathing technique (which leaked from Pearl Shallows) and has improved it. The Breath-Holders consider this poaching of sacred knowledge. Moana considers it evolution.",
+        greeting_neutral="\"Pearls? The reef here is deeper than Pearl Shallows'. The pearls are bigger. And I don't haggle — the price is the price.\"",
+        greeting_friendly="\"Captain! I brought up something special yesterday — from the deep reef, below where anyone else dives. Look at this luster. You won't see this at Pearl Shallows.\"",
+        greeting_hostile="\"Pearls at posted prices. I don't sell the deep-reef lots to captains I don't trust. Come back with a better reputation.\"",
+        rumor="Moana dove the deepest reef in the South Seas and brought up a pearl the size of a fist — the legendary pearl that Pearl Shallows' Breath-Holders tell stories about. She didn't tell anyone for three days. Then she wore it to a trade council. Pearl Shallows hasn't spoken to the Storm Riders since.",
+        relationship_notes={"ta_storm_chief": "Rangi respects her bravery. Moana respects Rangi's leadership. Mutual warrior respect.", "ta_harbor_chains": "Her diving boats need special chains.", "ta_shipwright_ahe": "Ahe designs diving craft for her. The collaboration is productive.", "ta_cook_hine": "Hine feeds the divers after deep dives. Essential recovery.", "ta_broker_wiremu": "He sells what she brings up. The margins fund everything."},
+    ),
+    PortNPC(
+        id="ta_shipwright_ahe", name="Shipwright Ahe", title="Storm Shipwright",
+        port_id="typhoon_anchorage", institution="shipyard", personality="innovative",
+        description="A shipwright who builds for the worst weather on earth. Ahe's ships are designed to survive what kills everything else — reinforced hulls, flexible masts that bend rather than break, and hull shapes that ride waves rather than fight them. Her yard is built from the Storm Wall's wrecks — she literally builds from failure.",
+        agenda="Ships that can't be broken. Ahe studies every wreck on the Storm Wall and designs against the failure mode. She's been corresponding with Devi in Monsoon Reach — two shipwrights who build for extreme weather, sharing data across the sea.",
+        greeting_neutral="\"Need repairs? I build for typhoons. Whatever the sea did to your ship, I've seen worse. Let me look at your hull.\"",
+        greeting_friendly="\"Captain! Your ship took that storm well — my reinforcements held. Come see what I'm working on next. A hull design that FLEXES in heavy seas instead of cracking.\"",
+        greeting_hostile="\"I'll repair your ship. The sea teaches through damage. But you're paying storm rates, and I'm not explaining my methods.\"",
+        rumor="Ahe built a ship so storm-resistant that Rangi took it into a typhoon deliberately to test it. The ship survived. Ahe said, 'I knew it would.' Rangi said, 'I didn't.' They've been inseparable since.",
+        relationship_notes={"ta_storm_chief": "Rangi tests what Ahe builds. The ultimate quality assurance.", "ta_harbor_chains": "They coordinate on hull-chain interface design.", "ta_pearl_boss": "Designs diving craft for Moana. Productive collaboration.", "ta_cook_hine": "Ahe works through meals. Hine brings food to the yard.", "ta_broker_wiremu": "Ship repairs are part of the Anchorage's revenue."},
+    ),
+    PortNPC(
+        id="ta_cook_hine", name="Cook Hine", title="Storm Cook",
+        port_id="typhoon_anchorage", institution="tavern", personality="resilient",
+        description="A woman who cooks on a volcanic-heated stone grill that never goes out — even in typhoons, because Hine built a windbreak from wrecked hull timbers. Her food is designed for survival: high-calorie, storm-resistant, and served in portions that fuel twelve-hour storm watches. She's the only person at the Anchorage who's never lost a night's sleep to weather.",
+        agenda="Fuel. Hine doesn't serve meals — she serves fuel. Her food keeps divers diving, shipwrights building, and storm watches watching. She considers cooking a survival skill, not an art. Mama Lucia at Corsair's Rest would disagree about the art part. They'd agree about the importance.",
+        greeting_neutral="\"Eat. You'll need it. Storm's building — I can feel the pressure changing. Eat now or not at all for two days.\"",
+        greeting_friendly="\"Captain! The grill's hot and I've been smoking fish all morning. Sit — eat — you look like you haven't had a proper meal since the last port.\"",
+        greeting_hostile="\"Everyone eats. Even people I don't like need fuel. Sit. Eat. Then leave.\"",
+        rumor="Hine cooked through the worst typhoon in twenty years — the one that rearranged the Storm Wall. She served hot food for thirty-six straight hours because 'cold people make bad decisions.' Nobody died. Rangi credits Hine's cooking as much as the chains.",
+        relationship_notes={"ta_storm_chief": "Rangi considers Hine essential. Hine considers cooking essential. Agreement.", "ta_harbor_chains": "Brings food to the dock. Koa eats standing.", "ta_pearl_boss": "Feeds divers after deep dives. Recovery fuel.", "ta_shipwright_ahe": "Brings food to the yard. Ahe forgets to eat.", "ta_broker_wiremu": "Wiremu eats at her grill. Everyone does. It's the only grill."},
+    ),
+    PortNPC(
+        id="ta_broker_wiremu", name="Broker Wiremu", title="Trade Broker",
+        port_id="typhoon_anchorage", institution="broker", personality="steady",
+        description="A quiet man who brokers Typhoon Anchorage's exports — pearls, tropical hardwood, and the services of the only shipyard in the South Seas. Wiremu is practical where everyone else is dramatic: he handles contracts while storms rage, maintains trade relationships during typhoon season, and never raises his voice above conversational.",
+        agenda="Steady revenue despite the weather. Wiremu's challenge: selling goods from a port that's famous for destroying ships. His solution: premium pricing for premium goods. Typhoon Anchorage pearls, he argues, are the best because the reef that produces them is the most dangerous to dive.",
+        greeting_neutral="\"Pearls, timber, or ship repair? I have all three. The prices reflect the difficulty of getting them. You're not buying goods — you're buying bravery.\"",
+        greeting_friendly="\"Captain! Moana brought up a new lot yesterday — deep-reef pearls. I've been waiting for a captain I trust. The margin is worth the voyage.\"",
+        greeting_hostile="\"Standard lots at posted prices. The premium goods go to captains the Anchorage respects. Respect is earned here, not bought.\"",
+        rumor="Wiremu brokered a pearl lot to the Coral Throne during a typhoon — literally signing the contract while the walls shook. The Coral King was so impressed by the delivery under storm conditions that he doubled the payment. Wiremu said, 'Standard service.'",
+        relationship_notes={"ta_storm_chief": "Rangi doesn't interfere with commerce. Wiremu appreciates this.", "ta_harbor_chains": "Trade depends on Koa's chains keeping the fleet intact.", "ta_pearl_boss": "He sells what Moana dives. The margins fund everything.", "ta_shipwright_ahe": "Ship repair revenue is steady work.", "ta_cook_hine": "Everyone eats at Hine's. There's no alternative. There doesn't need to be."},
+    ),
+]
+
+_TYPHOON_ANCHORAGE_INSTITUTIONS = [
+    PortInstitution(id="ta_cliff", name="The Chained Harbor", port_id="typhoon_anchorage", institution_type="harbor_master",
+        description="Carved into the leeward cliff. Ships chained, not anchored. The Storm Wall of wrecked hulls is both monument and breakwater.",
+        function="Survival berthing. Koa's chains hold. Anchors don't.", political_leaning="Coral Crown, Storm Rider pride.", npc_id="ta_harbor_chains"),
+    PortInstitution(id="ta_reef", name="The Deep Reef", port_id="typhoon_anchorage", institution_type="exchange",
+        description="The reef itself — the most dangerous diving ground in the South Seas. Moana's domain. The pearls justify the risk.",
+        function="Pearl diving and grading. Deeper, bigger, riskier than Pearl Shallows.", political_leaning="Storm Rider sovereignty.", npc_id="ta_pearl_boss"),
+    PortInstitution(id="ta_wall", name="The Storm Wall", port_id="typhoon_anchorage", institution_type="governor",
+        description="A breakwater built from wrecked hulls. Names carved by captains who survived typhoons. Rangi's seventh carving is the deepest.",
+        function="Governance + monument. Rangi leads from the Wall. Survival IS governance.", political_leaning="Coral Crown warrior culture.", npc_id="ta_storm_chief"),
+    PortInstitution(id="ta_grill", name="Hine's Storm Grill", port_id="typhoon_anchorage", institution_type="tavern",
+        description="A volcanic-heated stone grill behind a windbreak of hull timbers. Never goes out — not even in typhoons. Fuel, not art.",
+        function="Survival cooking. Hine served 36 hours straight during the worst typhoon. Nobody died.", political_leaning="Essential.", npc_id="ta_cook_hine"),
+    PortInstitution(id="ta_yard", name="The Wreck Yard", port_id="typhoon_anchorage", institution_type="shipyard",
+        description="A shipyard built from Storm Wall wrecks. Ahe literally builds from failure. Flexible masts, bending hulls, wave-riding designs.",
+        function="Storm-proof shipbuilding. Only yard in the South Seas. Ships designed to survive what kills everything else.",
+        political_leaning="Innovation through destruction.", npc_id="ta_shipwright_ahe"),
+    PortInstitution(id="ta_broker", name="Wiremu's Steady Desk", port_id="typhoon_anchorage", institution_type="broker",
+        description="A desk that doesn't move in a storm — because Wiremu bolted it to the rock. Contracts signed during typhoons.",
+        function="Premium brokering. Pearls, timber, repair services. The prices reflect the bravery of getting them.",
+        political_leaning="Practical Crown.", npc_id="ta_broker_wiremu"),
+]
+
+TYPHOON_ANCHORAGE_PROFILE = PortInstitutionalProfile(
+    port_id="typhoon_anchorage", governor_title="Storm Chief",
+    power_structure="Typhoon Anchorage is ruled by survival. Rangi leads because she's survived more. Koa chains ships. Moana dives deeper than anyone. Ahe builds from wreckage. Hine feeds through storms. Wiremu sells what the rest produce. Every institution exists to answer one question: can it survive a typhoon? If yes, it stays. If no, it's rebuilt.",
+    internal_tension="The rivalry with Pearl Shallows is the deepest wound. Moana uses Abena's breathing technique — poached, improved, and wielded as proof of Storm Rider superiority. The fist-sized pearl she brought up from the deep reef is the physical evidence. Pearl Shallows hasn't spoken to them since. Within the Anchorage, the tension is simpler: Rangi glorifies survival. Ahe wants to eliminate the need for survival through better engineering. Both are right. The storm doesn't care about their debate.",
+    institutions=_TYPHOON_ANCHORAGE_INSTITUTIONS, npcs=_TYPHOON_ANCHORAGE_NPCS,
+)
+
+
+# =========================================================================
+# CORAL THRONE — The Reef Kingdom
+# =========================================================================
+
+_CORAL_THRONE_NPCS = [
+    PortNPC(
+        id="ct_coral_king", name="The Coral King", title="King",
+        port_id="coral_throne", institution="governor", personality="imperious",
+        description="A man whose crown is literally grown from living coral — placed on his head as a boy, it has grown with him for forty years. The Coral King governs the South Seas from a palace built of reef, and his authority is absolute within the lagoon. Trade is tribute. Commerce is negotiation with sovereignty. He has no heir, and three princes compete for his favor.",
+        agenda="The kingdom's legacy. The King wants to ensure the Coral Crown outlasts him — which requires securing the succession, maintaining tribute from visiting captains, and building alliances with blocs powerful enough to protect the islands. He's been courting both the Gold Coast Compact and the Silk Circle, playing their goodwill against each other.",
+        greeting_neutral="\"The Coral King permits you to anchor. State your tribute. Silk or weapons preferred. Refusal is exile.\"",
+        greeting_friendly="\"Captain — the King remembers you. Your tribute was generous last time. You may enter the lagoon and approach the Palace. Few receive this honor.\"",
+        greeting_hostile="\"The lagoon is closed to you. Anchor outside the reef. Send your tribute by canoe. If it is sufficient, we will discuss your return.\"",
+        rumor="The Coral King has no heir, and three princes compete for the throne. Each courts foreign captains for weapons and alliances. Smart traders play all three. Dangerous traders pick a side. Nobody knows which prince the King favors. The King may not know either.",
+        relationship_notes={"ct_reef_pilot": "Iti guides ships through the reef. The King's authority starts at the lagoon mouth.", "ct_pearl_trader": "Hana manages the pearl trade. The King takes tribute; Hana handles commerce.", "ct_war_chief": "Tane commands the war canoes. The King's military arm.", "ct_drum_keeper": "Miri keeps the cultural traditions alive. The King's ceremonial arm.", "ct_broker_ariki": "Ariki brokers what the King permits. Tribute first, trade second."},
+    ),
+    PortNPC(
+        id="ct_reef_pilot", name="Reef Pilot Iti", title="Reef Pilot",
+        port_id="coral_throne", institution="harbor_master", personality="proud",
+        description="A man who knows every coral head, every channel, every treacherous shallow in the lagoon — because his family has piloted ships through the reef for twelve generations. Iti is Coral Throne's harbor master in the truest sense: without him, your ship doesn't enter. With him, you glide through the deadliest reef in the South Seas as if it were open water.",
+        agenda="The reef's sovereignty. Iti doesn't just pilot — he protects. Ships that approach without a pilot ground on coral. This isn't carelessness; it's defense. The reef is the Coral Throne's wall, and Iti is the gatekeeper.",
+        greeting_neutral="\"I will guide you through the reef. Follow my commands exactly. The lagoon entrance is narrow and the coral is living. One wrong turn and your hull belongs to the reef.\"",
+        greeting_friendly="\"Captain! The channel is calm today. I'll pilot you through the inner passage — the short route. Reserved for friends of the Crown.\"",
+        greeting_hostile="\"Outer channel. The long way around. And if your helmsman deviates from my course by one degree, I'm cutting the tow line.\"",
+        rumor="Iti once piloted a ship through the reef in total darkness during a storm — by feel alone, reading the current against the hull. The captain fainted. The crew prayed. The ship arrived without a scratch. Iti said, 'The reef speaks to those who listen.'",
+        relationship_notes={"ct_coral_king": "The King's authority starts at the lagoon. Iti's authority starts at the reef.", "ct_pearl_trader": "Hana's pearl boats use the inner channels. Iti knows every one.", "ct_war_chief": "Tane's war canoes don't need pilots. They know the reef from childhood.", "ct_drum_keeper": "Miri's ceremonies mark the reef seasons. Iti's piloting follows the same calendar.", "ct_broker_ariki": "Trade ships need Iti. Without him, there is no trade."},
+    ),
+    PortNPC(
+        id="ct_pearl_trader", name="Pearl Trader Hana", title="Royal Pearl Trader",
+        port_id="coral_throne", institution="exchange", personality="shrewd",
+        description="A woman who handles the Coral Crown's pearl commerce with the understanding that every pearl belongs to the King first and the market second. Hana is shrewd not because she's greedy but because every pearl she undervalues is a pearl that doesn't fund the kingdom.",
+        agenda="Maximum value for the Crown's pearls. Hana knows the pearl markets at Pearl Shallows and Typhoon Anchorage intimately — she prices Coral Throne pearls to compete but never undercut. The King takes tribute from trade; Hana ensures there's enough trade to fund the tribute system.",
+        greeting_neutral="\"The Crown's pearls are available for trade — after tribute is paid. The finest lots are presented at the Palace. Prices are the King's to set.\"",
+        greeting_friendly="\"Captain — I have set aside a pearl lot that the King approved for your hands. The quality is exceptional. The price reflects the Crown's generosity.\"",
+        greeting_hostile="\"Standard lots only. Posted prices. The Palace selection is not available to you. Pay tribute and improve your standing.\"",
+        rumor="Hana negotiated a pearl-for-weapons deal with an Iron Wolves captain that supplied the Crown's armory for a year. Commander Zhang at Dragon's Gate found out and was furious. Hana said the King's sovereignty includes the right to arm himself. Zhang had no answer.",
+        relationship_notes={"ct_coral_king": "She handles commerce. The King takes tribute. Clean division.", "ct_reef_pilot": "Pearl boats use Iti's channels.", "ct_war_chief": "The weapons she trades for fund Tane's armory.", "ct_drum_keeper": "Pearls are part of the coronation ceremony. Miri and Hana coordinate.", "ct_broker_ariki": "Ariki handles contracts. Hana handles pearls. Complementary."},
+    ),
+    PortNPC(
+        id="ct_war_chief", name="War Chief Tane", title="War Chief",
+        port_id="coral_throne", institution="customs", personality="fierce",
+        description="The Coral King's military commander — a warrior whose war canoes escort every entering ship and whose inspection is the closest thing Coral Throne has to customs: he checks your cargo for weapons, not to confiscate them but to ASSESS them. The King wants weapons. Tane decides if yours are good enough.",
+        agenda="The Crown's defense. Tane wants weapons — swords, bows, gunpowder, anything that gives the war canoes an edge. He's the reason weapons sell for 700% markup at Coral Throne. He also assesses every visiting captain as a potential ally or threat. His war canoes can sink a galleon in the shallows.",
+        greeting_neutral="\"Your weapons. Show them. The King demands tribute of arms. If yours are worthy, the price will be generous. If not... tribute in silk.\"",
+        greeting_friendly="\"Captain! You brought the blades I asked for? Show me. Ah — yes. The King will be pleased. Your tribute is weapons today. A GOOD tribute.\"",
+        greeting_hostile="\"Stand on your deck. My warriors will inspect your hold. Do not resist. The reef is shallow here, and war canoes are faster than anything you sail.\"",
+        rumor="Tane's war canoes sank a pirate ship that tried to raid Coral Throne by luring it onto the reef and then boarding from the shallow side. The pirates never saw them coming — the canoes were painted to match the coral. The pirate captain's flag hangs in the Palace.",
+        relationship_notes={"ct_coral_king": "His sword arm. Tane serves the Crown's military will absolutely.", "ct_reef_pilot": "Tane's canoes don't need pilots. They know the reef from childhood.", "ct_pearl_trader": "The weapons Hana trades for fund his armory.", "ct_drum_keeper": "War ceremonies before battle. Miri and Tane coordinate the drums.", "ct_broker_ariki": "Ariki's trade brings the weapons Tane needs."},
+    ),
+    PortNPC(
+        id="ct_drum_keeper", name="Drum Keeper Miri", title="Keeper of Traditions",
+        port_id="coral_throne", institution="tavern", personality="reverent",
+        description="A woman whose drumming IS the Coral Throne — the rhythms that mark arrivals, departures, trade sessions, ceremonies, and the Coral Coronation itself. Miri is not a tavern keeper — she's a cultural institution. Her drum circle at the lagoon's edge is where stories are told, ceremonies performed, and the kingdom's identity maintained through rhythm.",
+        agenda="Cultural continuity. The three competing princes each want Miri's support, because the Drum Keeper decides which coronation music plays — and the music determines which prince the gods favor. Miri hasn't decided. She may never decide. The drums will tell her when it's time.",
+        greeting_neutral="\"The drums welcome you, Captain. Listen — each rhythm has meaning. This one means 'stranger arriving.' If you hear the war rhythm, leave immediately.\"",
+        greeting_friendly="\"Captain! The welcome rhythm for you today — the long one, with the celebration beat. The King honors you. Sit. Listen. The drums speak.\"",
+        greeting_hostile="\"The warning rhythm plays. Do you hear it? The drums know you, Captain. They don't forget.\"",
+        rumor="The three princes each visit Miri separately, seeking her endorsement. She serves each the same tea and plays each the same neutral rhythm. None knows she plays a fourth rhythm — alone, at midnight, on the reef. What it means, only Miri and the coral know.",
+        relationship_notes={"ct_coral_king": "His ceremonial arm. The drums validate his authority.", "ct_reef_pilot": "The drums mark the reef seasons. Iti's piloting follows the calendar.", "ct_pearl_trader": "Pearls in the coronation ceremony. Coordination essential.", "ct_war_chief": "War drums before battle. The rhythm decides morale.", "ct_broker_ariki": "The drums signal trade sessions. Ariki's work begins when Miri plays."},
+    ),
+    PortNPC(
+        id="ct_broker_ariki", name="Broker Ariki", title="Royal Broker",
+        port_id="coral_throne", institution="broker", personality="diplomatic",
+        description="The Coral King's commercial face — the person who translates royal demands into trade contracts and tribute requirements into commercial language that visiting captains understand. Ariki bridges the gap between the King's absolute authority and the practical reality of international trade.",
+        agenda="The Crown's commerce. Ariki wants trade flowing — weapons in, pearls out, silk in, tobacco out. He manages the balance between the King's demands (always more weapons, always more silk) and what the market actually provides. He's the only person who can tell the King 'no' — phrased, of course, as 'not yet, Your Majesty.'",
+        greeting_neutral="\"The Crown offers trade — pearls, tobacco, rum. Tribute is required first. I can advise on what the King currently favors.\"",
+        greeting_friendly="\"Captain! The King's demands align with your cargo. This is fortunate. Let me broker the terms — tribute as weapons, trade in pearls. Both parties benefit.\"",
+        greeting_hostile="\"The Crown's trade requires a minimum tribute. Your history suggests your tribute may be... insufficient. I advise generosity.\"",
+        rumor="Ariki told the King 'no' once — when the King demanded a tariff so high it would have driven away all trade. He phrased it as 'the reef provides in its own time, Your Majesty, and so does trade.' The King was silent for an hour. Then he reduced the tariff. Ariki hasn't slept soundly since, but the trade continued.",
+        relationship_notes={"ct_coral_king": "The only person who says 'no' to the King — carefully.", "ct_reef_pilot": "Trade ships need Iti. Without pilots, there's no trade for Ariki to broker.", "ct_pearl_trader": "Hana handles pearls. Ariki handles everything else.", "ct_war_chief": "Ariki's trade brings weapons. Tane's armory depends on it.", "ct_drum_keeper": "The drums signal trade sessions. Ariki's work begins with Miri's rhythm."},
+    ),
+]
+
+_CORAL_THRONE_INSTITUTIONS = [
+    PortInstitution(id="ct_lagoon", name="The Lagoon Entrance", port_id="coral_throne", institution_type="harbor_master",
+        description="A narrow, treacherous passage through living coral. Only Iti can guide you through. War canoes escort every ship.",
+        function="Reef-piloted access. Iti is the gatekeeper. The reef is the wall.", political_leaning="Coral Crown absolute.", npc_id="ct_reef_pilot"),
+    PortInstitution(id="ct_pearl_hall", name="The Pearl Hall", port_id="coral_throne", institution_type="exchange",
+        description="A chamber in the Coral Palace where pearls are displayed, graded, and traded — after tribute is paid.",
+        function="Royal pearl commerce. Every pearl belongs to the King first. Hana manages the market second.", political_leaning="Crown commerce.", npc_id="ct_pearl_trader"),
+    PortInstitution(id="ct_palace", name="The Coral Palace", port_id="coral_throne", institution_type="governor",
+        description="Grown from living reef over centuries. Walls glitter with embedded shells and pearls. The King sits on a throne of coral that was alive when his grandfather was born.",
+        function="Absolute monarchy. Trade is tribute. Tribute is submission. Submission is the price of access.", political_leaning="The Crown IS the politics.", npc_id="ct_coral_king"),
+    PortInstitution(id="ct_drum_circle", name="The Drum Circle", port_id="coral_throne", institution_type="tavern",
+        description="The lagoon's edge where Miri's drums mark every moment. Not a tavern — a cultural heartbeat. Stories told through rhythm.",
+        function="Cultural continuity, ceremonies, arrival/departure signals. The drums decide which prince the gods favor.", political_leaning="Above politics. The drums speak for the reef.", npc_id="ct_drum_keeper"),
+    PortInstitution(id="ct_canoe_dock", name="The War Canoe Dock", port_id="coral_throne", institution_type="customs",
+        description="Where Tane's warriors inspect arriving cargo — not for legality but for QUALITY. The King wants weapons. Tane decides if yours are good enough.",
+        function="Military assessment disguised as customs. Weapons checked for tribute worthiness, not legality.", political_leaning="Crown military.", npc_id="ct_war_chief"),
+    PortInstitution(id="ct_trade", name="The Royal Trading Post", port_id="coral_throne", institution_type="broker",
+        description="A coral-walled room where Ariki translates royal demands into commercial language. The only person who can tell the King 'no.'",
+        function="Royal brokering. Tribute first, trade second. Ariki manages the balance.", political_leaning="Crown diplomacy.", npc_id="ct_broker_ariki"),
+]
+
+CORAL_THRONE_PROFILE = PortInstitutionalProfile(
+    port_id="coral_throne", governor_title="King",
+    power_structure="Absolute monarchy. The Coral King's authority is total within the lagoon. Iti controls reef access. Tane commands the military. Hana manages pearls. Miri maintains culture. Ariki handles commerce. The King sits at the center, wearing a crown that is literally growing. Every institution radiates from the Palace like spokes from a hub.",
+    internal_tension="The succession. The King has no heir, and three princes compete. Each courts foreign captains for weapons. Each visits Drum Keeper Miri seeking her endorsement — because the coronation music determines which prince the gods favor. Miri plays each the same neutral rhythm. She plays a fourth rhythm alone at midnight on the reef. Nobody knows what it means. The succession crisis isn't violent — yet. But when the King dies, three princes, their foreign alliances, and Miri's drums will determine whether the Coral Crown continues or shatters.",
+    institutions=_CORAL_THRONE_INSTITUTIONS, npcs=_CORAL_THRONE_NPCS,
+)
+
+
+# =========================================================================
+# Export all profiles from this file
+# =========================================================================
+
 EAST_PROFILES = {
     "silk_haven": SILK_HAVEN_PROFILE,
     "crosswind_isle": CROSSWIND_ISLE_PROFILE,
     "dragons_gate": DRAGONS_GATE_PROFILE,
     "spice_narrows": SPICE_NARROWS_PROFILE,
+    "ember_isle": EMBER_ISLE_PROFILE,
+    "typhoon_anchorage": TYPHOON_ANCHORAGE_PROFILE,
+    "coral_throne": CORAL_THRONE_PROFILE,
 }
