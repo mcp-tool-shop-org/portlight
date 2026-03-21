@@ -172,10 +172,21 @@ def status_view(world: "WorldState", ledger: "ReceiptLedger", infra: "Infrastruc
 
     if ship:
         lines.append(f"Ship: [bold]{ship.name}[/bold] ({ship.template_id})")
+        # Show resolved stats if upgrades are installed
+        from portlight.content.upgrades import UPGRADES as _UPGRADES_CAT
+        from portlight.engine.ship_stats import resolve_cargo_capacity, resolve_hull_max
+        eff_cargo = resolve_cargo_capacity(ship, _UPGRADES_CAT)
+        eff_hull_max = resolve_hull_max(ship, _UPGRADES_CAT)
         cargo_used = sum(c.quantity for c in captain.cargo)
-        lines.append(f"Cargo: {fmt.cargo_bar(cargo_used, ship.cargo_capacity)}")
-        lines.append(f"Hull:  {fmt.hull_bar(ship.hull, ship.hull_max)}")
+        lines.append(f"Cargo: {fmt.cargo_bar(cargo_used, eff_cargo)}")
+        lines.append(f"Hull:  {fmt.hull_bar(ship.hull, eff_hull_max)}")
         lines.append(f"Crew:  {fmt.crew_status(ship.crew, ship.crew_max, _crew_min(ship))}")
+        if ship.upgrades:
+            upgrade_names = []
+            for inst in ship.upgrades:
+                utmpl = _UPGRADES_CAT.get(inst.upgrade_id)
+                upgrade_names.append(utmpl.name if utmpl else inst.upgrade_id)
+            lines.append(f"Upgrades: {', '.join(upgrade_names)} ({len(ship.upgrades)}/{ship.upgrade_slots})")
     lines.append(f"Provisions: {fmt.provision_status(captain.provisions)}")
 
     # Current location
@@ -668,6 +679,70 @@ def shipyard_view(captain: "Captain") -> Panel:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def upgrade_catalog_view(captain: "Captain") -> Panel:
+    """Show available upgrades with bonuses and prices."""
+    from portlight.content.upgrades import UPGRADES as _UPGRADES_CAT
+
+    ship = captain.ship
+    table = Table(title="Ship Upgrades", show_header=True, header_style="bold")
+    table.add_column("ID", style="dim")
+    table.add_column("Name", style="bold")
+    table.add_column("Category")
+    table.add_column("Price", justify="right")
+    table.add_column("Effects")
+    table.add_column("Status")
+
+    installed_ids = {inst.upgrade_id for inst in (ship.upgrades if ship else [])}
+    slots_used = len(ship.upgrades) if ship else 0
+    slots_max = ship.upgrade_slots if ship else 0
+
+    for uid, tmpl in sorted(_UPGRADES_CAT.items(), key=lambda x: (x[1].category.value, x[1].price)):
+        effects: list[str] = []
+        if tmpl.speed_bonus:
+            effects.append(f"+{tmpl.speed_bonus} speed")
+        if tmpl.speed_penalty:
+            effects.append(f"-{tmpl.speed_penalty} speed")
+        if tmpl.hull_max_bonus:
+            effects.append(f"+{tmpl.hull_max_bonus} hull")
+        if tmpl.cargo_bonus:
+            effects.append(f"+{tmpl.cargo_bonus} cargo")
+        if tmpl.cannon_bonus:
+            effects.append(f"+{tmpl.cannon_bonus} cannons")
+        if tmpl.maneuver_bonus:
+            effects.append(f"+{tmpl.maneuver_bonus} maneuver")
+        if tmpl.storm_resist_bonus:
+            effects.append(f"+{int(tmpl.storm_resist_bonus * 100)}% storm")
+        if tmpl.crew_max_bonus:
+            effects.append(f"+{tmpl.crew_max_bonus} crew")
+        if tmpl.special:
+            effects.append(f"[italic]{tmpl.special}[/italic]")
+
+        if uid in installed_ids:
+            status = "[bold cyan]Installed[/bold cyan]"
+        elif slots_used >= slots_max:
+            status = "[dim]No slots[/dim]"
+        elif tmpl.price > captain.silver:
+            need = tmpl.price - captain.silver
+            status = f"[red]Need {need} more[/red]"
+        else:
+            status = "[green]Available[/green]"
+
+        table.add_row(
+            uid,
+            tmpl.name,
+            tmpl.category.value.replace("_", " ").title(),
+            fmt.silver(tmpl.price),
+            ", ".join(effects) if effects else "[dim]-[/dim]",
+            status,
+        )
+
+    footer = f"Slots: {slots_used}/{slots_max}"
+    if ship:
+        footer += f"  |  Ship: {ship.name}"
+
+    return Panel(table, subtitle=footer, border_style="yellow")
+
 
 def _routes_from(routes: list["Route"], port_id: str | None) -> list["Route"]:
     if port_id is None:

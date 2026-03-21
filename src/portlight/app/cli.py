@@ -454,6 +454,35 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
         console.print(views.shipyard_view(s.captain))
 
 
+@app.command()
+def upgrade(
+    upgrade_id: str = typer.Argument(None, help="Upgrade ID to install, or omit to browse"),
+    remove: bool = typer.Option(False, "--remove", "-r", help="Remove an installed upgrade"),
+) -> None:
+    """Browse or install ship upgrades at the shipyard."""
+    s = _session()
+    if not s.current_port:
+        console.print("[yellow]Must be docked to visit the shipyard.[/yellow]")
+        return
+
+    if upgrade_id and remove:
+        err = s.remove_upgrade(upgrade_id)
+        if err:
+            console.print(f"[red]{err}[/red]")
+        else:
+            console.print(f"\n[bold green]Removed {upgrade_id}.[/bold green]\n")
+            console.print(views.status_view(s.world, s.ledger, s.infra))
+    elif upgrade_id:
+        err = s.install_upgrade(upgrade_id)
+        if err:
+            console.print(f"[red]{err}[/red]")
+        else:
+            console.print("\n[bold green]Upgrade installed![/bold green]\n")
+            console.print(views.status_view(s.world, s.ledger, s.infra))
+    else:
+        console.print(views.upgrade_catalog_view(s.captain))
+
+
 # ---------------------------------------------------------------------------
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------

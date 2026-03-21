@@ -176,6 +176,92 @@ class TestSessionShipyard:
         assert s.captain.silver == 0  # 800 - 800 + 0 trade-in
 
 
+class TestSessionUpgrades:
+    def test_install_upgrade_at_shipyard(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()  # porto_novo has shipyard
+        s.captain.silver = 500
+        err = s.install_upgrade("iron_strapping")
+        assert err is None
+        assert len(s.captain.ship.upgrades) == 1
+        assert s.captain.ship.upgrades[0].upgrade_id == "iron_strapping"
+        assert s.captain.silver == 400  # 500 - 100
+
+    def test_install_upgrade_no_shipyard(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new(starting_port="al_manar")  # no shipyard
+        s.captain.silver = 500
+        err = s.install_upgrade("iron_strapping")
+        assert err is not None
+        assert "shipyard" in err.lower()
+
+    def test_install_upgrade_insufficient_silver(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        s.captain.silver = 10
+        err = s.install_upgrade("iron_strapping")
+        assert err is not None
+        assert "silver" in err.lower()
+
+    def test_install_upgrade_no_slots(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        s.captain.silver = 5000
+        ship = s.captain.ship
+        # Sloop has 2 slots — fill them
+        from portlight.engine.models import InstalledUpgrade
+        ship.upgrades = [
+            InstalledUpgrade("iron_strapping"),
+            InstalledUpgrade("lateen_rigging"),
+        ]
+        err = s.install_upgrade("extended_hold")
+        assert err is not None
+        assert "slot" in err.lower()
+
+    def test_install_unknown_upgrade(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        s.captain.silver = 500
+        err = s.install_upgrade("nonexistent_upgrade")
+        assert err is not None
+
+    def test_remove_upgrade(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        s.captain.silver = 500
+        s.install_upgrade("iron_strapping")
+        assert len(s.captain.ship.upgrades) == 1
+        err = s.remove_upgrade("iron_strapping")
+        assert err is None
+        assert len(s.captain.ship.upgrades) == 0
+
+    def test_remove_upgrade_not_installed(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        err = s.remove_upgrade("iron_strapping")
+        assert err is not None
+
+    def test_buy_ship_clears_upgrades(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        s.captain.silver = 2000
+        s.install_upgrade("iron_strapping")
+        assert len(s.captain.ship.upgrades) == 1
+        s.buy_ship("trade_brigantine")
+        assert len(s.captain.ship.upgrades) == 0
+
+    def test_upgrade_persists_after_save_load(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        s.captain.silver = 500
+        s.install_upgrade("iron_strapping")
+        # Load fresh session
+        s2 = GameSession(tmp_path)
+        s2.load()
+        assert len(s2.captain.ship.upgrades) == 1
+        assert s2.captain.ship.upgrades[0].upgrade_id == "iron_strapping"
+
+
 class TestFullVoyageLoop:
     """The acceptance test: buy → sail → events → arrive → sell → profit."""
 

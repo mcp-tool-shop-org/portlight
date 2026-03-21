@@ -181,9 +181,11 @@ class GameSession:
         stock_target = slot.stock_target if slot else 50
 
         # Snapshot cargo provenance before sell (sell may remove the item)
+        # Note: if cargo_item is None, execute_sell will return an error string
+        # so the provenance defaults below are never reached by check_delivery.
         cargo_item = next((c for c in self.world.captain.cargo if c.good_id == good_id), None)
-        cargo_source_port = cargo_item.acquired_port if cargo_item else port.id
-        cargo_source_region = cargo_item.acquired_region if cargo_item else port.region
+        cargo_source_port = cargo_item.acquired_port if cargo_item else ""
+        cargo_source_region = cargo_item.acquired_region if cargo_item else ""
 
         result = execute_sell(self.world.captain, port, good_id, qty, self._trade_seq)
         if isinstance(result, TradeReceipt):
@@ -276,7 +278,15 @@ class GameSession:
                 )
 
         # Daily infrastructure upkeep
-        tick_infrastructure(self.infra, self.world.captain, self.world.day)
+        infra_msgs = tick_infrastructure(self.infra, self.world.captain, self.world.day)
+        # File insurance claims for warehouse seizures
+        for msg in infra_msgs:
+            if "seized" in msg.lower():
+                # Estimate lost cargo value from message for insurance claim
+                resolve_claim(
+                    self.infra, self.world.captain,
+                    "cargo_damage", 100, self.world.day,  # base estimate
+                )
 
         # Daily credit tick (interest, due dates, defaults)
         credit_msgs = tick_credit(self.infra, self.world.captain, self.world.day)
@@ -299,6 +309,10 @@ class GameSession:
             return []
 
         events = advance_day(self.world, self._rng)
+
+        # Note: markets don't tick while at sea — prices only change when
+        # you're in port to observe them. This is intentional: it preserves
+        # the arbitrage window you planned for during departure.
 
         # Record inspection events for reputation + resolve insurance claims
         voyage = self.world.voyage
@@ -328,6 +342,9 @@ class GameSession:
                     self.world.captain.standing,
                     self.world.day, port.id, port.region,
                 )
+                # Track festival arrival for narrative beat
+                if any(af.port_id == port.id for af in self.world.culture.active_festivals):
+                    self.world.culture.festivals_visited += 1
                 self._recalc(port)
                 self._refresh_board(port)
 
@@ -445,6 +462,56 @@ class GameSession:
 
         self._save()
         return None
+
+    def install_upgrade(self, upgrade_id: str) -> str | None:
+        """Install a ship upgrade at a shipyard port. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked"
+        from portlight.engine.models import InstalledUpgrade, PortFeature
+        if PortFeature.SHIPYARD not in port.features:
+            return f"{port.name} has no shipyard"
+        from portlight.content.upgrades import UPGRADES
+        template = UPGRADES.get(upgrade_id)
+        if not template:
+            return f"Unknown upgrade: {upgrade_id}"
+        ship = self.world.captain.ship
+        if not ship:
+            return "No ship"
+        if len(ship.upgrades) >= ship.upgrade_slots:
+            return f"No upgrade slots remaining ({ship.upgrade_slots}/{ship.upgrade_slots} used)"
+        if template.price > self.world.captain.silver:
+            return f"Need {template.price} silver, have {self.world.captain.silver}"
+
+        self.world.captain.silver -= template.price
+        ship.upgrades.append(InstalledUpgrade(
+            upgrade_id=upgrade_id,
+            installed_day=self.world.day,
+        ))
+        self._save()
+        return None
+
+    def remove_upgrade(self, upgrade_id: str) -> str | None:
+        """Remove an installed upgrade. No refund. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked"
+        from portlight.engine.models import PortFeature
+        if PortFeature.SHIPYARD not in port.features:
+            return f"{port.name} has no shipyard"
+        ship = self.world.captain.ship
+        if not ship:
+            return "No ship"
+        for i, inst in enumerate(ship.upgrades):
+            if inst.upgrade_id == upgrade_id:
+                ship.upgrades.pop(i)
+                self._save()
+                return None
+        return f"Upgrade not installed: {upgrade_id}"
 
     # --- Hire crew ---
 
