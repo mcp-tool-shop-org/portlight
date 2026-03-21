@@ -1134,6 +1134,8 @@ def _pirate_state_to_dict(state: PirateState) -> dict:
         "duels_lost": state.duels_lost,
         "naval_victories": state.naval_victories,
         "naval_defeats": state.naval_defeats,
+        "encounter_phase": state.encounter_phase,
+        "encounter_state": state.encounter_state,
     }
     if state.pending_duel is not None:
         pd = state.pending_duel
@@ -1214,6 +1216,8 @@ def _pirate_state_from_dict(d: dict) -> PirateState:
         naval_defeats=d.get("naval_defeats", 0),
         pending_duel=pending,
         captain_memories=captain_memories,
+        encounter_phase=d.get("encounter_phase", ""),
+        encounter_state=d.get("encounter_state", {}),
     )
 
 

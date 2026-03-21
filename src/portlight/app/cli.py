@@ -1365,11 +1365,29 @@ _pending_victory = False  # True when player won and must choose spare/take-all
 
 
 def _sync_encounter_phase(s) -> None:
-    """Persist the current encounter phase to save data."""
+    """Persist the current encounter phase and combat state to save data."""
     if _active_encounter and s and s.world:
-        s.world.pirates.encounter_phase = _active_encounter.phase
+        enc = _active_encounter
+        s.world.pirates.encounter_phase = enc.phase
+        estate = {
+            "boarding_progress": enc.boarding_progress,
+            "boarding_threshold": enc.boarding_threshold,
+            "naval_turns": enc.naval_turns,
+            "duel_turns": enc.duel_turns,
+            "enemy_ship_hull": enc.enemy_ship_hull,
+            "enemy_ship_crew": enc.enemy_ship_crew,
+        }
+        # Persist combatant HP/stamina for duel phase
+        if _player_combatant:
+            estate["player_hp"] = _player_combatant.hp
+            estate["player_stamina"] = _player_combatant.stamina
+        if _opponent_combatant:
+            estate["opponent_hp"] = _opponent_combatant.hp
+            estate["opponent_stamina"] = _opponent_combatant.stamina
+        s.world.pirates.encounter_state = estate
     elif s and s.world:
         s.world.pirates.encounter_phase = ""
+        s.world.pirates.encounter_state = {}
 
 
 def _clear_encounter(s) -> None:
@@ -1382,6 +1400,7 @@ def _clear_encounter(s) -> None:
     if s and s.world:
         s.world.pirates.pending_duel = None
         s.world.pirates.encounter_phase = ""
+        s.world.pirates.encounter_state = {}
 
 
 def _restore_encounter(s) -> None:
@@ -1405,10 +1424,18 @@ def _restore_encounter(s) -> None:
         enc.enemy_personality = pd.personality
         enc.enemy_strength = pd.strength
         enc.enemy_region = pd.region
-        # Restore persisted phase
+        # Restore persisted phase and combat state
         phase = s.world.pirates.encounter_phase
         if phase and phase in ("approach", "naval", "boarding", "duel"):
             enc.phase = phase
+        estate = s.world.pirates.encounter_state
+        if estate:
+            enc.boarding_progress = estate.get("boarding_progress", 0)
+            enc.boarding_threshold = estate.get("boarding_threshold", 3)
+            enc.naval_turns = estate.get("naval_turns", 0)
+            enc.duel_turns = estate.get("duel_turns", 0)
+            enc.enemy_ship_hull = estate.get("enemy_ship_hull", enc.enemy_ship_hull)
+            enc.enemy_ship_crew = estate.get("enemy_ship_crew", enc.enemy_ship_crew)
         _active_encounter = enc
 
 
@@ -1456,7 +1483,8 @@ def encounter(
                 enc.boarding_progress, enc.boarding_threshold, 0,
             ))
         else:
-            _active_encounter = None
+            _clear_encounter(s)
+        _sync_encounter_phase(s)
         s._save()
 
     elif choice == "flee":
@@ -1469,11 +1497,13 @@ def encounter(
         else:
             msg2 = begin_fight(enc, combat_ship)
             console.print(f"\n{msg2}")
+        _sync_encounter_phase(s)
         s._save()
 
     elif choice == "fight":
         msg = begin_fight(enc, combat_ship)
         console.print(f"\n{msg}")
+        _sync_encounter_phase(s)
         console.print(combat_views.naval_status_view(
             s.captain.ship.hull, s.captain.ship.hull_max,
             s.captain.ship.crew, s.captain.ship.cannons,
@@ -1562,6 +1592,7 @@ def naval(
             enc.boarding_progress, enc.boarding_threshold, enc.naval_turns,
         ))
 
+    _sync_encounter_phase(s)
     s._save()
 
 
@@ -1672,6 +1703,18 @@ def fight(
                 _player_combatant.armor_dr = armor_def.damage_reduction
                 _player_combatant.dodge_stamina_penalty = armor_def.dodge_penalty
 
+        # Restore HP/stamina from persisted state (cross-process resume)
+        estate = s.world.pirates.encounter_state
+        if estate:
+            if "player_hp" in estate:
+                _player_combatant.hp = estate["player_hp"]
+            if "player_stamina" in estate:
+                _player_combatant.stamina = estate["player_stamina"]
+            if "opponent_hp" in estate:
+                _opponent_combatant.hp = estate["opponent_hp"]
+            if "opponent_stamina" in estate:
+                _opponent_combatant.stamina = estate["opponent_stamina"]
+
     p, o = _player_combatant, _opponent_combatant
     valid = get_encounter_combat_actions(p)
     action = action.lower().strip()
@@ -1776,10 +1819,9 @@ def fight(
             record_encounter(memory, s.world.day, enc.enemy_region, "player_lost",
                              crew_killed=max(0, enc.enemy_ship_crew_max - enc.enemy_ship_crew))
 
-        _active_encounter = None
-        _player_combatant = None
-        _opponent_combatant = None
+        _clear_encounter(s)
 
+    _sync_encounter_phase(s)
     s._save()
 
 
