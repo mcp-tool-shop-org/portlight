@@ -51,7 +51,7 @@ def test_theme_css():
     assert len(APP_CSS) > 500
     assert "#0a1628" in APP_CSS  # deep ocean background
     assert "#2a9d8f" in APP_CSS  # sea foam accent
-    assert "#e9c46a" in APP_CSS  # gold for silver/wealth
+    assert "#264653" in APP_CSS  # storm gray for panels
     assert "#e76f51" in APP_CSS  # coral red for danger
 
 

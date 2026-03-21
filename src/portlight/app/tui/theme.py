@@ -169,15 +169,6 @@ Footer {
     color: #576574;
 }
 
-Footer > .footer--key {
-    background: #264653;
-    color: #2a9d8f;
-}
-
-Footer > .footer--description {
-    color: #c8d6e5;
-}
-
 /* View panels */
 .view-panel {
     height: 1fr;
@@ -188,21 +179,6 @@ Footer > .footer--description {
 DataTable {
     height: 1fr;
     background: #0a1628;
-}
-
-DataTable > .datatable--header {
-    background: #264653;
-    color: #2a9d8f;
-    text-style: bold;
-}
-
-DataTable > .datatable--cursor {
-    background: #1a3a5c;
-    color: #e9c46a;
-}
-
-DataTable > .datatable--even-row {
-    background: #0d1f3c;
 }
 
 /* Combat panels */
@@ -231,60 +207,19 @@ DataTable > .datatable--even-row {
 }
 
 /* Modal dialogs */
-ModalScreen {
-    background: rgba(10, 22, 40, 0.85);
-}
-
 #input-area {
     width: 60;
     height: auto;
-    margin: 4 auto;
+    margin: 4;
     padding: 2;
     background: #0d1f3c;
     border: tall #2a9d8f;
 }
 
-#input-area Input {
-    background: #0a1628;
-    color: #e9c46a;
-    border: tall #264653;
-}
-
-#input-area Input:focus {
-    border: tall #2a9d8f;
-}
-
-/* Notifications */
-Toast {
-    background: #0d1f3c;
-    border: tall #2a9d8f;
-    color: #c8d6e5;
-}
-
 /* Splash screen */
-#splash {
-    width: 100%;
-    height: 100%;
-    content-align: center middle;
-    background: #0a1628;
-}
-
 #splash-art {
     text-align: center;
     margin: 2;
-}
-
-#splash-title {
-    text-align: center;
-    text-style: bold;
-    color: #e9c46a;
-    margin: 1;
-}
-
-#splash-subtitle {
-    text-align: center;
-    color: #576574;
-    margin: 1;
 }
 
 /* Voyage progress */

@@ -695,7 +695,6 @@ class ContentArea(Widget):
             "\n".join(lines),
             title="[bold #e9c46a]\u2693 Help[/bold #e9c46a]",
             border_style="#264653",
-            id="help-panel",
         )
 
 
