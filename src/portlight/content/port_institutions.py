@@ -4072,6 +4072,306 @@ JADE_PORT_PROFILE = PortInstitutionalProfile(
 
 # ---------------------------------------------------------------------------
 # Master registry — will grow as we build each port
+
+# =========================================================================
+# MONSOON REACH — The Wind Temple
+# =========================================================================
+
+_MONSOON_REACH_NPCS = [
+    PortNPC(
+        id="mr_harbor_ravi",
+        name="Harbor Master Ravi",
+        title="Harbor Master",
+        port_id="monsoon_reach",
+        institution="harbor_master",
+        personality="calm",
+        description=(
+            "A former monk who left the Wind Temple because he preferred boats to "
+            "prayer — then discovered that running a harbor IS prayer, just louder. "
+            "Ravi assigns berths with the same unhurried deliberation the monks "
+            "apply to reading wind. He checks the tide, checks the forecast, checks "
+            "the sky, and then points. He's never wrong about when a ship should depart."
+        ),
+        agenda=(
+            "Harmony with the monsoon. Ravi doesn't fight the weather — he works "
+            "with it. Ships that arrive at the wrong time wait. Ships that insist "
+            "on departing into a monsoon get a lecture and a refusal. He's saved more "
+            "lives through stubbornness than any rescue fleet."
+        ),
+        greeting_neutral="\"Welcome. The wind is from the southeast today — good for arrivals, not for departures. You'll berth at the headland. The monks will post tomorrow's forecast at dawn.\"",
+        greeting_friendly="\"Captain! The wind said you'd come today. Berth three — sheltered from the afternoon gusts. Stay for the evening forecast. Brother Anand has something to tell you.\"",
+        greeting_hostile="\"You may dock. But I recommend you wait for tomorrow's forecast before making plans. The monsoon doesn't care about your schedule.\"",
+        rumor="Ravi once refused to let a Silk Circle trade fleet depart for three days because the monks predicted a storm. The fleet commander was furious. The storm arrived on the fourth day and destroyed a pirate fleet that had been waiting to ambush them. Ravi said nothing. The monks smiled.",
+        relationship_notes={
+            "mr_brother_anand": "His former teacher. Ravi left the Temple but never left the teachings.",
+            "mr_shipwright_devi": "Partners. She builds the ships; he tells them when to sail.",
+            "mr_spice_trader_priya": "She brings the trade; he manages the harbor. Clean working relationship.",
+            "mr_elder_council": "They govern; he runs the harbor. He attends council when the wind permits.",
+            "mr_customs_sanjay": "Sanjay checks cargo; Ravi checks weather. Non-overlapping concerns.",
+            "mr_broker_kamala": "She matches contracts; he matches tides. Both serve the flow.",
+        },
+    ),
+    PortNPC(
+        id="mr_brother_anand",
+        name="Brother Anand",
+        title="Wind Reader",
+        port_id="monsoon_reach",
+        institution="apothecary",
+        personality="enigmatic",
+        description=(
+            "Shaved head, saffron robes, and eyes that are always looking at something "
+            "you can't see — the wind patterns above the clouds, the currents below "
+            "the surface, the pressure changes that announce storms days before they "
+            "arrive. Brother Anand is the Wind Temple's chief reader — the monk whose "
+            "forecasts guide every departure from Monsoon Reach."
+        ),
+        agenda=(
+            "The wind's truth. Anand doesn't forecast for commerce — he forecasts "
+            "because the wind speaks and someone must listen. His predictions are "
+            "uncannily accurate because they're based on generations of observation "
+            "recorded in the Temple's archives. He offered alliance to no one — not "
+            "the Silk Circle, not the Free Ports, not any faction. The wind, he says, "
+            "belongs to everyone."
+        ),
+        greeting_neutral="\"The wind brings you. Good. Tomorrow it will shift — from the east, I think. Plan your departure accordingly. Or stay. The Temple is open.\"",
+        greeting_friendly="\"Ah, Captain. The wind spoke your name this morning — I expected you. Come to the Temple tonight. There is something I wish to show you about the southern currents.\"",
+        greeting_hostile="\"The wind carries all ships. Even those I would not choose to guide. Your forecast is the same as everyone's — truthful.\"",
+        rumor="Brother Anand predicted the worst monsoon in a generation three weeks before it arrived. He told every captain in harbor. Most left. The ones who stayed survived because Anand also told them exactly where to anchor. His forecast saved forty-three ships and he never mentioned it again.",
+        relationship_notes={
+            "mr_harbor_ravi": "His former student. Ravi left the Temple but carries the teachings in how he runs the harbor.",
+            "mr_shipwright_devi": "She builds ships to survive what he predicts. A sacred partnership.",
+            "mr_spice_trader_priya": "She consults his forecasts before every trade decision. He gives them freely.",
+            "mr_elder_council": "The council defers to him on all weather matters. His forecasts are policy.",
+            "mr_customs_sanjay": "No strong connection. The wind doesn't need customs clearance.",
+            "mr_broker_kamala": "She incorporates his forecasts into contract timing. Smart — he approves.",
+        },
+    ),
+    PortNPC(
+        id="mr_shipwright_devi",
+        name="Shipwright Devi",
+        title="Master Shipwright",
+        port_id="monsoon_reach",
+        institution="shipyard",
+        personality="inventive",
+        description=(
+            "Calloused hands, charcoal smudges on her face from drawing hull designs, "
+            "and a mind that's always solving the next problem. Devi runs Monsoon "
+            "Reach's shipyard — the only yard in the East Indies, built to produce "
+            "ships that survive what the monsoon throws at them. Her hulls are deeper, "
+            "her masts stronger, her keels longer than Mediterranean designs."
+        ),
+        agenda=(
+            "Building ships that can't be broken. Devi studies every wreck that washes "
+            "up after monsoon season, mapping failure points and redesigning to address "
+            "them. She's been corresponding with Elena in Silva Bay — two master "
+            "shipwrights on opposite sides of the world, trading techniques in letters "
+            "that take months to arrive. They've never met. They respect each other "
+            "enormously."
+        ),
+        greeting_neutral="\"Your hull — may I see it? I study every ship that docks here. The monsoon teaches through destruction. I learn through repair.\"",
+        greeting_friendly="\"Captain! Bring her in — I've been developing a new keel reinforcement. Your ship would be perfect to test it. Free of charge — I need the data.\"",
+        greeting_hostile="\"I'll repair your ship. The sea doesn't hold grudges and neither does my yard. But I'm charging monsoon rates.\"",
+        rumor="Devi and Elena Madeira in Silva Bay have been exchanging ship designs by letter for five years. Neither has met the other. When asked if she'd visit Silva Bay, Devi said, 'Someday. When I build a ship good enough to survive the voyage AND impress her.' She hasn't built it yet. She's still trying.",
+        relationship_notes={
+            "mr_harbor_ravi": "Partners. She builds; he launches. They coordinate on tide schedules.",
+            "mr_brother_anand": "She builds ships to survive his worst forecasts. A sacred partnership of engineer and prophet.",
+            "mr_spice_trader_priya": "Devi repairs the spice traders' ships. Priya pays promptly. Professional.",
+            "mr_elder_council": "The council values the shipyard's revenue. Devi values her independence.",
+            "mr_customs_sanjay": "No interaction. Ships aren't cargo.",
+            "mr_broker_kamala": "Kamala brings repair commissions from the wider network. Good business.",
+        },
+    ),
+    PortNPC(
+        id="mr_spice_trader_priya",
+        name="Priya Sundaram",
+        title="Spice Factor",
+        port_id="monsoon_reach",
+        institution="exchange",
+        personality="pragmatic",
+        description=(
+            "Sharp eyes, quick hands on the abacus, and the impatience of a woman "
+            "who knows that spice prices change with the wind — literally. Priya "
+            "runs Monsoon Reach's spice exchange: grading, pricing, and routing "
+            "the spice that funnels through this crossroads port. She's the practical "
+            "counterweight to the Temple's spirituality."
+        ),
+        agenda=(
+            "Efficient trade. Priya wants spice to move — bought, priced, shipped — "
+            "without the ceremonial delays that Jade Port imposes. Monsoon Reach is "
+            "a Free Port, and Priya exploits that: she'll trade with the Silk Circle, "
+            "the Exchange Alliance, the Gold Coast, and the Shadow Ports without "
+            "discrimination. Quality and price are her only metrics."
+        ),
+        greeting_neutral="\"Spice or silk? I have both. Prices change with the afternoon forecast, so decide quickly. The wind doesn't wait for negotiations.\"",
+        greeting_friendly="\"Captain! The morning lot is excellent — post-monsoon harvest, Anand predicts clear sailing for a week. Buy now, ship fast, sell high. I'll hold the best lots for you.\"",
+        greeting_hostile="\"Prices are posted. Standard lots only. The premium reserves are for merchants who trade regularly and reliably. Perhaps next time.\"",
+        rumor="Priya once sold spice to a Crimson Tide captain and an Alliance merchant in the same hour, from the same lot, at the same price. Both complained about the other's presence. Priya said, 'Spice doesn't choose its buyer. Neither do I.' Neither argued.",
+        relationship_notes={
+            "mr_harbor_ravi": "She consults his departure schedules. Timing is everything in the spice trade.",
+            "mr_brother_anand": "His forecasts shape her pricing. A calm week means ship; a storm means hold.",
+            "mr_shipwright_devi": "Priya's traders need seaworthy ships. Devi provides them.",
+            "mr_elder_council": "She's the council's revenue engine. They depend on her trade volume.",
+            "mr_customs_sanjay": "He checks her lots. She keeps them clean. No friction.",
+            "mr_broker_kamala": "Kamala handles the contracts Priya generates. A fluid partnership.",
+        },
+    ),
+    PortNPC(
+        id="mr_elder_council",
+        name="The Harbor Council",
+        title="Governing Council",
+        port_id="monsoon_reach",
+        institution="governor",
+        personality="deliberate",
+        description=(
+            "A council of five — two monks, two merchants, and one shipwright — who "
+            "govern Monsoon Reach by consensus. They meet in the Wind Temple's "
+            "lower hall, where the sound of the pagoda bells accompanies every "
+            "decision. The council moves slowly because the monks insist on waiting "
+            "for signs, which the merchants find maddening and the shipwright ignores."
+        ),
+        agenda=(
+            "Neutrality and prosperity. The council wants Monsoon Reach to remain "
+            "a Free Port — trading with all, allied with none. They rejected the "
+            "Silk Circle's offer of membership because the monks said the wind "
+            "doesn't recognize borders. The merchants agreed because neutrality "
+            "brings more trade."
+        ),
+        greeting_neutral="\"Monsoon Reach welcomes all vessels. The council's only requirement: respect the Temple's forecasts and depart when the wind permits.\"",
+        greeting_friendly="\"Captain — the council acknowledges your contributions to Monsoon Reach's prosperity. Your voice is welcome at our table.\"",
+        greeting_hostile="\"The council notes your recent conduct. You may trade, but the Temple's forecasts are not optional. Depart only when cleared.\"",
+        rumor="The council once voted to close the harbor for a week because Brother Anand dreamed of a great wave. No wave came. The monks said the dream was a warning they heeded. The merchants lost a week's revenue. The debate about whether prophecy counts as policy has never been settled.",
+        relationship_notes={
+            "mr_harbor_ravi": "He attends when the wind permits. The council has learned not to schedule around his availability.",
+            "mr_brother_anand": "The council defers to him on weather. His forecasts shape every departure policy.",
+            "mr_shipwright_devi": "The shipyard is represented on the council. Devi's independence is protected.",
+            "mr_spice_trader_priya": "The revenue engine. The council depends on trade volume she generates.",
+            "mr_customs_sanjay": "Reports to the council. Light-touch customs is deliberate policy.",
+            "mr_broker_kamala": "Contract revenue funds council operations. Kamala's success is the council's success.",
+        },
+    ),
+    PortNPC(
+        id="mr_customs_sanjay",
+        name="Customs Officer Sanjay",
+        title="Customs Officer",
+        port_id="monsoon_reach",
+        institution="customs",
+        personality="easygoing",
+        description=(
+            "A man who treats customs the way the monks treat weather: observe, "
+            "record, and don't interfere unless absolutely necessary. Sanjay checks "
+            "manifests, stamps paperwork, and makes sure nothing obviously illegal "
+            "passes through. He's not lazy — he's philosophically aligned with "
+            "Monsoon Reach's Free Port ethos."
+        ),
+        agenda="Sufficient compliance. Sanjay does enough to satisfy the Alliance's reporting requirements without slowing trade. The monks taught him that the river flows best when you stop throwing rocks in it.",
+        greeting_neutral="\"Manifest? Let me stamp it. Monsoon Reach doesn't complicate trade. The wind does enough of that.\"",
+        greeting_friendly="\"Captain — already stamped. I saw your sails and did the paperwork. Go see Priya before the good lots are gone.\"",
+        greeting_hostile="\"Standard inspection today. Nothing personal — just... reports I need to file. I'll be quick.\"",
+        rumor="Sanjay spent a year at the Wind Temple before becoming a customs officer. He left because he couldn't sit still long enough for meditation. The monks said his restlessness was also a form of prayer. He stamps manifests with the same equanimity.",
+        relationship_notes={
+            "mr_harbor_ravi": "They share dock space without friction. Non-overlapping concerns.",
+            "mr_brother_anand": "Sanjay still meditates occasionally — badly. Anand doesn't judge.",
+            "mr_shipwright_devi": "No interaction. Ships aren't cargo.",
+            "mr_spice_trader_priya": "He checks her lots. She keeps them clean.",
+            "mr_elder_council": "Reports to them. Light customs is deliberate council policy.",
+            "mr_broker_kamala": "Stamps her contracts. No complications.",
+        },
+    ),
+    PortNPC(
+        id="mr_broker_kamala",
+        name="Kamala Nair",
+        title="Broker",
+        port_id="monsoon_reach",
+        institution="broker",
+        personality="fluid",
+        description=(
+            "A woman who moves between cultures the way water moves between rocks — "
+            "naturally, without friction. Kamala brokers contracts at Monsoon Reach "
+            "by understanding what every party needs and finding the overlap. She "
+            "speaks four languages, trades with every bloc, and has a reputation for "
+            "finding deals that make everyone feel like they won."
+        ),
+        agenda=(
+            "Connection. Kamala sees Monsoon Reach as a connector port — the place "
+            "where Eastern quality meets Western demand meets Gold Coast resources. "
+            "Her contracts are bridges. She incorporates Anand's weather forecasts "
+            "into shipping schedules, which gives her clients a timing advantage "
+            "no other broker can match."
+        ),
+        greeting_neutral="\"Captain — what are you carrying, and where does it need to go? I know someone who needs exactly that. I always do.\"",
+        greeting_friendly="\"Captain! I've been holding a contract — spice to the Mediterranean, timed to Anand's forecast of clear sailing next week. Perfect margin. Shall I?\"",
+        greeting_hostile="\"I... don't have anything that matches your current profile. But Monsoon Reach is a forgiving port. Come back when your reputation recovers.\"",
+        rumor="Kamala once brokered a three-way deal: Iron Point ore to Jade Port, Jade Port porcelain to Porto Novo, Porto Novo grain to Iron Point. Three contracts, three routes, three satisfied parties. She calls it 'the Triangle.' Everyone else calls it genius.",
+        relationship_notes={
+            "mr_harbor_ravi": "She matches contracts; he matches tides. Both serve the flow.",
+            "mr_brother_anand": "She incorporates his forecasts into timing. Smart — he approves.",
+            "mr_shipwright_devi": "Brings repair commissions. Good business for both.",
+            "mr_spice_trader_priya": "Fluid partnership. Priya generates trade; Kamala structures contracts.",
+            "mr_elder_council": "Contract revenue funds council operations.",
+            "mr_customs_sanjay": "Stamps her contracts. No complications.",
+        },
+    ),
+]
+
+_MONSOON_REACH_INSTITUTIONS = [
+    PortInstitution(id="mr_harbor", name="The Headland Harbor", port_id="monsoon_reach", institution_type="harbor_master",
+        description="A curved harbor around a headland crowned by the Wind Temple pagoda. Deeper keels, stronger moorings. The wind chimes on the pagoda are the harbor's clock.",
+        function="Weather-coordinated berthing. Departures cleared by monk forecast only. Ravi manages the intersection of tide and prophecy.",
+        political_leaning="Free Port. All flags welcome. The wind doesn't discriminate.", npc_id="mr_harbor_ravi"),
+    PortInstitution(id="mr_temple", name="The Wind Temple", port_id="monsoon_reach", institution_type="apothecary",
+        description="A pagoda on the headland where monks track the monsoon with instruments passed down for generations. Wind vanes, pressure bells, and archives of a thousand seasons.",
+        function="Weather forecasting, spiritual guidance, departure clearance. Anand's predictions guide every ship that leaves.",
+        political_leaning="Above politics. The wind belongs to everyone.", npc_id="mr_brother_anand"),
+    PortInstitution(id="mr_shipyard", name="The Monsoon Yard", port_id="monsoon_reach", institution_type="shipyard",
+        description="A yard built to produce monsoon-proof vessels. Deeper keels, reinforced masts, hulls designed from studying wrecks. Devi's workshop is full of failure analysis sketches.",
+        function="Ship building and repair specialized for monsoon conditions. Devi studies destruction to build survival.",
+        political_leaning="Independent. The yard serves the sea, not any bloc.", npc_id="mr_shipwright_devi"),
+    PortInstitution(id="mr_spice_exchange", name="The Spice Crossroads", port_id="monsoon_reach", institution_type="exchange",
+        description="An open-air market where spice from a dozen origins is graded and priced. Prices change with the afternoon forecast — literally.",
+        function="Spice grading, pricing, and routing. Priya trades with all blocs without discrimination. Quality and price are the only metrics.",
+        political_leaning="Free Port pragmatism. Commerce doesn't need borders.", npc_id="mr_spice_trader_priya"),
+    PortInstitution(id="mr_council_hall", name="The Temple Hall", port_id="monsoon_reach", institution_type="governor",
+        description="The Wind Temple's lower hall where pagoda bells accompany every decision. Five council members — two monks, two merchants, one shipwright.",
+        function="Consensus governance. The monks wait for signs. The merchants find this maddening. The shipwright ignores both.",
+        political_leaning="Free Port by conviction. The wind doesn't recognize borders.", npc_id="mr_elder_council"),
+    PortInstitution(id="mr_customs", name="The Flow Desk", port_id="monsoon_reach", institution_type="customs",
+        description="A desk near the harbor that Sanjay occupies with the same equanimity he brought from his year at the Temple. Stamp, smile, flow.",
+        function="Minimal customs. Philosophical alignment with Free Port ethos: observe, record, don't interfere.",
+        political_leaning="Free Port. The river flows best when you stop throwing rocks in it.", npc_id="mr_customs_sanjay"),
+    PortInstitution(id="mr_broker", name="The Bridge Desk", port_id="monsoon_reach", institution_type="broker",
+        description="A desk overlooking the spice market where Kamala matches contracts by understanding what every culture needs. Four languages. Zero borders.",
+        function="Cross-cultural contract matching with weather-timed shipping. Kamala finds the overlap between what everyone wants.",
+        political_leaning="Free Port connector. Kamala builds bridges, not walls.", npc_id="mr_broker_kamala"),
+]
+
+MONSOON_REACH_PROFILE = PortInstitutionalProfile(
+    port_id="monsoon_reach",
+    governor_title="Harbor Council",
+    power_structure=(
+        "Monsoon Reach is governed by a five-person council (2 monks, 2 merchants, "
+        "1 shipwright) that meets in the Wind Temple. Brother Anand's forecasts are "
+        "de facto law — no ship departs without his clearance. Ravi runs the harbor "
+        "as an extension of the Temple's teachings. Devi builds ships to survive what "
+        "Anand predicts. Priya moves the spice. Kamala connects the world. The power "
+        "structure is unusually harmonious because everyone agrees on the port's "
+        "purpose: trade in harmony with the monsoon."
+    ),
+    internal_tension=(
+        "The tension is between faith and commerce. The monks believe the wind "
+        "speaks truth and should be obeyed. The merchants believe the wind is data "
+        "to be exploited. When Anand closes the harbor for a dream, the merchants "
+        "lose money. When Anand's dreams prove accurate, the merchants are grateful. "
+        "This cycle — frustration, then vindication — keeps the balance intact but "
+        "never fully resolved. The deeper thread: Devi's correspondence with Elena "
+        "in Silva Bay is building a cross-hemisphere shipwright relationship that "
+        "could transform both yards. If they ever meet, the collaboration could "
+        "produce ships neither culture imagined alone."
+    ),
+    institutions=_MONSOON_REACH_INSTITUTIONS,
+    npcs=_MONSOON_REACH_NPCS,
+)
+
+
 # ---------------------------------------------------------------------------
 
 PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
@@ -4087,6 +4387,7 @@ PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
     "iron_point": IRON_POINT_PROFILE,
     "pearl_shallows": PEARL_SHALLOWS_PROFILE,
     "jade_port": JADE_PORT_PROFILE,
+    "monsoon_reach": MONSOON_REACH_PROFILE,
 }
 
 ALL_NPCS: dict[str, PortNPC] = {npc.id: npc for profile in PORT_INSTITUTIONAL_PROFILES.values() for npc in profile.npcs}
