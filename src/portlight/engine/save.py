@@ -17,6 +17,8 @@ from portlight.engine.models import (
     CargoItem,
     CulturalState,
     MarketSlot,
+    PirateEncounterRecord,
+    PirateState,
     Port,
     PortFeature,
     ReputationIncident,
@@ -56,7 +58,7 @@ from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"
-CURRENT_SAVE_VERSION = 4
+CURRENT_SAVE_VERSION = 5
 
 
 # ---------------------------------------------------------------------------
@@ -127,10 +129,24 @@ def _migrate_v3_to_v4(data: dict) -> dict:
 
 
 # Ordered migration functions: (from_version, to_version, migrator)
+def _migrate_v4_to_v5(data: dict) -> dict:
+    """v4 → v5: Add underworld standing and pirate state."""
+    captain = data.get("captain", {})
+    standing = captain.get("standing", {})
+    standing.setdefault("underworld_standing", {})
+    standing.setdefault("underworld_heat", 0)
+    captain["standing"] = standing
+    data["captain"] = captain
+    data.setdefault("pirate_state", {"encounters": [], "nemesis_id": None, "duels_won": 0, "duels_lost": 0})
+    data["version"] = 5
+    return data
+
+
 _MIGRATIONS = [
     (1, 2, _migrate_v1_to_v2),
     (2, 3, _migrate_v2_to_v3),
     (3, 4, _migrate_v3_to_v4),
+    (4, 5, _migrate_v4_to_v5),
 ]
 
 
@@ -202,6 +218,8 @@ def _reputation_to_dict(rep: ReputationState) -> dict:
         "customs_heat": rep.customs_heat,
         "commercial_trust": rep.commercial_trust,
         "recent_incidents": [_incident_to_dict(i) for i in rep.recent_incidents],
+        "underworld_standing": rep.underworld_standing,
+        "underworld_heat": rep.underworld_heat,
     }
 
 
@@ -218,6 +236,8 @@ def _reputation_from_dict(d: dict) -> ReputationState:
         customs_heat=heat,
         commercial_trust=d.get("commercial_trust", 0),
         recent_incidents=incidents,
+        underworld_standing=d.get("underworld_standing", {}),
+        underworld_heat=d.get("underworld_heat", 0),
     )
 
 
@@ -769,6 +789,34 @@ def _narrative_from_dict(d: dict) -> NarrativeState:
     )
 
 
+def _pirate_state_to_dict(state: PirateState) -> dict:
+    return {
+        "encounters": [
+            {"captain_id": e.captain_id, "faction_id": e.faction_id,
+             "day": e.day, "outcome": e.outcome, "region": e.region}
+            for e in state.encounters
+        ],
+        "nemesis_id": state.nemesis_id,
+        "duels_won": state.duels_won,
+        "duels_lost": state.duels_lost,
+    }
+
+
+def _pirate_state_from_dict(d: dict) -> PirateState:
+    return PirateState(
+        encounters=[
+            PirateEncounterRecord(
+                captain_id=e["captain_id"], faction_id=e["faction_id"],
+                day=e["day"], outcome=e["outcome"], region=e.get("region", ""),
+            )
+            for e in d.get("encounters", [])
+        ],
+        nemesis_id=d.get("nemesis_id"),
+        duels_won=d.get("duels_won", 0),
+        duels_lost=d.get("duels_lost", 0),
+    )
+
+
 def _cultural_state_to_dict(state: CulturalState) -> dict:
     return {
         "active_festivals": [
@@ -836,6 +884,7 @@ def world_to_dict(
         "day": world.day,
         "seed": world.seed,
         "cultural_state": _cultural_state_to_dict(world.culture),
+        "pirate_state": _pirate_state_to_dict(world.pirates),
         "ledger": _ledger_to_dict(ledger) if ledger else None,
         "contract_board": _board_to_dict(board) if board else None,
         "infrastructure": _infra_to_dict(infra) if infra else None,
@@ -850,6 +899,7 @@ def world_to_dict(
 def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState, NarrativeState]:
     """Deserialize game state from dict. Returns (world, ledger, board, infra, campaign, narrative)."""
     culture = _cultural_state_from_dict(d["cultural_state"]) if d.get("cultural_state") else CulturalState()
+    pirates = _pirate_state_from_dict(d["pirate_state"]) if d.get("pirate_state") else PirateState()
     world = WorldState(
         captain=_captain_from_dict(d["captain"]),
         ports={pid: _port_from_dict(p) for pid, p in d["ports"].items()},
@@ -858,6 +908,7 @@ def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, 
         day=d["day"],
         seed=d.get("seed", 0),
         culture=culture,
+        pirates=pirates,
     )
     ledger = _ledger_from_dict(d["ledger"]) if d.get("ledger") else ReceiptLedger()
     board = _board_from_dict(d["contract_board"]) if d.get("contract_board") else ContractBoard()

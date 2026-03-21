@@ -416,6 +416,90 @@ _BEATS: list[NarrativeBeat] = [
             "You trade with the rhythm of the world, not against it."
         ),
     ),
+
+    # === PIRATE / UNDERWORLD BEATS ===
+    NarrativeBeat(
+        id="first_contraband",
+        phase=NarrativePhase.THRESHOLD,
+        title="Crossing the Line",
+        text=(
+            "You bought something the law says you shouldn't have. It sits in your "
+            "hold like a secret — valuable, dangerous, and impossible to un-know. "
+            "The legitimate world just got a little smaller."
+        ),
+        hint="Contraband can only be sold at BLACK_MARKET ports. Plan your route carefully.",
+    ),
+    NarrativeBeat(
+        id="underworld_contact",
+        phase=NarrativePhase.TESTS,
+        title="A Name in the Dark",
+        text=(
+            "Word travels in the underworld. A pirate faction knows your name — "
+            "not as prey, but as someone worth talking to. "
+            "The line between trader and smuggler just blurred."
+        ),
+    ),
+    NarrativeBeat(
+        id="pirate_deal",
+        phase=NarrativePhase.TESTS,
+        title="Trading with Wolves",
+        text=(
+            "You traded with a pirate captain on the open sea. No port, no witnesses, "
+            "no manifest. Just two captains, a price, and a handshake. "
+            "The underworld does business differently."
+        ),
+    ),
+    NarrativeBeat(
+        id="first_duel_win",
+        phase=NarrativePhase.TESTS,
+        title="Blood and Steel",
+        text=(
+            "Your blade found its mark. The pirate captain yielded, and for a "
+            "heartbeat the world narrowed to two people and a single truth: "
+            "you earned what you carry. The crew looks at you differently now."
+        ),
+    ),
+    NarrativeBeat(
+        id="nemesis_born",
+        phase=NarrativePhase.ORDEAL,
+        title="A Grudge on the Water",
+        text=(
+            "A pirate captain remembers you. Not as a trade partner or a neutral ship — "
+            "as an enemy. They'll be watching for your sails, and next time, "
+            "the conversation starts with steel."
+        ),
+    ),
+    NarrativeBeat(
+        id="faction_trusted",
+        phase=NarrativePhase.REWARD,
+        title="The Shadow's Trust",
+        text=(
+            "A pirate faction trusts you completely. Their captains greet you as an ally, "
+            "their ports treat you as family. You've earned what money alone can't buy: "
+            "a place in the underworld's inner circle."
+        ),
+    ),
+    NarrativeBeat(
+        id="duel_master",
+        phase=NarrativePhase.REWARD,
+        title="Blade of the Sea",
+        text=(
+            "Five captains have felt your steel. Your name is spoken with respect "
+            "in every pirate port and with fear on every patrol ship. "
+            "The blade is part of who you are now."
+        ),
+    ),
+    NarrativeBeat(
+        id="shadow_master",
+        phase=NarrativePhase.THE_RETURN,
+        title="Lord of the Grey",
+        text=(
+            "Three factions count you as a friend. The underworld's politics flow "
+            "through your hold as surely as the legitimate trade. You've built something "
+            "no customs inspector can confiscate: a network that spans every shadow port "
+            "in the Known World."
+        ),
+    ),
 ]
 
 _BEATS_BY_ID: dict[str, NarrativeBeat] = {b.id: b for b in _BEATS}
@@ -616,5 +700,46 @@ def evaluate_narrative(
     # Four seasons captain: played through all 4 seasons (day > 360)
     if world.day > 360:
         _fire("four_seasons_captain")
+
+    # === PIRATE / UNDERWORLD BEATS ===
+    pirates = world.pirates
+    uw_standing = captain.standing.underworld_standing
+
+    # First contraband: player has contraband in cargo
+    has_contraband = any(
+        c.good_id in ("opium", "black_powder", "stolen_cargo")
+        for c in captain.cargo
+    )
+    if has_contraband:
+        _fire("first_contraband")
+
+    # Underworld contact: standing 10+ with any faction
+    if any(v >= 10 for v in uw_standing.values()):
+        _fire("underworld_contact")
+
+    # Pirate deal: at-sea trade recorded in encounter history
+    if any(e.outcome == "trade" for e in pirates.encounters):
+        _fire("pirate_deal")
+
+    # First duel win
+    if pirates.duels_won >= 1:
+        _fire("first_duel_win")
+
+    # Nemesis born
+    if pirates.nemesis_id is not None:
+        _fire("nemesis_born")
+
+    # Faction trusted: standing 50+ with any faction
+    if any(v >= 50 for v in uw_standing.values()):
+        _fire("faction_trusted")
+
+    # Duel master: 5+ duel wins
+    if pirates.duels_won >= 5:
+        _fire("duel_master")
+
+    # Shadow master: standing 25+ with 3+ factions
+    factions_with_standing = sum(1 for v in uw_standing.values() if v >= 25)
+    if factions_with_standing >= 3:
+        _fire("shadow_master")
 
     return newly_fired

@@ -37,6 +37,7 @@ class ContractFamily(str, Enum):
     RETURN_FREIGHT = "return_freight"
     CIRCUIT = "circuit"
     REPUTATION_CHARTER = "reputation_charter"
+    SMUGGLING = "smuggling"
 
 
 class ContractStatus(str, Enum):

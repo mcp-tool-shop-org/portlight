@@ -165,6 +165,9 @@ class ReputationState:
     commercial_trust: int = 0
     # Recent incidents (capped at 20, newest first)
     recent_incidents: list[ReputationIncident] = field(default_factory=list)
+    # Underworld standing (per pirate faction)
+    underworld_standing: dict[str, int] = field(default_factory=dict)  # faction_id → 0-100
+    underworld_heat: int = 0  # snitch factor — rises from betraying pirates
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +238,51 @@ def get_season(day: int) -> Season:
         return Season.AUTUMN
     else:
         return Season.WINTER
+
+
+# ---------------------------------------------------------------------------
+# Pirate encounters
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PirateEncounterRecord:
+    """Record of an encounter with a named pirate captain."""
+    captain_id: str
+    faction_id: str
+    day: int
+    outcome: str                     # "attack", "trade", "alliance", "fled", "duel_win", "duel_loss"
+    region: str = ""
+
+
+@dataclass
+class DuelRound:
+    """One round of a sword duel."""
+    player_stance: str               # thrust/slash/parry
+    opponent_stance: str
+    damage_to_opponent: int = 0
+    damage_to_player: int = 0
+    flavor: str = ""
+
+
+@dataclass
+class DuelResult:
+    """Outcome of a completed duel."""
+    opponent_id: str
+    opponent_name: str
+    player_won: bool
+    draw: bool = False
+    rounds: list[DuelRound] = field(default_factory=list)
+    silver_delta: int = 0
+    standing_delta: int = 0
+
+
+@dataclass
+class PirateState:
+    """Tracks pirate encounters, nemesis, and duel history."""
+    encounters: list[PirateEncounterRecord] = field(default_factory=list)
+    nemesis_id: str | None = None
+    duels_won: int = 0
+    duels_lost: int = 0
 
 
 class VoyageStatus(str, Enum):
@@ -354,3 +402,4 @@ class WorldState:
     day: int = 1
     seed: int = 0                    # RNG seed for reproducibility
     culture: CulturalState = field(default_factory=CulturalState)
+    pirates: PirateState = field(default_factory=PirateState)

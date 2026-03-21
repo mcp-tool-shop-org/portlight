@@ -1,14 +1,11 @@
-"""Expanded goods catalog — 14 tradeable goods across 6 categories.
+"""Goods catalog — 17 tradeable goods across 6 categories.
 
 Phase 1: 8 goods (grain, timber, iron, cotton, spice, silk, rum, porcelain)
 Phase 2: +6 goods (tea, tobacco, dyes, pearls, weapons, medicines)
+Phase 3: +3 contraband (opium, black_powder, stolen_cargo)
 
-New goods create deeper trade triangles:
-  - Tea/tobacco: mid-tier luxuries, more accessible than silk/spice
-  - Dyes: commodity that bridges West Africa → Mediterranean textile trade
-  - Pearls: ultra-luxury, rare, high-risk high-reward
-  - Weapons: military category, restricted at some ports, high margins
-  - Medicines: medicine category, universally needed, moderate margins
+Contraband goods are only tradeable at BLACK_MARKET ports.
+They carry extreme inspection risk but massive margins.
 """
 
 from portlight.engine.models import Good, GoodCategory
@@ -37,4 +34,9 @@ GOODS: dict[str, Good] = {g.id: g for g in [
 
     # === Medicine ===
     Good("medicines", "Medicines",     GoodCategory.MEDICINE,   base_price=35),
+
+    # === Contraband (BLACK_MARKET ports only) ===
+    Good("opium",        "Opium",         GoodCategory.CONTRABAND, base_price=85, weight_per_unit=0.5),
+    Good("black_powder", "Black Powder",  GoodCategory.CONTRABAND, base_price=65, weight_per_unit=1.5),
+    Good("stolen_cargo", "Stolen Cargo",  GoodCategory.CONTRABAND, base_price=40, weight_per_unit=1.0),
 ]}

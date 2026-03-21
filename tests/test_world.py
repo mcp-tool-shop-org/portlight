@@ -17,7 +17,7 @@ class TestContentIntegrity:
         assert len(PORTS) == 20
 
     def test_good_count(self):
-        assert len(GOODS) == 14
+        assert len(GOODS) == 17
 
     def test_ship_count(self):
         assert len(SHIPS) == 5

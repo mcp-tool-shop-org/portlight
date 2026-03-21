@@ -25,7 +25,7 @@ import hashlib
 import random
 from typing import TYPE_CHECKING
 
-from portlight.engine.models import CargoItem, GoodCategory, Port
+from portlight.engine.models import CargoItem, GoodCategory, Port, PortFeature
 from portlight.receipts.models import TradeAction, TradeReceipt
 
 if TYPE_CHECKING:
@@ -215,8 +215,16 @@ def execute_buy(
 def execute_sell(
     captain: Captain, port: Port, good_id: str, qty: int,
     seq: int = 0,
+    goods_table: dict[str, object] | None = None,
 ) -> TradeReceipt | str:
     """Sell goods to port. Returns TradeReceipt on success, error string on failure."""
+    # Contraband sell restriction — BLACK_MARKET ports only
+    if goods_table:
+        good = goods_table.get(good_id)
+        if good and hasattr(good, "category") and good.category == GoodCategory.CONTRABAND:  # type: ignore[union-attr]
+            if PortFeature.BLACK_MARKET not in port.features:
+                return f"The harbormaster won't touch {good_id}. Try somewhere less official."
+
     slot = next((s for s in port.market if s.good_id == good_id), None)
     if slot is None:
         return f"{port.name} doesn't trade {good_id}"

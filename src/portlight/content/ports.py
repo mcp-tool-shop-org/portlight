@@ -86,6 +86,10 @@ PORTS: dict[str, Port] = {p.id: p for p in [
             _slot("tobacco", 20, 18, 2.0, affinity=1.3),   # EXPORTS tobacco
             _slot("silk",    3,  5,  0.5, affinity=0.5),   # WANTS silk
             _slot("medicines", 4, 6, 0.5, affinity=0.5),   # WANTS medicines
+            # === Contraband (BLACK_MARKET only) ===
+            _slot("black_powder", 8, 6, 0.5, affinity=1.3),  # primary contraband
+            _slot("stolen_cargo", 12, 10, 1.0, affinity=1.2),
+            _slot("opium",        3, 4, 0.3, affinity=0.7),  # small supply
         ],
         port_fee=3,         # pirate haven, cheap docking
         provision_cost=2,
@@ -320,6 +324,10 @@ PORTS: dict[str, Port] = {p.id: p for p in [
             _slot("silk",     10, 12, 1.0, affinity=0.9),
             _slot("weapons",  3,  5,  0.5, affinity=0.5),  # WANTS weapons
             _slot("grain",    5,  8,  0.5, affinity=0.5),  # WANTS grain
+            # === Contraband (BLACK_MARKET only) ===
+            _slot("opium",        10, 8, 0.5, affinity=1.4),  # primary source
+            _slot("stolen_cargo", 8, 6, 0.8, affinity=1.0),
+            _slot("black_powder", 3, 4, 0.3, affinity=0.6),  # small supply
         ],
         port_fee=5,
         provision_cost=3,

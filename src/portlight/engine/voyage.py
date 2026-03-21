@@ -186,23 +186,56 @@ def _resolve_event(
             fee = rng.randint(5, 25)
             fine_mult = insp.fine_mult if insp else 1.0
             # Heat-based fine amplification from reputation
+            max_heat = 0
             if hasattr(captain, 'standing') and captain.standing.customs_heat:
-                # Use highest regional heat as proxy (voyage crosses regions)
                 max_heat = max(captain.standing.customs_heat.values())
                 if max_heat >= 30:
                     fine_mult *= 1.5
                 elif max_heat >= 15:
                     fine_mult *= 1.2
             fee = max(1, int(fee * fine_mult))
-            # Seizure risk (smuggler penalty)
+
             seized_goods: dict[str, int] | None = None
             seizure_msg = ""
+
+            # Contraband detection — catastrophic if found
+            contraband_items = [c for c in captain.cargo if c.good_id in ("opium", "black_powder", "stolen_cargo")]
+            if contraband_items:
+                # Detection: 40% base + 10% per heat above 15, -15% for smuggler
+                detect_chance = 0.40 + max(0, (max_heat - 15) * 0.10)
+                is_smuggler = captain.captain_type == "smuggler"
+                if is_smuggler:
+                    detect_chance -= 0.15
+                detect_chance = max(0.1, min(0.9, detect_chance))
+                if rng.random() < detect_chance:
+                    # ALL contraband seized, heavy fine
+                    seized_goods = {}
+                    contraband_value = 0
+                    for item in contraband_items:
+                        seized_goods[item.good_id] = item.quantity
+                        contraband_value += item.quantity * 30  # rough value for fine calc
+                    fine = contraband_value * 3
+                    fee += fine
+                    seizure_msg = (
+                        " CONTRABAND FOUND! The inspectors seize everything illegal in your hold. "
+                        f"Fine: {fine} silver. Your reputation takes a devastating hit."
+                    )
+                    return VoyageEvent(
+                        EventType.INSPECTION, f"A patrol boards your ship.{seizure_msg}",
+                        silver_delta=-fee, cargo_lost=seized_goods,
+                        flavor="The silence after a contraband seizure is the loudest sound at sea.",
+                    )
+
+            # Normal seizure risk (smuggler penalty — non-contraband)
             if insp and insp.seizure_risk > 0 and captain.cargo:
                 if rng.random() < insp.seizure_risk:
-                    target = rng.choice(captain.cargo)
-                    seized = min(target.quantity, rng.randint(1, 3))
-                    seized_goods = {target.good_id: seized}
-                    seizure_msg = f" They confiscate {seized} units of {target.good_id}!"
+                    # Only seize non-contraband here (contraband handled above)
+                    legal_cargo = [c for c in captain.cargo if c.good_id not in ("opium", "black_powder", "stolen_cargo")]
+                    if legal_cargo:
+                        target = rng.choice(legal_cargo)
+                        seized = min(target.quantity, rng.randint(1, 3))
+                        seized_goods = {target.good_id: seized}
+                        seizure_msg = f" They confiscate {seized} units of {target.good_id}!"
             msg = f"A patrol inspects your cargo and levies a {fee} silver fee.{seizure_msg}"
             return VoyageEvent(EventType.INSPECTION, msg,
                                silver_delta=-fee, cargo_lost=seized_goods)
