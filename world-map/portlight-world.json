@@ -1,0 +1,604 @@
+{
+  "id": "portlight-world",
+  "name": "Portlight — Trade Winds of the Known World",
+  "description": "A maritime trade network spanning five regions: Mediterranean, North Atlantic, West Africa, East Indies, and South Seas. Twenty ports connected by forty-three sea routes, tiered by ship class from coastal sloops to galleons.",
+  "version": "1.0.0",
+  "genre": "historical",
+  "tones": ["mercantile", "adventurous", "strategic"],
+  "difficulty": "medium",
+  "narratorTone": "A weathered captain's log — practical, evocative, aware of the risks and rewards of the sea.",
+  "mode": "ocean",
+
+  "map": {
+    "id": "portlight-map",
+    "name": "The Known World",
+    "description": "Five trading regions connected by sea lanes of increasing danger and reward.",
+    "gridWidth": 50,
+    "gridHeight": 36,
+    "tileSize": 32
+  },
+
+  "zones": [
+    {
+      "id": "porto_novo",
+      "name": "Porto Novo",
+      "tags": ["port", "shipyard", "mediterranean", "start", "grain-exporter"],
+      "description": "A bustling harbor city, gateway to inland trade. Grain ships fill the docks.",
+      "gridX": 18, "gridY": 8, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["al_manar", "silva_bay", "corsairs_rest"],
+      "exits": [
+        {"targetZoneId": "al_manar", "label": "East along the coast to Al-Manar"},
+        {"targetZoneId": "silva_bay", "label": "South to Silva Bay"},
+        {"targetZoneId": "corsairs_rest", "label": "Southeast to Corsair's Rest"},
+        {"targetZoneId": "ironhaven", "label": "Northwest across the Atlantic to Ironhaven"},
+        {"targetZoneId": "sun_harbor", "label": "South across the sea to Sun Harbor"}
+      ],
+      "light": 9, "noise": 7,
+      "hazards": [],
+      "interactables": [
+        {"name": "grain-exchange", "type": "use"},
+        {"name": "shipwright-yard", "type": "use"},
+        {"name": "harbor-master", "type": "talk"}
+      ],
+      "parentDistrictId": "mediterranean"
+    },
+    {
+      "id": "al_manar",
+      "name": "Al-Manar",
+      "tags": ["port", "mediterranean", "spice-market", "luxury-hub"],
+      "description": "Ancient port famed for its spice markets. Merchants bid fiercely for grain and iron.",
+      "gridX": 24, "gridY": 6, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["porto_novo", "silva_bay"],
+      "exits": [
+        {"targetZoneId": "porto_novo", "label": "West to Porto Novo"},
+        {"targetZoneId": "silva_bay", "label": "Southwest to Silva Bay"},
+        {"targetZoneId": "sun_harbor", "label": "South across the sea to Sun Harbor"},
+        {"targetZoneId": "monsoon_reach", "label": "Far east to Monsoon Reach (dangerous)"}
+      ],
+      "light": 9, "noise": 8,
+      "hazards": [],
+      "interactables": [
+        {"name": "spice-bazaar", "type": "use"},
+        {"name": "merchant-guild", "type": "talk"}
+      ],
+      "parentDistrictId": "mediterranean"
+    },
+    {
+      "id": "silva_bay",
+      "name": "Silva Bay",
+      "tags": ["port", "shipyard", "mediterranean", "timber-exporter"],
+      "description": "Timber-rich bay surrounded by dense forests. The shipwrights here are the best in the region.",
+      "gridX": 14, "gridY": 10, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["porto_novo", "al_manar", "corsairs_rest"],
+      "exits": [
+        {"targetZoneId": "porto_novo", "label": "North to Porto Novo"},
+        {"targetZoneId": "al_manar", "label": "Northeast to Al-Manar"},
+        {"targetZoneId": "corsairs_rest", "label": "East to Corsair's Rest"},
+        {"targetZoneId": "ironhaven", "label": "Northwest to Ironhaven"},
+        {"targetZoneId": "palm_cove", "label": "South to Palm Cove"}
+      ],
+      "light": 7, "noise": 5,
+      "hazards": [],
+      "interactables": [
+        {"name": "timber-yard", "type": "use"},
+        {"name": "master-shipwright", "type": "talk"}
+      ],
+      "parentDistrictId": "mediterranean"
+    },
+    {
+      "id": "corsairs_rest",
+      "name": "Corsair's Rest",
+      "tags": ["port", "black-market", "mediterranean", "weapons-smuggling"],
+      "description": "A lawless harbor tucked between cliffs. Smugglers, pirates, and those who trade with them.",
+      "gridX": 21, "gridY": 13, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["porto_novo", "silva_bay"],
+      "exits": [
+        {"targetZoneId": "porto_novo", "label": "Northwest to Porto Novo"},
+        {"targetZoneId": "silva_bay", "label": "West to Silva Bay"},
+        {"targetZoneId": "stormwall", "label": "North to Stormwall (risky)"},
+        {"targetZoneId": "spice_narrows", "label": "Far east to Spice Narrows (very dangerous)"}
+      ],
+      "light": 4, "noise": 6,
+      "hazards": ["pirate-patrols"],
+      "interactables": [
+        {"name": "black-market-dealer", "type": "talk"},
+        {"name": "weapons-cache", "type": "use"}
+      ],
+      "parentDistrictId": "mediterranean"
+    },
+
+    {
+      "id": "ironhaven",
+      "name": "Ironhaven",
+      "tags": ["port", "shipyard", "north-atlantic", "iron-exporter", "industrial"],
+      "description": "Industrial port city wreathed in forge smoke. Weapons and iron flow out, everything else flows in.",
+      "gridX": 8, "gridY": 4, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["stormwall", "thornport"],
+      "exits": [
+        {"targetZoneId": "stormwall", "label": "West to Stormwall"},
+        {"targetZoneId": "thornport", "label": "South to Thornport"},
+        {"targetZoneId": "porto_novo", "label": "Southeast to Porto Novo"},
+        {"targetZoneId": "silva_bay", "label": "South-southeast to Silva Bay"},
+        {"targetZoneId": "jade_port", "label": "Far east to Jade Port (dangerous)"}
+      ],
+      "light": 5, "noise": 9,
+      "hazards": ["forge-smoke"],
+      "interactables": [
+        {"name": "iron-foundry", "type": "use"},
+        {"name": "arms-dealer", "type": "talk"},
+        {"name": "industrial-shipyard", "type": "use"}
+      ],
+      "parentDistrictId": "north_atlantic"
+    },
+    {
+      "id": "stormwall",
+      "name": "Stormwall",
+      "tags": ["port", "north-atlantic", "military", "fortress"],
+      "description": "Fortress port guarding the northern straits. Military outpost with strict inspections.",
+      "gridX": 4, "gridY": 8, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["ironhaven", "thornport"],
+      "exits": [
+        {"targetZoneId": "ironhaven", "label": "East to Ironhaven"},
+        {"targetZoneId": "thornport", "label": "Southeast to Thornport"},
+        {"targetZoneId": "corsairs_rest", "label": "South to Corsair's Rest"}
+      ],
+      "light": 6, "noise": 7,
+      "hazards": ["customs-inspection"],
+      "interactables": [
+        {"name": "garrison-commander", "type": "talk"},
+        {"name": "military-depot", "type": "use"}
+      ],
+      "parentDistrictId": "north_atlantic"
+    },
+    {
+      "id": "thornport",
+      "name": "Thornport",
+      "tags": ["port", "north-atlantic", "tea-exporter", "tobacco-exporter"],
+      "description": "Whaling town turned trading post. Tea and tobacco are the local currency.",
+      "gridX": 11, "gridY": 10, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["ironhaven", "stormwall"],
+      "exits": [
+        {"targetZoneId": "ironhaven", "label": "North to Ironhaven"},
+        {"targetZoneId": "stormwall", "label": "West to Stormwall"}
+      ],
+      "light": 6, "noise": 5,
+      "hazards": [],
+      "interactables": [
+        {"name": "tea-house", "type": "use"},
+        {"name": "tobacco-warehouse", "type": "use"}
+      ],
+      "parentDistrictId": "north_atlantic"
+    },
+
+    {
+      "id": "sun_harbor",
+      "name": "Sun Harbor",
+      "tags": ["port", "west-africa", "cotton-exporter", "dyes-exporter"],
+      "description": "Golden coast port where cotton bales stack higher than the warehouses.",
+      "gridX": 14, "gridY": 22, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["palm_cove", "iron_point", "pearl_shallows"],
+      "exits": [
+        {"targetZoneId": "palm_cove", "label": "South to Palm Cove"},
+        {"targetZoneId": "iron_point", "label": "East to Iron Point"},
+        {"targetZoneId": "pearl_shallows", "label": "South to Pearl Shallows"},
+        {"targetZoneId": "porto_novo", "label": "North across the sea to Porto Novo"},
+        {"targetZoneId": "al_manar", "label": "Northeast to Al-Manar"},
+        {"targetZoneId": "crosswind_isle", "label": "Far east to Crosswind Isle (dangerous)"}
+      ],
+      "light": 9, "noise": 6,
+      "hazards": [],
+      "interactables": [
+        {"name": "cotton-exchange", "type": "use"},
+        {"name": "dye-works", "type": "use"}
+      ],
+      "parentDistrictId": "west_africa"
+    },
+    {
+      "id": "palm_cove",
+      "name": "Palm Cove",
+      "tags": ["port", "west-africa", "rum-exporter", "cheap-provisions"],
+      "description": "A sheltered cove where rum barrels outnumber the inhabitants. Cheapest provisions on the coast.",
+      "gridX": 10, "gridY": 26, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["sun_harbor", "iron_point", "pearl_shallows"],
+      "exits": [
+        {"targetZoneId": "sun_harbor", "label": "North to Sun Harbor"},
+        {"targetZoneId": "iron_point", "label": "East to Iron Point"},
+        {"targetZoneId": "pearl_shallows", "label": "South to Pearl Shallows"},
+        {"targetZoneId": "silva_bay", "label": "North across the sea to Silva Bay"}
+      ],
+      "light": 8, "noise": 4,
+      "hazards": [],
+      "interactables": [
+        {"name": "rum-distillery", "type": "use"},
+        {"name": "provision-market", "type": "use"}
+      ],
+      "parentDistrictId": "west_africa"
+    },
+    {
+      "id": "iron_point",
+      "name": "Iron Point",
+      "tags": ["port", "west-africa", "iron-exporter", "mining"],
+      "description": "Mining settlement at the river mouth. Iron flows out, everything else flows in at a premium.",
+      "gridX": 18, "gridY": 24, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["sun_harbor", "palm_cove"],
+      "exits": [
+        {"targetZoneId": "sun_harbor", "label": "West to Sun Harbor"},
+        {"targetZoneId": "palm_cove", "label": "Southwest to Palm Cove"},
+        {"targetZoneId": "crosswind_isle", "label": "East to Crosswind Isle"}
+      ],
+      "light": 6, "noise": 7,
+      "hazards": ["mine-runoff"],
+      "interactables": [
+        {"name": "iron-mine", "type": "use"},
+        {"name": "assay-office", "type": "talk"}
+      ],
+      "parentDistrictId": "west_africa"
+    },
+    {
+      "id": "pearl_shallows",
+      "name": "Pearl Shallows",
+      "tags": ["port", "west-africa", "pearls-exporter", "dyes-exporter"],
+      "description": "Divers bring up pearls from the warm shallows. A quiet port where fortunes are made by the patient.",
+      "gridX": 12, "gridY": 30, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["sun_harbor", "palm_cove"],
+      "exits": [
+        {"targetZoneId": "sun_harbor", "label": "North to Sun Harbor"},
+        {"targetZoneId": "palm_cove", "label": "Northwest to Palm Cove"},
+        {"targetZoneId": "crosswind_isle", "label": "East to Crosswind Isle"},
+        {"targetZoneId": "coral_throne", "label": "Far southeast to Coral Throne (dangerous)"}
+      ],
+      "light": 9, "noise": 2,
+      "hazards": [],
+      "interactables": [
+        {"name": "pearl-divers", "type": "talk"},
+        {"name": "dye-market", "type": "use"}
+      ],
+      "parentDistrictId": "west_africa"
+    },
+
+    {
+      "id": "jade_port",
+      "name": "Jade Port",
+      "tags": ["port", "east-indies", "porcelain-exporter", "silk-exporter"],
+      "description": "Porcelain workshops line the waterfront. Iron and grain are worth their weight in gold here.",
+      "gridX": 34, "gridY": 10, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["monsoon_reach", "silk_haven", "crosswind_isle", "dragons_gate"],
+      "exits": [
+        {"targetZoneId": "monsoon_reach", "label": "Southeast to Monsoon Reach"},
+        {"targetZoneId": "silk_haven", "label": "East to Silk Haven"},
+        {"targetZoneId": "crosswind_isle", "label": "Southwest to Crosswind Isle"},
+        {"targetZoneId": "dragons_gate", "label": "East to Dragon's Gate"},
+        {"targetZoneId": "ironhaven", "label": "Far west to Ironhaven (dangerous)"}
+      ],
+      "light": 8, "noise": 6,
+      "hazards": [],
+      "interactables": [
+        {"name": "porcelain-workshop", "type": "use"},
+        {"name": "jade-merchant", "type": "talk"}
+      ],
+      "parentDistrictId": "east_indies"
+    },
+    {
+      "id": "monsoon_reach",
+      "name": "Monsoon Reach",
+      "tags": ["port", "shipyard", "east-indies", "spice-exporter", "crossroads"],
+      "description": "Seasonal winds funnel the spice trade through this crossroads. The shipyard builds for endurance.",
+      "gridX": 38, "gridY": 14, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["jade_port", "silk_haven", "crosswind_isle", "spice_narrows"],
+      "exits": [
+        {"targetZoneId": "jade_port", "label": "Northwest to Jade Port"},
+        {"targetZoneId": "silk_haven", "label": "North to Silk Haven"},
+        {"targetZoneId": "crosswind_isle", "label": "West to Crosswind Isle"},
+        {"targetZoneId": "spice_narrows", "label": "South to Spice Narrows"},
+        {"targetZoneId": "al_manar", "label": "Far west to Al-Manar (dangerous)"},
+        {"targetZoneId": "typhoon_anchorage", "label": "South to Typhoon Anchorage (dangerous)"}
+      ],
+      "light": 7, "noise": 7,
+      "hazards": ["monsoon-winds"],
+      "interactables": [
+        {"name": "monsoon-shipyard", "type": "use"},
+        {"name": "spice-traders", "type": "talk"}
+      ],
+      "parentDistrictId": "east_indies"
+    },
+    {
+      "id": "silk_haven",
+      "name": "Silk Haven",
+      "tags": ["port", "east-indies", "silk-exporter", "luxury"],
+      "description": "Premier silk market of the eastern waters. Rum and iron are scarce luxuries here.",
+      "gridX": 42, "gridY": 8, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["jade_port", "monsoon_reach", "crosswind_isle", "spice_narrows"],
+      "exits": [
+        {"targetZoneId": "jade_port", "label": "West to Jade Port"},
+        {"targetZoneId": "monsoon_reach", "label": "South to Monsoon Reach"},
+        {"targetZoneId": "crosswind_isle", "label": "Southwest to Crosswind Isle"},
+        {"targetZoneId": "spice_narrows", "label": "South to Spice Narrows"}
+      ],
+      "light": 8, "noise": 5,
+      "hazards": [],
+      "interactables": [
+        {"name": "silk-loom-hall", "type": "use"},
+        {"name": "silk-merchant-prince", "type": "talk"}
+      ],
+      "parentDistrictId": "east_indies"
+    },
+    {
+      "id": "crosswind_isle",
+      "name": "Crosswind Isle",
+      "tags": ["port", "safe-harbor", "east-indies", "neutral", "hub"],
+      "description": "Free port at the junction of all trade winds. Everything passes through, nothing stays cheap.",
+      "gridX": 32, "gridY": 16, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["jade_port", "monsoon_reach", "silk_haven", "dragons_gate"],
+      "exits": [
+        {"targetZoneId": "jade_port", "label": "Northeast to Jade Port"},
+        {"targetZoneId": "monsoon_reach", "label": "East to Monsoon Reach"},
+        {"targetZoneId": "silk_haven", "label": "Northeast to Silk Haven"},
+        {"targetZoneId": "dragons_gate", "label": "East to Dragon's Gate"},
+        {"targetZoneId": "sun_harbor", "label": "Far west to Sun Harbor (dangerous)"},
+        {"targetZoneId": "iron_point", "label": "West to Iron Point"},
+        {"targetZoneId": "pearl_shallows", "label": "Southwest to Pearl Shallows"},
+        {"targetZoneId": "ember_isle", "label": "South to Ember Isle (dangerous)"}
+      ],
+      "light": 8, "noise": 8,
+      "hazards": [],
+      "interactables": [
+        {"name": "free-port-exchange", "type": "use"},
+        {"name": "harbor-neutral-ground", "type": "talk"}
+      ],
+      "parentDistrictId": "east_indies"
+    },
+    {
+      "id": "dragons_gate",
+      "name": "Dragon's Gate",
+      "tags": ["port", "east-indies", "fortress", "tea-exporter"],
+      "description": "Fortress harbor controlling the eastern straits. Weapons are contraband here, but medicines are gold.",
+      "gridX": 44, "gridY": 12, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["jade_port", "crosswind_isle", "spice_narrows"],
+      "exits": [
+        {"targetZoneId": "jade_port", "label": "West to Jade Port"},
+        {"targetZoneId": "crosswind_isle", "label": "Southwest to Crosswind Isle"},
+        {"targetZoneId": "spice_narrows", "label": "South to Spice Narrows"}
+      ],
+      "light": 6, "noise": 5,
+      "hazards": ["strict-customs", "weapons-contraband"],
+      "interactables": [
+        {"name": "customs-house", "type": "talk"},
+        {"name": "medicine-traders", "type": "use"}
+      ],
+      "parentDistrictId": "east_indies"
+    },
+    {
+      "id": "spice_narrows",
+      "name": "Spice Narrows",
+      "tags": ["port", "black-market", "east-indies", "spice-exporter"],
+      "description": "Hidden anchorage in the spice archipelago. The most concentrated spice market in the world.",
+      "gridX": 38, "gridY": 20, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["monsoon_reach", "silk_haven", "dragons_gate"],
+      "exits": [
+        {"targetZoneId": "monsoon_reach", "label": "North to Monsoon Reach"},
+        {"targetZoneId": "silk_haven", "label": "Northeast to Silk Haven"},
+        {"targetZoneId": "dragons_gate", "label": "Northeast to Dragon's Gate"},
+        {"targetZoneId": "corsairs_rest", "label": "Far west to Corsair's Rest (very dangerous)"},
+        {"targetZoneId": "ember_isle", "label": "South to Ember Isle (dangerous)"}
+      ],
+      "light": 4, "noise": 5,
+      "hazards": ["hidden-reefs", "pirate-territory"],
+      "interactables": [
+        {"name": "spice-auction", "type": "use"},
+        {"name": "black-market-fence", "type": "talk"}
+      ],
+      "parentDistrictId": "east_indies"
+    },
+
+    {
+      "id": "ember_isle",
+      "name": "Ember Isle",
+      "tags": ["port", "south-seas", "medicines-exporter", "volcanic"],
+      "description": "Volcanic island with obsidian beaches. Rich in rare minerals and medicinal plants.",
+      "gridX": 34, "gridY": 28, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["typhoon_anchorage", "coral_throne"],
+      "exits": [
+        {"targetZoneId": "typhoon_anchorage", "label": "East to Typhoon Anchorage"},
+        {"targetZoneId": "coral_throne", "label": "Southeast to Coral Throne"},
+        {"targetZoneId": "spice_narrows", "label": "North to Spice Narrows (dangerous)"},
+        {"targetZoneId": "crosswind_isle", "label": "North to Crosswind Isle (dangerous)"}
+      ],
+      "light": 7, "noise": 4,
+      "hazards": ["volcanic-ash", "hot-springs"],
+      "interactables": [
+        {"name": "herbalist-camp", "type": "use"},
+        {"name": "obsidian-beach", "type": "inspect"}
+      ],
+      "parentDistrictId": "south_seas"
+    },
+    {
+      "id": "typhoon_anchorage",
+      "name": "Typhoon Anchorage",
+      "tags": ["port", "shipyard", "south-seas", "pearls-exporter", "dangerous"],
+      "description": "Storm-battered harbor that only the boldest captains visit. Pearls and rare goods reward the brave.",
+      "gridX": 40, "gridY": 30, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["ember_isle", "coral_throne"],
+      "exits": [
+        {"targetZoneId": "ember_isle", "label": "West to Ember Isle"},
+        {"targetZoneId": "coral_throne", "label": "East to Coral Throne"},
+        {"targetZoneId": "monsoon_reach", "label": "North to Monsoon Reach (dangerous)"}
+      ],
+      "light": 5, "noise": 8,
+      "hazards": ["typhoon-season", "treacherous-reefs"],
+      "interactables": [
+        {"name": "pearl-market", "type": "use"},
+        {"name": "storm-shipyard", "type": "use"}
+      ],
+      "parentDistrictId": "south_seas"
+    },
+    {
+      "id": "coral_throne",
+      "name": "Coral Throne",
+      "tags": ["port", "south-seas", "pearls-exporter", "kingdom", "endgame"],
+      "description": "Island kingdom built on coral reefs. The king trades pearls for weapons and demands tribute in silk.",
+      "gridX": 44, "gridY": 26, "gridWidth": 3, "gridHeight": 3,
+      "neighbors": ["ember_isle", "typhoon_anchorage"],
+      "exits": [
+        {"targetZoneId": "ember_isle", "label": "West to Ember Isle"},
+        {"targetZoneId": "typhoon_anchorage", "label": "Southwest to Typhoon Anchorage"},
+        {"targetZoneId": "pearl_shallows", "label": "Far west to Pearl Shallows (dangerous)"}
+      ],
+      "light": 9, "noise": 6,
+      "hazards": ["coral-reefs", "royal-tribute"],
+      "interactables": [
+        {"name": "coral-palace", "type": "talk"},
+        {"name": "royal-exchange", "type": "use"}
+      ],
+      "parentDistrictId": "south_seas"
+    }
+  ],
+
+  "connections": [
+    {"fromZoneId": "porto_novo", "toZoneId": "al_manar", "bidirectional": true, "kind": "route", "label": "Sloop — 24 leagues, calm waters"},
+    {"fromZoneId": "porto_novo", "toZoneId": "silva_bay", "bidirectional": true, "kind": "route", "label": "Sloop — 16 leagues, sheltered coast"},
+    {"fromZoneId": "al_manar", "toZoneId": "silva_bay", "bidirectional": true, "kind": "route", "label": "Sloop — 20 leagues, coastal"},
+    {"fromZoneId": "porto_novo", "toZoneId": "corsairs_rest", "bidirectional": true, "kind": "route", "label": "Sloop — 18 leagues, watch for pirates"},
+    {"fromZoneId": "silva_bay", "toZoneId": "corsairs_rest", "bidirectional": true, "kind": "route", "label": "Sloop — 14 leagues, shortest Med route"},
+
+    {"fromZoneId": "ironhaven", "toZoneId": "stormwall", "bidirectional": true, "kind": "route", "label": "Sloop — 20 leagues, northern waters"},
+    {"fromZoneId": "ironhaven", "toZoneId": "thornport", "bidirectional": true, "kind": "route", "label": "Sloop — 22 leagues, Atlantic coast"},
+    {"fromZoneId": "stormwall", "toZoneId": "thornport", "bidirectional": true, "kind": "route", "label": "Sloop — 18 leagues, storm-prone"},
+
+    {"fromZoneId": "porto_novo", "toZoneId": "ironhaven", "bidirectional": true, "kind": "channel", "label": "Brigantine — 36 leagues, open Atlantic crossing"},
+    {"fromZoneId": "silva_bay", "toZoneId": "ironhaven", "bidirectional": true, "kind": "channel", "label": "Brigantine — 32 leagues, North Atlantic bridge"},
+    {"fromZoneId": "corsairs_rest", "toZoneId": "stormwall", "bidirectional": true, "kind": "channel", "label": "Brigantine — 40 leagues, dangerous strait"},
+
+    {"fromZoneId": "porto_novo", "toZoneId": "sun_harbor", "bidirectional": true, "kind": "channel", "label": "Brigantine — 40 leagues, Med to West Africa"},
+    {"fromZoneId": "al_manar", "toZoneId": "sun_harbor", "bidirectional": true, "kind": "channel", "label": "Brigantine — 48 leagues, long southern crossing"},
+    {"fromZoneId": "silva_bay", "toZoneId": "palm_cove", "bidirectional": true, "kind": "channel", "label": "Brigantine — 44 leagues, Atlantic coast run"},
+
+    {"fromZoneId": "sun_harbor", "toZoneId": "palm_cove", "bidirectional": true, "kind": "route", "label": "Sloop — 20 leagues, West African coast"},
+    {"fromZoneId": "sun_harbor", "toZoneId": "iron_point", "bidirectional": true, "kind": "route", "label": "Sloop — 18 leagues, coastal"},
+    {"fromZoneId": "palm_cove", "toZoneId": "iron_point", "bidirectional": true, "kind": "route", "label": "Sloop — 22 leagues, river route"},
+    {"fromZoneId": "sun_harbor", "toZoneId": "pearl_shallows", "bidirectional": true, "kind": "route", "label": "Sloop — 24 leagues, shallow waters"},
+    {"fromZoneId": "palm_cove", "toZoneId": "pearl_shallows", "bidirectional": true, "kind": "route", "label": "Sloop — 20 leagues, southern coast"},
+
+    {"fromZoneId": "sun_harbor", "toZoneId": "crosswind_isle", "bidirectional": true, "kind": "channel", "label": "Galleon — 64 leagues, Indian Ocean crossing"},
+    {"fromZoneId": "iron_point", "toZoneId": "crosswind_isle", "bidirectional": true, "kind": "channel", "label": "Brigantine — 60 leagues, trade wind route"},
+    {"fromZoneId": "pearl_shallows", "toZoneId": "crosswind_isle", "bidirectional": true, "kind": "channel", "label": "Brigantine — 56 leagues, southern crossing"},
+
+    {"fromZoneId": "crosswind_isle", "toZoneId": "jade_port", "bidirectional": true, "kind": "route", "label": "Brigantine — 28 leagues, East Indies internal"},
+    {"fromZoneId": "crosswind_isle", "toZoneId": "monsoon_reach", "bidirectional": true, "kind": "route", "label": "Brigantine — 24 leagues, monsoon waters"},
+    {"fromZoneId": "crosswind_isle", "toZoneId": "silk_haven", "bidirectional": true, "kind": "route", "label": "Brigantine — 32 leagues, eastern passage"},
+    {"fromZoneId": "crosswind_isle", "toZoneId": "dragons_gate", "bidirectional": true, "kind": "route", "label": "Brigantine — 30 leagues, fortress strait"},
+    {"fromZoneId": "jade_port", "toZoneId": "monsoon_reach", "bidirectional": true, "kind": "route", "label": "Brigantine — 20 leagues, spice route"},
+    {"fromZoneId": "jade_port", "toZoneId": "silk_haven", "bidirectional": true, "kind": "route", "label": "Brigantine — 18 leagues, silk road by sea"},
+    {"fromZoneId": "jade_port", "toZoneId": "dragons_gate", "bidirectional": true, "kind": "route", "label": "Brigantine — 22 leagues, guarded passage"},
+    {"fromZoneId": "monsoon_reach", "toZoneId": "silk_haven", "bidirectional": true, "kind": "route", "label": "Brigantine — 22 leagues, eastern waters"},
+    {"fromZoneId": "monsoon_reach", "toZoneId": "spice_narrows", "bidirectional": true, "kind": "route", "label": "Brigantine — 26 leagues, spice archipelago"},
+    {"fromZoneId": "silk_haven", "toZoneId": "spice_narrows", "bidirectional": true, "kind": "route", "label": "Brigantine — 20 leagues, hidden channels"},
+    {"fromZoneId": "dragons_gate", "toZoneId": "spice_narrows", "bidirectional": true, "kind": "route", "label": "Brigantine — 28 leagues, smuggler's passage"},
+
+    {"fromZoneId": "monsoon_reach", "toZoneId": "typhoon_anchorage", "bidirectional": true, "kind": "channel", "label": "Galleon — 52 leagues, typhoon alley"},
+    {"fromZoneId": "spice_narrows", "toZoneId": "ember_isle", "bidirectional": true, "kind": "channel", "label": "Galleon — 48 leagues, volcanic waters"},
+    {"fromZoneId": "crosswind_isle", "toZoneId": "ember_isle", "bidirectional": true, "kind": "channel", "label": "Galleon — 56 leagues, South Seas gateway"},
+
+    {"fromZoneId": "ember_isle", "toZoneId": "typhoon_anchorage", "bidirectional": true, "kind": "route", "label": "Brigantine — 24 leagues, South Seas internal"},
+    {"fromZoneId": "ember_isle", "toZoneId": "coral_throne", "bidirectional": true, "kind": "route", "label": "Brigantine — 28 leagues, coral passage"},
+    {"fromZoneId": "typhoon_anchorage", "toZoneId": "coral_throne", "bidirectional": true, "kind": "route", "label": "Brigantine — 22 leagues, reef navigation"},
+
+    {"fromZoneId": "al_manar", "toZoneId": "monsoon_reach", "bidirectional": true, "kind": "channel", "label": "Galleon — 72 leagues, monsoon shortcut (very dangerous)"},
+    {"fromZoneId": "corsairs_rest", "toZoneId": "spice_narrows", "bidirectional": true, "kind": "channel", "label": "Galleon — 80 leagues, pirate's passage (extremely dangerous)"},
+    {"fromZoneId": "ironhaven", "toZoneId": "jade_port", "bidirectional": true, "kind": "channel", "label": "Galleon — 76 leagues, northern passage (dangerous)"},
+    {"fromZoneId": "pearl_shallows", "toZoneId": "coral_throne", "bidirectional": true, "kind": "channel", "label": "Galleon — 68 leagues, deep South Seas run (dangerous)"}
+  ],
+
+  "districts": [
+    {
+      "id": "mediterranean",
+      "name": "Mediterranean",
+      "description": "The cradle of trade. Established routes, moderate prices, and the safest waters for new captains. Porto Novo's grain, Al-Manar's spices, Silva Bay's timber, and Corsair's Rest's black market.",
+      "tags": ["starting-region", "safe", "established"],
+      "zoneIds": ["porto_novo", "al_manar", "silva_bay", "corsairs_rest"],
+      "controllingFactionId": "merchant-guilds"
+    },
+    {
+      "id": "north_atlantic",
+      "name": "North Atlantic",
+      "description": "Industrial north — iron, weapons, and storm-battered coastlines. Ironhaven's foundries supply the world's arms. Stormwall's military garrison enforces order.",
+      "tags": ["industrial", "military", "expansion"],
+      "zoneIds": ["ironhaven", "stormwall", "thornport"],
+      "controllingFactionId": "northern-alliance"
+    },
+    {
+      "id": "west_africa",
+      "name": "West Africa",
+      "description": "The golden coast — cotton, rum, pearls, and the crossroads to the East Indies. Sun Harbor's bustling exchange, Palm Cove's cheap provisions, Iron Point's mines, and Pearl Shallows' divers.",
+      "tags": ["commodity-rich", "midgame", "crossroads"],
+      "zoneIds": ["sun_harbor", "palm_cove", "iron_point", "pearl_shallows"],
+      "controllingFactionId": "coastal-chiefs"
+    },
+    {
+      "id": "east_indies",
+      "name": "East Indies",
+      "description": "The jewel of trade — silk, porcelain, spice, and tea. Six ports spanning from Crosswind Isle's neutral free port to Dragon's Gate's fortress and Spice Narrows' hidden markets.",
+      "tags": ["luxury", "late-game", "high-value"],
+      "zoneIds": ["jade_port", "monsoon_reach", "silk_haven", "crosswind_isle", "dragons_gate", "spice_narrows"],
+      "controllingFactionId": "eastern-dynasties"
+    },
+    {
+      "id": "south_seas",
+      "name": "South Seas",
+      "description": "The endgame frontier — volcanic islands, typhoon-battered harbors, and the Coral Throne's kingdom. Extreme danger, extreme rewards. Weapons sell for 700% markup here.",
+      "tags": ["endgame", "dangerous", "high-reward"],
+      "zoneIds": ["ember_isle", "typhoon_anchorage", "coral_throne"],
+      "controllingFactionId": "coral-kingdom"
+    }
+  ],
+
+  "landmarks": [
+    {"id": "grain-exchange", "name": "Porto Novo Grain Exchange", "zoneId": "porto_novo", "gridX": 19, "gridY": 9, "tags": ["market", "grain"], "interactionType": "use"},
+    {"id": "spice-bazaar", "name": "Al-Manar Spice Bazaar", "zoneId": "al_manar", "gridX": 25, "gridY": 7, "tags": ["market", "spice"], "interactionType": "use"},
+    {"id": "master-shipyard", "name": "Silva Bay Master Shipyard", "zoneId": "silva_bay", "gridX": 15, "gridY": 11, "tags": ["shipyard"], "interactionType": "use"},
+    {"id": "pirate-den", "name": "Corsair's Den", "zoneId": "corsairs_rest", "gridX": 22, "gridY": 14, "tags": ["black-market"], "interactionType": "talk"},
+    {"id": "iron-foundry", "name": "Ironhaven Great Foundry", "zoneId": "ironhaven", "gridX": 9, "gridY": 5, "tags": ["industry", "iron"], "interactionType": "use"},
+    {"id": "storm-fortress", "name": "Stormwall Fortress", "zoneId": "stormwall", "gridX": 5, "gridY": 9, "tags": ["military", "fortress"], "interactionType": "talk"},
+    {"id": "pearl-beds", "name": "Pearl Diving Beds", "zoneId": "pearl_shallows", "gridX": 13, "gridY": 31, "tags": ["pearls", "rare"], "interactionType": "inspect"},
+    {"id": "silk-loom", "name": "Grand Silk Loom Hall", "zoneId": "silk_haven", "gridX": 43, "gridY": 9, "tags": ["silk", "luxury"], "interactionType": "use"},
+    {"id": "coral-palace", "name": "The Coral Palace", "zoneId": "coral_throne", "gridX": 45, "gridY": 27, "tags": ["kingdom", "endgame", "royal"], "interactionType": "talk"},
+    {"id": "volcano-peak", "name": "Ember Peak", "zoneId": "ember_isle", "gridX": 35, "gridY": 29, "tags": ["volcanic", "landmark"], "interactionType": "inspect"}
+  ],
+
+  "factionPresences": [
+    {"factionId": "merchant-guilds", "districtId": "mediterranean", "influence": 8, "attitude": "friendly"},
+    {"factionId": "northern-alliance", "districtId": "north_atlantic", "influence": 7, "attitude": "neutral"},
+    {"factionId": "coastal-chiefs", "districtId": "west_africa", "influence": 6, "attitude": "neutral"},
+    {"factionId": "eastern-dynasties", "districtId": "east_indies", "influence": 9, "attitude": "cautious"},
+    {"factionId": "coral-kingdom", "districtId": "south_seas", "influence": 10, "attitude": "hostile"}
+  ],
+  "pressureHotspots": [],
+
+  "dialogues": [],
+  "progressionTrees": [],
+  "entityPlacements": [],
+  "itemPlacements": [],
+  "encounterAnchors": [],
+  "spawnPoints": [
+    {"id": "merchant-start", "zoneId": "porto_novo", "gridX": 19, "gridY": 9, "label": "Merchant Captain — Porto Novo", "isDefault": true},
+    {"id": "smuggler-start", "zoneId": "palm_cove", "gridX": 11, "gridY": 27, "label": "Smuggler Captain — Palm Cove"},
+    {"id": "navigator-start", "zoneId": "silva_bay", "gridX": 15, "gridY": 11, "label": "Navigator Captain — Silva Bay"}
+  ],
+  "craftingStations": [],
+  "marketNodes": [
+    {"id": "market-porto-novo", "zoneId": "porto_novo", "merchantId": "porto-novo-exchange", "restockIntervalDays": 3, "priceVariance": 0.15},
+    {"id": "market-al-manar", "zoneId": "al_manar", "merchantId": "al-manar-bazaar", "restockIntervalDays": 3, "priceVariance": 0.20},
+    {"id": "market-sun-harbor", "zoneId": "sun_harbor", "merchantId": "sun-harbor-exchange", "restockIntervalDays": 3, "priceVariance": 0.15},
+    {"id": "market-jade-port", "zoneId": "jade_port", "merchantId": "jade-port-workshop", "restockIntervalDays": 4, "priceVariance": 0.20},
+    {"id": "market-coral-throne", "zoneId": "coral_throne", "merchantId": "coral-throne-royal", "restockIntervalDays": 5, "priceVariance": 0.25}
+  ],
+
+  "tilesets": [],
+  "tileLayers": [],
+  "props": [],
+  "propPlacements": [],
+  "ambientLayers": [
+    {"id": "ocean-mist", "kind": "fog", "opacity": 0.2, "coverage": 0.3}
+  ],
+  "assets": [],
+  "assetPacks": []
+}

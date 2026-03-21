@@ -387,7 +387,7 @@ class TestInfraSaveLoad:
         infra.warehouses.append(lease)
 
         d = world_to_dict(world, infra=infra)
-        _, _, _, loaded_infra, _campaign = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign, _narrative = world_from_dict(d)
 
         assert len(loaded_infra.warehouses) == 1
         wh = loaded_infra.warehouses[0]
@@ -402,7 +402,7 @@ class TestInfraSaveLoad:
 
     def test_empty_infra_roundtrip(self, world):
         d = world_to_dict(world)
-        _, _, _, loaded_infra, _campaign = world_from_dict(d)
+        _, _, _, loaded_infra, _campaign, _narrative = world_from_dict(d)
         assert len(loaded_infra.warehouses) == 0
 
     def test_save_load_with_infra(self, tmp_path, world):
@@ -415,7 +415,7 @@ class TestInfraSaveLoad:
         save_game(world, infra=infra, base_path=tmp_path)
         result = load_game(base_path=tmp_path)
         assert result is not None
-        _, _, _, loaded_infra, _campaign = result
+        _, _, _, loaded_infra, _campaign, _narrative = result
         assert len(loaded_infra.warehouses) == 1
         assert loaded_infra.warehouses[0].port_id == "porto_novo"
 

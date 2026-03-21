@@ -1,11 +1,16 @@
-"""Phase 2 ship templates - 3 classes, each changes the game shape.
+"""Expanded ship catalog — 5 classes, each changes the game shape.
 
 Sloop: fast, fragile, small hold. Mediterranean-safe. Gets punished on long hauls.
-Brigantine: balanced, opens West Africa reliably and East Indies hub.
+Cutter: nimble scout with moderate hold. Opens early cross-region runs.
+  Fast enough to outrun pirates. Good crew-to-speed ratio.
+Brigantine: balanced workhorse. Opens West Africa reliably and East Indies hub.
   More cargo = bulk routes viable. Higher crew = real wage pressure.
 Galleon: slow fortress. Makes long-haul luxury profitable.
   Huge hold but expensive crew, slow speed means more provisions burned.
-  Storm-resistant - the only ship that can reliably survive perilous routes.
+  Storm-resistant — the only ship that can reliably survive perilous routes.
+Man-of-War: endgame capital ship. Massive hold, maximum storm resistance.
+  Eye-watering crew costs but opens every route in the game.
+  For the captain who has truly built an empire.
 """
 
 from portlight.engine.models import ShipClass, ShipTemplate
@@ -23,6 +28,19 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         price=0,  # starting ship
         daily_wage=1,
         storm_resist=0.0,
+    ),
+    ShipTemplate(
+        id="swift_cutter",
+        name="Swift Cutter",
+        ship_class=ShipClass.CUTTER,
+        cargo_capacity=50,
+        speed=9,            # fastest ship in the game
+        hull_max=70,
+        crew_min=5,
+        crew_max=12,
+        price=450,
+        daily_wage=1,
+        storm_resist=0.15,  # modest storm protection
     ),
     ShipTemplate(
         id="trade_brigantine",
@@ -49,6 +67,19 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         price=2200,
         daily_wage=3,
         storm_resist=0.6,  # absorbs 60% storm damage
+    ),
+    ShipTemplate(
+        id="royal_man_of_war",
+        name="Royal Man-of-War",
+        ship_class=ShipClass.MAN_OF_WAR,
+        cargo_capacity=200,
+        speed=3,
+        hull_max=220,
+        crew_min=25,
+        crew_max=60,
+        price=5000,
+        daily_wage=4,
+        storm_resist=0.8,  # near-invulnerable to storms
     ),
 ]}
 

@@ -14,13 +14,13 @@ class TestContentIntegrity:
             assert good.base_price > 0, f"{good.id} has non-positive price"
 
     def test_port_count(self):
-        assert len(PORTS) == 10
+        assert len(PORTS) == 20
 
     def test_good_count(self):
-        assert len(GOODS) == 8
+        assert len(GOODS) == 14
 
     def test_ship_count(self):
-        assert len(SHIPS) == 3
+        assert len(SHIPS) == 5
 
     def test_all_port_goods_exist(self):
         """Every good_id in a port market must be in the GOODS table."""
@@ -41,15 +41,19 @@ class TestContentIntegrity:
     def test_ship_progression_price_order(self):
         """Ships should get more expensive as they get bigger."""
         sloop = SHIPS["coastal_sloop"]
+        cutter = SHIPS["swift_cutter"]
         brig = SHIPS["trade_brigantine"]
         galleon = SHIPS["merchant_galleon"]
-        assert sloop.price < brig.price < galleon.price
+        mow = SHIPS["royal_man_of_war"]
+        assert sloop.price < cutter.price < brig.price < galleon.price < mow.price
 
     def test_ship_progression_capacity_order(self):
         sloop = SHIPS["coastal_sloop"]
+        cutter = SHIPS["swift_cutter"]
         brig = SHIPS["trade_brigantine"]
         galleon = SHIPS["merchant_galleon"]
-        assert sloop.cargo_capacity < brig.cargo_capacity < galleon.cargo_capacity
+        mow = SHIPS["royal_man_of_war"]
+        assert sloop.cargo_capacity < cutter.cargo_capacity < brig.cargo_capacity < galleon.cargo_capacity < mow.cargo_capacity
 
 
 class TestNewGame:

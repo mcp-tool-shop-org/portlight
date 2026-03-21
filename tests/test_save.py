@@ -1,10 +1,17 @@
-"""Tests for save/load round-trip."""
+"""Tests for save/load round-trip and migration."""
 
+import json
 from pathlib import Path
 
 from portlight.content.world import new_game
 from portlight.engine.economy import execute_buy, recalculate_prices
-from portlight.engine.save import load_game, save_game
+from portlight.engine.save import (
+    CURRENT_SAVE_VERSION,
+    load_game,
+    migrate_save,
+    save_game,
+    world_to_dict,
+)
 from portlight.content.goods import GOODS
 from portlight.receipts.models import ReceiptLedger, TradeReceipt, TradeAction
 
@@ -15,11 +22,11 @@ class TestSaveLoad:
         save_game(world, base_path=tmp_path)
         result = load_game(base_path=tmp_path)
         assert result is not None
-        loaded, ledger, _board, _infra, _campaign = result
+        loaded, ledger, _board, _infra, _campaign, _narrative = result
         assert loaded.captain.name == "Hawk"
         assert loaded.captain.silver == 550  # Merchant starting silver
         assert loaded.day == 1
-        assert len(loaded.ports) == 10
+        assert len(loaded.ports) == 20
 
     def test_round_trip_with_cargo(self, tmp_path: Path):
         world = new_game()
@@ -27,7 +34,7 @@ class TestSaveLoad:
         recalculate_prices(port, GOODS)
         execute_buy(world.captain, port, "grain", 5, GOODS)
         save_game(world, base_path=tmp_path)
-        loaded, _, _board, _infra, _campaign = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra, _campaign, _narrative = load_game(base_path=tmp_path)
         assert len(loaded.captain.cargo) == 1
         assert loaded.captain.cargo[0].good_id == "grain"
         assert loaded.captain.cargo[0].quantity == 5
@@ -47,7 +54,7 @@ class TestSaveLoad:
             day=1,
         ))
         save_game(world, ledger, base_path=tmp_path)
-        _, loaded_ledger, _board, _infra, _campaign = load_game(base_path=tmp_path)
+        _, loaded_ledger, _board, _infra, _campaign, _narrative = load_game(base_path=tmp_path)
         assert loaded_ledger.run_id == "test-run"
         assert len(loaded_ledger.receipts) == 1
         assert loaded_ledger.total_buys == 120
@@ -67,7 +74,7 @@ class TestSaveLoad:
         grain = next(s for s in porto.market if s.good_id == "grain")
         original_buy = grain.buy_price
         save_game(world, base_path=tmp_path)
-        loaded, _, _board, _infra, _campaign = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra, _campaign, _narrative = load_game(base_path=tmp_path)
         loaded_grain = next(s for s in loaded.ports["porto_novo"].market if s.good_id == "grain")
         assert loaded_grain.buy_price == original_buy
 
@@ -76,7 +83,7 @@ class TestSaveLoad:
         world = new_game()
         depart(world, "al_manar")
         save_game(world, base_path=tmp_path)
-        loaded, _, _board, _infra, _campaign = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra, _campaign, _narrative = load_game(base_path=tmp_path)
         assert loaded.voyage.destination_id == "al_manar"
         assert loaded.voyage.status.value == "at_sea"
 
@@ -85,6 +92,67 @@ class TestSaveLoad:
         world.captain.ship.hull = 42
         world.captain.ship.crew = 5
         save_game(world, base_path=tmp_path)
-        loaded, _, _board, _infra, _campaign = load_game(base_path=tmp_path)
+        loaded, _, _board, _infra, _campaign, _narrative = load_game(base_path=tmp_path)
         assert loaded.captain.ship.hull == 42
         assert loaded.captain.ship.crew == 5
+
+
+class TestSaveMigration:
+    def test_current_version_no_migration(self):
+        world = new_game("Hawk")
+        data = world_to_dict(world)
+        assert data["version"] == CURRENT_SAVE_VERSION
+        migrated = migrate_save(data)
+        assert migrated["version"] == CURRENT_SAVE_VERSION
+
+    def test_v1_migrates_to_current(self):
+        """A v1 save (minimal fields) migrates to current version."""
+        world = new_game("Hawk")
+        from portlight.engine.campaign import CampaignState
+        from portlight.engine.infrastructure import InfrastructureState
+        from portlight.engine.contracts import ContractBoard
+        data = world_to_dict(world, ReceiptLedger(), ContractBoard(), InfrastructureState(), CampaignState())
+        # Simulate v1: strip optional sections and set version=1
+        data["version"] = 1
+        del data["campaign"]
+        del data["infrastructure"]
+        del data["contract_board"]
+        del data["ledger"]
+        migrated = migrate_save(data)
+        assert migrated["version"] == CURRENT_SAVE_VERSION
+        assert "campaign" in migrated
+        assert "infrastructure" in migrated
+        assert "contract_board" in migrated
+        assert "ledger" in migrated
+
+    def test_v1_save_loads_successfully(self, tmp_path: Path):
+        """A v1 save file on disk loads through the migration chain."""
+        world = new_game("Hawk")
+        from portlight.engine.campaign import CampaignState
+        from portlight.engine.infrastructure import InfrastructureState
+        from portlight.engine.contracts import ContractBoard
+        data = world_to_dict(world, ReceiptLedger(), ContractBoard(), InfrastructureState(), CampaignState())
+        data["version"] = 1
+        del data["campaign"]
+        save_dir = tmp_path / "saves"
+        save_dir.mkdir()
+        (save_dir / "portlight_save.json").write_text(
+            json.dumps(data, indent=2), encoding="utf-8",
+        )
+        result = load_game(base_path=tmp_path)
+        assert result is not None
+        loaded, _ledger, _board, _infra, _campaign, _narrative = result
+        assert loaded.captain.name == "Hawk"
+
+    def test_future_version_returns_none(self, tmp_path: Path):
+        """A save from a newer version gracefully fails to load."""
+        world = new_game("Hawk")
+        data = world_to_dict(world)
+        data["version"] = 999
+        save_dir = tmp_path / "saves"
+        save_dir.mkdir()
+        (save_dir / "portlight_save.json").write_text(
+            json.dumps(data, indent=2), encoding="utf-8",
+        )
+        result = load_game(base_path=tmp_path)
+        assert result is None

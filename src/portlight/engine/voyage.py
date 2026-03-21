@@ -55,6 +55,15 @@ class EventType(str, Enum):
     MERCHANT_ENCOUNTER = "merchant_encounter"
     FLOTSAM = "flotsam"
     NOTHING = "nothing"
+    # Cultural events (replace boredom, not danger)
+    FOREIGN_VESSEL = "foreign_vessel"
+    CULTURAL_WATERS = "cultural_waters"
+    SEA_CEREMONY = "sea_ceremony"
+    WHALE_SIGHTING = "whale_sighting"
+    LIGHTHOUSE = "lighthouse"
+    MUSICIAN_ABOARD = "musician_aboard"
+    DRIFTING_OFFERING = "drifting_offering"
+    STAR_NAVIGATION = "star_navigation"
 
 
 @dataclass
@@ -68,13 +77,14 @@ class VoyageEvent:
     crew_delta: int = 0
     speed_modifier: float = 1.0
     cargo_lost: dict[str, int] | None = None  # good_id -> qty lost
+    flavor: str = ""                           # atmospheric color text
 
 
 # ---------------------------------------------------------------------------
 # Ship class ordering for route checks
 # ---------------------------------------------------------------------------
 
-_SHIP_CLASS_RANK = {"sloop": 0, "brigantine": 1, "galleon": 2}
+_SHIP_CLASS_RANK = {"sloop": 0, "cutter": 1, "brigantine": 2, "galleon": 3, "man_of_war": 4}
 
 
 def ship_class_rank(template_id: str) -> int:
@@ -90,7 +100,7 @@ def ship_class_rank(template_id: str) -> int:
 # ---------------------------------------------------------------------------
 
 _EVENT_WEIGHTS: list[tuple[EventType, float]] = [
-    (EventType.NOTHING, 0.35),
+    (EventType.NOTHING, 0.27),
     (EventType.CALM_SEAS, 0.12),
     (EventType.FAVORABLE_WIND, 0.10),
     (EventType.STORM, 0.12),
@@ -100,6 +110,15 @@ _EVENT_WEIGHTS: list[tuple[EventType, float]] = [
     (EventType.CARGO_DAMAGED, 0.04),
     (EventType.MERCHANT_ENCOUNTER, 0.05),
     (EventType.FLOTSAM, 0.04),
+    # Cultural events (8% total — atmosphere, not punishment)
+    (EventType.FOREIGN_VESSEL, 0.01),
+    (EventType.CULTURAL_WATERS, 0.01),
+    (EventType.SEA_CEREMONY, 0.01),
+    (EventType.WHALE_SIGHTING, 0.01),
+    (EventType.LIGHTHOUSE, 0.01),
+    (EventType.MUSICIAN_ABOARD, 0.01),
+    (EventType.DRIFTING_OFFERING, 0.01),
+    (EventType.STAR_NAVIGATION, 0.01),
 ]
 
 
@@ -227,8 +246,176 @@ def _resolve_event(
                 f"Floating wreckage yields salvageable supplies. (+{prov} provisions)",
                 provision_delta=prov)
 
+        # ---------------------------------------------------------------
+        # Cultural events — atmosphere over mechanics
+        # ---------------------------------------------------------------
+        case EventType.FOREIGN_VESSEL:
+            return _resolve_foreign_vessel(rng, captain)
+
+        case EventType.CULTURAL_WATERS:
+            return _resolve_cultural_waters(rng, captain)
+
+        case EventType.SEA_CEREMONY:
+            return VoyageEvent(
+                EventType.SEA_CEREMONY,
+                "The crew gathers at dusk. The bosun pours rum into the sea — "
+                "an old offering for safe passage.",
+                provision_delta=-1,
+                flavor="Some rituals are older than the ships that carry them.",
+            )
+
+        case EventType.WHALE_SIGHTING:
+            return VoyageEvent(
+                EventType.WHALE_SIGHTING,
+                "A pod of whales surfaces alongside the ship. "
+                "The crew watches in silence.",
+                flavor="Some things are bigger than commerce.",
+            )
+
+        case EventType.LIGHTHOUSE:
+            return _resolve_lighthouse(rng, captain)
+
+        case EventType.MUSICIAN_ABOARD:
+            return _resolve_musician(rng, captain)
+
+        case EventType.DRIFTING_OFFERING:
+            return _resolve_drifting_offering(rng, captain)
+
+        case EventType.STAR_NAVIGATION:
+            return _resolve_star_navigation(rng, captain)
+
         case _:
             return VoyageEvent(EventType.NOTHING, "An uneventful day at sea.")
+
+
+# ---------------------------------------------------------------------------
+# Cultural event helpers
+# ---------------------------------------------------------------------------
+
+_REGION_VESSEL_FLAVOR: dict[str, list[str]] = {
+    "Mediterranean": [
+        "A merchant galley with striped sails crosses your bow, its deck stacked with amphoras.",
+        "A felucca glides past, its triangular sail catching the coastal wind. The crew waves.",
+    ],
+    "North Atlantic": [
+        "A heavy iron-hulled freighter steams past, smoke trailing from its stack. Northern build.",
+        "A grey warship cuts through the swell, pennants snapping. The North Atlantic patrol.",
+    ],
+    "West Africa": [
+        "A carved fishing boat with outriggers crosses your wake. The crew sings as they work.",
+        "A cotton trader's vessel passes, bales stacked so high the deck is barely visible.",
+    ],
+    "East Indies": [
+        "A junk with crimson sails and incense burners at the prow glides past in silence.",
+        "A fleet of sampans appears from behind an island, loaded with silk-wrapped cargo.",
+    ],
+    "South Seas": [
+        "A war canoe with painted warriors paddles past. They watch you but do not stop.",
+        "An outrigger with pearl divers skims across the reef. They move like the water itself.",
+    ],
+}
+
+
+def _resolve_foreign_vessel(rng: "random.Random", captain: "Captain") -> VoyageEvent:
+    """Encounter a vessel from the destination region's culture."""
+    regions = list(_REGION_VESSEL_FLAVOR.keys())
+    region = rng.choice(regions)
+    flavors = _REGION_VESSEL_FLAVOR[region]
+    msg = rng.choice(flavors)
+    return VoyageEvent(EventType.FOREIGN_VESSEL, msg, flavor="The sea is shared.")
+
+
+_REGION_CROSSING_FLAVOR: dict[str, str] = {
+    "Mediterranean": "The water changes here — warmer, bluer. The Middle Sea welcomes you.",
+    "North Atlantic": "Grey waves and cold spray. You feel the weight of the Iron Coast ahead.",
+    "West Africa": "The current warms. Palm-fringed shores appear on the horizon. The Gold Coast.",
+    "East Indies": "Jade-green water and the distant scent of spice. The Silk Waters begin here.",
+    "South Seas": "Turquoise shallows and coral beneath the hull. The Reef Kingdoms lie ahead.",
+}
+
+
+def _resolve_cultural_waters(rng: "random.Random", captain: "Captain") -> VoyageEvent:
+    """Crossing into a new region's waters."""
+    regions = list(_REGION_CROSSING_FLAVOR.keys())
+    region = rng.choice(regions)
+    msg = _REGION_CROSSING_FLAVOR[region]
+    return VoyageEvent(
+        EventType.CULTURAL_WATERS, msg,
+        flavor="Every border on the sea is drawn by culture, not by stone.",
+    )
+
+
+def _resolve_lighthouse(rng: "random.Random", captain: "Captain") -> VoyageEvent:
+    """Sighting a famous beacon — confirms you're on course."""
+    beacons = [
+        "The beacon of Porto Novo breaks through the haze. You're on course.",
+        "Ironhaven's Great Foundry chimney glows red on the horizon — a landmark for miles.",
+        "The Wind Temple pagoda catches the sunset. Monsoon Reach is near.",
+        "Ember Peak's volcanic glow marks the horizon. The South Seas await.",
+        "The Whale Arch of Thornport stands white against the grey sky.",
+    ]
+    msg = rng.choice(beacons)
+    return VoyageEvent(
+        EventType.LIGHTHOUSE, msg, speed_modifier=1.1,
+        flavor="Known waters. The charts don't lie.",
+    )
+
+
+_REGION_MUSIC: dict[str, str] = {
+    "Mediterranean": "A sailor plays a reed flute — an old Mediterranean melody about grain ships and fair winds.",
+    "North Atlantic": "A northern ballad, deep and slow, about iron and ice and the lights in winter skies.",
+    "West Africa": "Drums and singing from the crew — rhythms of the Gold Coast that make the work feel lighter.",
+    "East Indies": "A string instrument hums from below deck — eastern scales that the crew learned in Jade Port.",
+    "South Seas": "Shell horns and chanting — songs the crew picked up at Coral Throne. Haunting and beautiful.",
+}
+
+
+def _resolve_musician(rng: "random.Random", captain: "Captain") -> VoyageEvent:
+    """A sailor plays music from their home region."""
+    regions = list(_REGION_MUSIC.keys())
+    region = rng.choice(regions)
+    msg = _REGION_MUSIC[region]
+    return VoyageEvent(
+        EventType.MUSICIAN_ABOARD, msg,
+        flavor="For a moment, the sea feels smaller.",
+    )
+
+
+def _resolve_drifting_offering(rng: "random.Random", captain: "Captain") -> VoyageEvent:
+    """Floating shrine or cultural offering in the water."""
+    offerings = [
+        "Floating flowers and a small wooden shrine drift past — an offering for safe passage.",
+        "A garland of marigolds on a leaf boat. Someone prayed for a ship that never came home.",
+        "A sealed clay jar bobs in the waves, marked with symbols of good fortune.",
+        "Driftwood carved with old prayers. The crew leaves it undisturbed.",
+    ]
+    msg = rng.choice(offerings)
+    return VoyageEvent(
+        EventType.DRIFTING_OFFERING, msg,
+        flavor="The sea remembers everyone who sails it.",
+    )
+
+
+def _resolve_star_navigation(rng: "random.Random", captain: "Captain") -> VoyageEvent:
+    """Navigator reads the stars — bonus speed, extra for navigator captains."""
+    cap_mods = _get_captain_mods(captain)
+    is_navigator = cap_mods and captain.captain_type == "navigator"
+    if is_navigator:
+        speed = 1.2
+        msg = (
+            "You read the stars yourself and correct course. "
+            "The old constellations guide you true — no one reads them better."
+        )
+    else:
+        speed = 1.05
+        msg = (
+            "The navigator reads the stars and adjusts course. "
+            "Ancient constellations confirm your heading."
+        )
+    return VoyageEvent(
+        EventType.STAR_NAVIGATION, msg, speed_modifier=speed,
+        flavor="The sky is the oldest chart.",
+    )
 
 
 # ---------------------------------------------------------------------------

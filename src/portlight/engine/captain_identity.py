@@ -147,13 +147,13 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
         ),
         home_region="West Africa",
         home_port_id="palm_cove",        # remote, low scrutiny
-        starting_silver=400,             # less starting capital
+        starting_silver=475,             # less starting capital, but resourceful
         starting_ship_id="coastal_sloop",
         starting_provisions=35,          # knows how to stock up
         pricing=PricingModifiers(
             buy_price_mult=1.0,          # no general buy edge
-            sell_price_mult=0.95,        # 5% worse on staples (no network)
-            luxury_sell_bonus=0.20,      # 20% bonus selling luxury goods
+            sell_price_mult=0.97,        # 3% worse on staples (no network)
+            luxury_sell_bonus=0.25,      # 25% bonus selling luxury goods
             port_fee_mult=1.0,           # normal port fees
         ),
         voyage=VoyageModifiers(
@@ -164,8 +164,8 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
         ),
         inspection=InspectionProfile(
             inspection_chance_mult=1.5,  # 50% more inspections (suspicious profile)
-            seizure_risk=0.10,           # 10% chance of cargo seizure on inspection
-            fine_mult=1.5,               # higher fines (no goodwill)
+            seizure_risk=0.07,           # 7% chance of cargo seizure on inspection
+            fine_mult=1.3,               # higher fines (no goodwill)
         ),
         reputation_seed=ReputationSeed(
             commercial_trust=0,          # no trust
@@ -175,15 +175,15 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
             east_indies=0,
         ),
         strengths=[
-            "20% bonus selling luxury goods (silk, spice, porcelain)",
+            "25% bonus selling luxury goods (silk, spice, porcelain)",
             "Less provision burn and cargo damage at sea",
             "Extra provisions at start",
             "Thrives on volatile markets and shortages",
         ],
         weaknesses=[
             "50% more inspections, higher fines",
-            "10% chance of cargo seizure during inspection",
-            "Worse sell prices on staple goods",
+            "7% chance of cargo seizure during inspection",
+            "Slightly worse sell prices on staple goods",
             "Starts with customs heat, no commercial trust",
         ],
     ),

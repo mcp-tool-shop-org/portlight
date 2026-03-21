@@ -12,8 +12,10 @@ import json
 from pathlib import Path
 
 from portlight.engine.models import (
+    ActiveFestival,
     Captain,
     CargoItem,
+    CulturalState,
     MarketSlot,
     Port,
     PortFeature,
@@ -49,10 +51,114 @@ from portlight.engine.infrastructure import (
     WarehouseTier,
 )
 from portlight.engine.campaign import CampaignState, MilestoneCompletion
+from portlight.engine.narrative import JournalEntry, NarrativeState
 from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"
+CURRENT_SAVE_VERSION = 4
+
+
+# ---------------------------------------------------------------------------
+# Save migration chain
+# ---------------------------------------------------------------------------
+
+def _migrate_v1_to_v2(data: dict) -> dict:
+    """v1 → v2: Add save_version tracking, ensure all subsections have defaults."""
+    # Ensure campaign section exists
+    if "campaign" not in data:
+        data["campaign"] = {"completed": [], "completed_paths": []}
+    # Ensure infrastructure section exists
+    if "infrastructure" not in data:
+        data["infrastructure"] = {
+            "warehouses": [], "brokers": [], "licenses": [],
+            "policies": [], "claims": [],
+        }
+    # Ensure contract_board section exists
+    if "contract_board" not in data:
+        data["contract_board"] = {
+            "offers": [], "active": [], "completed": [],
+            "last_refresh_day": 0, "max_offers": 5,
+        }
+    # Ensure ledger section exists
+    if "ledger" not in data:
+        data["ledger"] = {
+            "run_id": "", "receipts": [],
+            "total_buys": 0, "total_sells": 0, "net_profit": 0,
+        }
+    data["version"] = 2
+    return data
+
+
+def _migrate_v2_to_v3(data: dict) -> dict:
+    """v2 → v3: Add North Atlantic and South Seas regions to reputation state."""
+    captain = data.get("captain", {})
+    standing = captain.get("standing", {})
+
+    # Add new regions to regional_standing
+    rs = standing.get("regional_standing", {})
+    rs.setdefault("North Atlantic", 0)
+    rs.setdefault("South Seas", 0)
+    standing["regional_standing"] = rs
+
+    # Add new regions to customs_heat
+    ch = standing.get("customs_heat", {})
+    ch.setdefault("North Atlantic", 0)
+    ch.setdefault("South Seas", 0)
+    standing["customs_heat"] = ch
+
+    captain["standing"] = standing
+    data["captain"] = captain
+    data["version"] = 3
+    return data
+
+
+def _migrate_v3_to_v4(data: dict) -> dict:
+    """v3 → v4: Add cultural state tracking."""
+    if "cultural_state" not in data:
+        data["cultural_state"] = {
+            "active_festivals": [],
+            "regions_entered": [],
+            "cultural_encounters": 0,
+            "port_visits": {},
+        }
+    data["version"] = 4
+    return data
+
+
+# Ordered migration functions: (from_version, to_version, migrator)
+_MIGRATIONS = [
+    (1, 2, _migrate_v1_to_v2),
+    (2, 3, _migrate_v2_to_v3),
+    (3, 4, _migrate_v3_to_v4),
+]
+
+
+def migrate_save(data: dict) -> dict:
+    """Apply all necessary migrations to bring save data to current version.
+
+    Returns migrated data dict. Raises ValueError if version is unsupported.
+    """
+    version = data.get("version", 1)
+    if version == CURRENT_SAVE_VERSION:
+        return data
+    if version > CURRENT_SAVE_VERSION:
+        raise ValueError(
+            f"Save file version {version} is newer than supported "
+            f"version {CURRENT_SAVE_VERSION}. Update Portlight to load this save."
+        )
+
+    for from_v, to_v, fn in _MIGRATIONS:
+        if version == from_v:
+            data = fn(data)
+            version = to_v
+
+    if version != CURRENT_SAVE_VERSION:
+        raise ValueError(
+            f"Migration chain broken: reached version {version}, "
+            f"expected {CURRENT_SAVE_VERSION}"
+        )
+    return data
 
 
 def _ship_to_dict(ship: Ship) -> dict:
@@ -101,10 +207,15 @@ def _reputation_to_dict(rep: ReputationState) -> dict:
 
 def _reputation_from_dict(d: dict) -> ReputationState:
     incidents = [_incident_from_dict(i) for i in d.get("recent_incidents", [])]
+    # Ensure all 5 regions exist (migration from 3-region saves)
+    default_standing = {"Mediterranean": 0, "North Atlantic": 0, "West Africa": 0, "East Indies": 0, "South Seas": 0}
+    default_heat = {"Mediterranean": 0, "North Atlantic": 0, "West Africa": 0, "East Indies": 0, "South Seas": 0}
+    standing = {**default_standing, **d.get("regional_standing", {})}
+    heat = {**default_heat, **d.get("customs_heat", {})}
     return ReputationState(
-        regional_standing=d.get("regional_standing", {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}),
+        regional_standing=standing,
         port_standing=d.get("port_standing", {}),
-        customs_heat=d.get("customs_heat", {"Mediterranean": 0, "West Africa": 0, "East Indies": 0}),
+        customs_heat=heat,
         commercial_trust=d.get("commercial_trust", 0),
         recent_incidents=incidents,
     )
@@ -183,6 +294,8 @@ def _port_to_dict(port: Port) -> dict:
         "provision_cost": port.provision_cost,
         "repair_cost": port.repair_cost,
         "crew_cost": port.crew_cost,
+        "map_x": port.map_x,
+        "map_y": port.map_y,
     }
 
 
@@ -198,6 +311,8 @@ def _port_from_dict(d: dict) -> Port:
         provision_cost=d.get("provision_cost", 2),
         repair_cost=d.get("repair_cost", 3),
         crew_cost=d.get("crew_cost", 5),
+        map_x=d.get("map_x", 0),
+        map_y=d.get("map_y", 0),
     )
 
 
@@ -631,6 +746,57 @@ def _campaign_from_dict(d: dict) -> CampaignState:
     )
 
 
+def _narrative_to_dict(state: NarrativeState) -> dict:
+    return {
+        "fired": list(state.fired),
+        "journal": [
+            {"beat_id": j.beat_id, "day": j.day, "port_id": j.port_id, "region": j.region}
+            for j in state.journal
+        ],
+    }
+
+
+def _narrative_from_dict(d: dict) -> NarrativeState:
+    return NarrativeState(
+        fired=d.get("fired", []),
+        journal=[
+            JournalEntry(
+                beat_id=j["beat_id"], day=j.get("day", 0),
+                port_id=j.get("port_id", ""), region=j.get("region", ""),
+            )
+            for j in d.get("journal", [])
+        ],
+    )
+
+
+def _cultural_state_to_dict(state: CulturalState) -> dict:
+    return {
+        "active_festivals": [
+            {"festival_id": af.festival_id, "port_id": af.port_id,
+             "start_day": af.start_day, "end_day": af.end_day}
+            for af in state.active_festivals
+        ],
+        "regions_entered": list(state.regions_entered),
+        "cultural_encounters": state.cultural_encounters,
+        "port_visits": dict(state.port_visits),
+    }
+
+
+def _cultural_state_from_dict(d: dict) -> CulturalState:
+    return CulturalState(
+        active_festivals=[
+            ActiveFestival(
+                festival_id=af["festival_id"], port_id=af["port_id"],
+                start_day=af["start_day"], end_day=af["end_day"],
+            )
+            for af in d.get("active_festivals", [])
+        ],
+        regions_entered=d.get("regions_entered", []),
+        cultural_encounters=d.get("cultural_encounters", 0),
+        port_visits=d.get("port_visits", {}),
+    )
+
+
 def _ledger_to_dict(ledger: ReceiptLedger) -> dict:
     return {
         "run_id": ledger.run_id,
@@ -658,27 +824,32 @@ def world_to_dict(
     board: ContractBoard | None = None,
     infra: InfrastructureState | None = None,
     campaign: CampaignState | None = None,
+    narrative: NarrativeState | None = None,
 ) -> dict:
     """Serialize full game state to a JSON-safe dict."""
     d = {
-        "version": 1,
+        "version": CURRENT_SAVE_VERSION,
         "captain": _captain_to_dict(world.captain),
         "ports": {pid: _port_to_dict(p) for pid, p in world.ports.items()},
         "routes": [{"port_a": r.port_a, "port_b": r.port_b, "distance": r.distance, "danger": r.danger, "min_ship_class": r.min_ship_class} for r in world.routes],
         "voyage": _voyage_to_dict(world.voyage) if world.voyage else None,
         "day": world.day,
         "seed": world.seed,
+        "cultural_state": _cultural_state_to_dict(world.culture),
         "ledger": _ledger_to_dict(ledger) if ledger else None,
         "contract_board": _board_to_dict(board) if board else None,
         "infrastructure": _infra_to_dict(infra) if infra else None,
     }
     if campaign is not None:
         d["campaign"] = _campaign_to_dict(campaign)
+    if narrative is not None:
+        d["narrative"] = _narrative_to_dict(narrative)
     return d
 
 
-def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState]:
-    """Deserialize game state from dict. Returns (world, ledger, board, infra, campaign)."""
+def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState, NarrativeState]:
+    """Deserialize game state from dict. Returns (world, ledger, board, infra, campaign, narrative)."""
+    culture = _cultural_state_from_dict(d["cultural_state"]) if d.get("cultural_state") else CulturalState()
     world = WorldState(
         captain=_captain_from_dict(d["captain"]),
         ports={pid: _port_from_dict(p) for pid, p in d["ports"].items()},
@@ -686,12 +857,14 @@ def world_from_dict(d: dict) -> tuple[WorldState, ReceiptLedger, ContractBoard, 
         voyage=_voyage_from_dict(d["voyage"]) if d.get("voyage") else None,
         day=d["day"],
         seed=d.get("seed", 0),
+        culture=culture,
     )
     ledger = _ledger_from_dict(d["ledger"]) if d.get("ledger") else ReceiptLedger()
     board = _board_from_dict(d["contract_board"]) if d.get("contract_board") else ContractBoard()
     infra = _infra_from_dict(d["infrastructure"]) if d.get("infrastructure") else InfrastructureState()
     campaign = _campaign_from_dict(d["campaign"]) if d.get("campaign") else CampaignState()
-    return world, ledger, board, infra, campaign
+    narrative = _narrative_from_dict(d["narrative"]) if d.get("narrative") else NarrativeState()
+    return world, ledger, board, infra, campaign, narrative
 
 
 def save_game(
@@ -700,6 +873,7 @@ def save_game(
     board: ContractBoard | None = None,
     infra: InfrastructureState | None = None,
     campaign: CampaignState | None = None,
+    narrative: NarrativeState | None = None,
     base_path: Path | None = None,
 ) -> Path:
     """Save game state to JSON file. Returns path written."""
@@ -707,12 +881,12 @@ def save_game(
     save_dir = base / SAVE_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / SAVE_FILE
-    data = world_to_dict(world, ledger, board, infra, campaign)
+    data = world_to_dict(world, ledger, board, infra, campaign, narrative)
     save_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return save_path
 
 
-def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState] | None:
+def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState, NarrativeState] | None:
     """Load game state from JSON file. Returns None if no save exists or data is corrupt."""
     base = base_path or Path(".")
     save_path = base / SAVE_DIR / SAVE_FILE
@@ -723,6 +897,7 @@ def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger,
     except (json.JSONDecodeError, UnicodeDecodeError):
         return None
     try:
+        data = migrate_save(data)
         return world_from_dict(data)
     except (KeyError, TypeError, ValueError):
         return None

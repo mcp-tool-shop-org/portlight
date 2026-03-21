@@ -134,7 +134,11 @@ def _best_sell(session: "GameSession", min_margin: float = 0.0) -> ActionPlan | 
 
 
 def _best_route(session: "GameSession", prefer_long: bool = False) -> str | None:
-    """Pick the best destination to sail to."""
+    """Pick the best destination to sail to.
+
+    Contract-aware: destinations that fulfill active contracts get a large
+    score bonus so bots actually complete contracts they've accepted.
+    """
     if session.at_sea or not session.current_port:
         return None
     world = session.world
@@ -149,6 +153,21 @@ def _best_route(session: "GameSession", prefer_long: bool = False) -> str | None
     if not ship_class:
         return None
 
+    # Pre-compute contract destinations and what goods we hold for them
+    contract_dest_scores: dict[str, float] = {}
+    for contract in session.board.active:
+        remaining = contract.required_quantity - contract.delivered_quantity
+        if remaining <= 0:
+            continue
+        held = sum(c.quantity for c in captain.cargo if c.good_id == contract.good_id)
+        if held > 0:
+            # Strong incentive: we have cargo and a destination to deliver to
+            urgency = 1.0 + max(0.0, 1.0 - (contract.deadline_day - world.day) / 15.0)
+            contract_dest_scores[contract.destination_port_id] = (
+                contract_dest_scores.get(contract.destination_port_id, 0.0)
+                + held * urgency * 5.0
+            )
+
     candidates = []
     for route in world.routes:
         if route.port_a == port_id:
@@ -159,7 +178,7 @@ def _best_route(session: "GameSession", prefer_long: bool = False) -> str | None
             continue
 
         # Check ship class requirement
-        class_order = {"sloop": 0, "brigantine": 1, "galleon": 2}
+        class_order = {"sloop": 0, "cutter": 1, "brigantine": 2, "galleon": 3, "man_of_war": 4}
         if class_order.get(ship_class.ship_class.value, 0) < class_order.get(route.min_ship_class, 0):
             continue
 
@@ -179,6 +198,9 @@ def _best_route(session: "GameSession", prefer_long: bool = False) -> str | None
             if slot:
                 ratio = slot.stock_target / max(slot.stock_current, 1)
                 score += ratio * item.quantity
+
+        # Contract delivery bonus (large — completing contracts is high value)
+        score += contract_dest_scores.get(dest, 0.0)
 
         # Distance bonus/penalty
         if prefer_long:
@@ -247,13 +269,44 @@ def _should_upgrade_ship(session: "GameSession") -> ActionPlan | None:
     if not current:
         return None
 
-    class_order = {"sloop": 0, "brigantine": 1, "galleon": 2}
+    class_order = {"sloop": 0, "cutter": 1, "brigantine": 2, "galleon": 3, "man_of_war": 4}
     current_rank = class_order.get(current.ship_class.value, 0)
 
     for sid, tmpl in SHIPS.items():
         rank = class_order.get(tmpl.ship_class.value, 0)
         if rank == current_rank + 1 and tmpl.price <= captain.silver * 0.8:
             return ActionPlan("buy_ship", {"ship_id": sid})
+    return None
+
+
+def _buy_for_active_contracts(session: "GameSession") -> ActionPlan | None:
+    """Buy goods needed by any active contract if available at current port."""
+    port = session.current_port
+    if not port:
+        return None
+    captain = session.captain
+    ship = captain.ship
+    if not ship:
+        return None
+    cargo_used = sum(c.quantity for c in captain.cargo)
+    space = ship.cargo_capacity - int(cargo_used)
+    if space <= 0:
+        return None
+
+    for contract in session.board.active:
+        remaining = contract.required_quantity - contract.delivered_quantity
+        if remaining <= 0:
+            continue
+        held = sum(c.quantity for c in captain.cargo if c.good_id == contract.good_id)
+        need = remaining - held
+        if need <= 0:
+            continue
+        slot = next((sl for sl in port.market if sl.good_id == contract.good_id), None)
+        if slot and slot.buy_price > 0 and slot.stock_current > 0:
+            budget = int(captain.silver * 0.5)
+            qty = min(need, slot.stock_current, space, budget // slot.buy_price if slot.buy_price > 0 else 0)
+            if qty > 0:
+                return ActionPlan("buy", {"good": contract.good_id, "qty": qty})
     return None
 
 
@@ -297,6 +350,11 @@ def _lawful_conservative(s: "GameSession") -> list[ActionPlan]:
     if contract:
         actions.append(contract)
 
+    # Buy for active contracts first
+    contract_buy = _buy_for_active_contracts(s)
+    if contract_buy:
+        actions.append(contract_buy)
+
     # Buy if we have space
     buy = _best_buy(s, max_spend_pct=0.5)
     if buy:
@@ -336,6 +394,11 @@ def _opportunistic_trader(s: "GameSession") -> list[ActionPlan]:
     contract = _try_accept_contract(s)
     if contract:
         actions.append(contract)
+
+    # Buy for active contracts first
+    contract_buy = _buy_for_active_contracts(s)
+    if contract_buy:
+        actions.append(contract_buy)
 
     buy = _best_buy(s, max_spend_pct=0.7)
     if buy:
@@ -551,6 +614,11 @@ def _shadow_runner(s: "GameSession") -> list[ActionPlan]:
     if contract:
         actions.append(contract)
 
+    # Buy for active contracts
+    contract_buy = _buy_for_active_contracts(s)
+    if contract_buy:
+        actions.append(contract_buy)
+
     # Buy luxury goods preferentially
     buy = _buy_luxury(s) or _best_buy(s, max_spend_pct=0.7)
     if buy:
@@ -583,7 +651,7 @@ def _buy_luxury(s: "GameSession") -> ActionPlan | None:
     space = ship.cargo_capacity - int(cargo_used)
     budget = int(captain.silver * 0.6)
 
-    luxury_ids = {"silk", "spice", "porcelain"}
+    luxury_ids = {"silk", "spice", "porcelain", "tea", "pearls"}
     for slot in port.market:
         if slot.good_id not in luxury_ids:
             continue

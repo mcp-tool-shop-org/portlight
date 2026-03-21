@@ -74,6 +74,7 @@ class ContractTemplate:
     destination_regions: list[str] = field(default_factory=list)  # valid dest regions
     captain_bias: list[str] = field(default_factory=list)  # captain types that see this more
     tags: list[str] = field(default_factory=list)
+    cultural_flavor: str = ""              # atmospheric text about cultural significance
 
 
 # ---------------------------------------------------------------------------

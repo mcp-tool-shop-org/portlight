@@ -85,12 +85,12 @@ class TestHintLine:
 
     def test_hint_ship_upgrade_close(self, tmp_path: Path):
         s = _fresh_session(tmp_path)
-        # Brigantine costs 800, put captain at 650 silver (150 away)
-        s.captain.silver = 650
+        # Cutter costs 450, put captain at 350 silver (100 away)
+        s.captain.silver = 350
         s._save()
         hint = views.hint_line(s.world, s.infra, s.board)
         assert hint is not None
-        assert "upgrade" in hint.lower() or "Brigantine" in hint
+        assert "upgrade" in hint.lower() or "Cutter" in hint
 
     def test_hint_no_warehouse(self, tmp_path: Path):
         s = _fresh_session(tmp_path)

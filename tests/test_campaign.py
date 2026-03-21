@@ -816,10 +816,10 @@ class TestCampaignSaveLoad:
             ],
         )
 
-        save_game(world, ledger, board, infra, campaign, tmp_path)
+        save_game(world, ledger, board, infra, campaign, base_path=tmp_path)
         result = load_game(tmp_path)
         assert result is not None
-        _, _, _, _, loaded_campaign = result
+        _, _, _, _, loaded_campaign, _narrative = result
         assert len(loaded_campaign.completed) == 2
         assert loaded_campaign.completed[0].milestone_id == "foothold_first_warehouse"
         assert loaded_campaign.completed[0].completed_day == 5
@@ -847,7 +847,7 @@ class TestCampaignSaveLoad:
 
         result = load_game(tmp_path)
         assert result is not None
-        _, _, _, _, campaign = result
+        _, _, _, _, campaign, _narrative = result
         assert len(campaign.completed) == 0
 
 
@@ -1247,10 +1247,10 @@ class TestVictoryClosure:
             ],
         )
 
-        save_game(world, ledger, board, infra, campaign, tmp_path)
+        save_game(world, ledger, board, infra, campaign, base_path=tmp_path)
         result = load_game(tmp_path)
         assert result is not None
-        _, _, _, _, loaded = result
+        _, _, _, _, loaded, _narrative = result
         assert len(loaded.completed_paths) == 1
         assert loaded.completed_paths[0].path_id == "lawful_house"
         assert loaded.completed_paths[0].completion_day == 40
@@ -1276,5 +1276,5 @@ class TestVictoryClosure:
 
         result = load_game(tmp_path)
         assert result is not None
-        _, _, _, _, campaign = result
+        _, _, _, _, campaign, _narrative = result
         assert len(campaign.completed_paths) == 0

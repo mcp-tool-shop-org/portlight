@@ -20,10 +20,12 @@ if TYPE_CHECKING:
 
 class GoodCategory(str, Enum):
     """Broad good classification — affects event interactions."""
-    COMMODITY = "commodity"      # grain, timber, iron
-    LUXURY = "luxury"           # silk, spice, porcelain
-    PROVISION = "provision"     # food, water, rum
+    COMMODITY = "commodity"      # grain, timber, iron, cotton, dyes
+    LUXURY = "luxury"           # silk, spice, porcelain, pearls, tea
+    PROVISION = "provision"     # food, water, rum, tobacco
     CONTRABAND = "contraband"   # opium, black powder
+    MILITARY = "military"       # weapons, gunpowder
+    MEDICINE = "medicine"       # medicines, herbs
 
 
 @dataclass
@@ -78,6 +80,8 @@ class Port:
     provision_cost: int = 2          # silver per day of provisions
     repair_cost: int = 3             # silver per hull point
     crew_cost: int = 5               # silver per crew hire
+    map_x: int = 0                   # abstract map x coordinate
+    map_y: int = 0                   # abstract map y coordinate
 
 
 # ---------------------------------------------------------------------------
@@ -87,8 +91,10 @@ class Port:
 class ShipClass(str, Enum):
     """Ship tier — determines upgrade path."""
     SLOOP = "sloop"
+    CUTTER = "cutter"
     BRIGANTINE = "brigantine"
     GALLEON = "galleon"
+    MAN_OF_WAR = "man_of_war"
 
 
 @dataclass
@@ -145,13 +151,15 @@ class ReputationState:
     """
     # Regional standing (how established you are in each region)
     regional_standing: dict[str, int] = field(default_factory=lambda: {
-        "Mediterranean": 0, "West Africa": 0, "East Indies": 0,
+        "Mediterranean": 0, "North Atlantic": 0, "West Africa": 0,
+        "East Indies": 0, "South Seas": 0,
     })
     # Port-specific standing (major ports only, affects local services)
     port_standing: dict[str, int] = field(default_factory=dict)
     # Customs heat (anti-abuse pressure, rises from suspicious behavior)
     customs_heat: dict[str, int] = field(default_factory=lambda: {
-        "Mediterranean": 0, "West Africa": 0, "East Indies": 0,
+        "Mediterranean": 0, "North Atlantic": 0, "West Africa": 0,
+        "East Indies": 0, "South Seas": 0,
     })
     # Commercial trust (does the market believe you can deliver?)
     commercial_trust: int = 0
@@ -221,6 +229,78 @@ class Route:
     distance: int
     danger: float = 0.1             # base event probability per day
     min_ship_class: str = "sloop"   # minimum ship class to attempt this route
+    lore_name: str = ""             # named trade route (e.g. "The Grain Road")
+    lore: str = ""                  # historical flavor text
+
+
+# ---------------------------------------------------------------------------
+# World state (top-level game state)
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Culture (static reference data + mutable festival state)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Festival:
+    """A recurring cultural event that affects port economics."""
+    id: str
+    name: str
+    description: str
+    region: str
+    frequency_days: int              # roughly how often (stochastic trigger)
+    market_effects: dict[str, float] = field(default_factory=dict)  # good_id → demand mult
+    duration_days: int = 3
+    standing_bonus: int = 0          # bonus standing for trading during festival
+
+
+@dataclass
+class RegionCulture:
+    """Cultural identity of a trade region — static reference data."""
+    id: str                          # "mediterranean", "north_atlantic", etc.
+    region_name: str                 # canonical: "Mediterranean"
+    cultural_name: str               # flavor: "The Middle Sea"
+    ethos: str                       # 1-2 sentence cultural philosophy
+    trade_philosophy: str            # how this culture views commerce
+    sacred_goods: list[str] = field(default_factory=list)    # culturally revered
+    forbidden_goods: list[str] = field(default_factory=list) # taboo/restricted
+    prized_goods: list[str] = field(default_factory=list)    # socially valued
+    greeting: str = ""               # merchant greeting on arrival
+    farewell: str = ""               # parting words
+    proverb: str = ""                # trade proverb
+    festivals: list[Festival] = field(default_factory=list)
+    weather_flavor: list[str] = field(default_factory=list)  # atmospheric text
+
+
+@dataclass
+class PortCulture:
+    """Cultural flavor for a specific port — static reference data."""
+    port_id: str
+    landmark: str                    # a named cultural landmark
+    local_custom: str                # a custom that colors trade here
+    atmosphere: str                  # sensory: what it feels/smells/sounds like
+    dock_scene: str                  # what you see when you arrive
+    tavern_rumor: str                # a rumor you overhear
+    cultural_group: str = ""         # local faction/guild name
+    cultural_group_description: str = ""
+
+
+@dataclass
+class ActiveFestival:
+    """A festival currently in progress."""
+    festival_id: str
+    port_id: str
+    start_day: int
+    end_day: int
+
+
+@dataclass
+class CulturalState:
+    """Tracks cultural engagement — persisted in save files."""
+    active_festivals: list[ActiveFestival] = field(default_factory=list)
+    regions_entered: list[str] = field(default_factory=list)
+    cultural_encounters: int = 0
+    port_visits: dict[str, int] = field(default_factory=dict)  # port_id → count
 
 
 # ---------------------------------------------------------------------------
@@ -236,3 +316,4 @@ class WorldState:
     voyage: VoyageState | None = None
     day: int = 1
     seed: int = 0                    # RNG seed for reproducibility
+    culture: CulturalState = field(default_factory=CulturalState)

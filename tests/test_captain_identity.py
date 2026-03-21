@@ -307,7 +307,7 @@ class TestSaveLoadCaptainState:
         world = new_game(captain_type=CaptainType.NAVIGATOR)
         world.captain.standing.commercial_trust = 42
         d = world_to_dict(world)
-        world2, _, _board, _infra, _campaign = world_from_dict(d)
+        world2, _, _board, _infra, _campaign, _narrative = world_from_dict(d)
         assert world2.captain.captain_type == "navigator"
         assert world2.captain.standing.commercial_trust == 42
 
@@ -316,7 +316,7 @@ class TestSaveLoadCaptainState:
         d = world_to_dict(new_game())
         del d["captain"]["captain_type"]  # simulate old save
         del d["captain"]["standing"]      # simulate old save
-        world, _, _board, _infra, _campaign = world_from_dict(d)
+        world, _, _board, _infra, _campaign, _narrative = world_from_dict(d)
         assert world.captain.captain_type == "merchant"
         assert world.captain.standing.commercial_trust == 0
 
@@ -331,12 +331,14 @@ class TestCaptainEconomicDifference:
             silvers[ct] = world.captain.silver
         assert silvers[CaptainType.MERCHANT] == max(silvers.values())
 
-    def test_smuggler_has_least_silver(self):
+    def test_smuggler_has_less_silver_than_merchant(self):
+        """Smuggler starts with less capital than Merchant but more than Navigator."""
         silvers = {}
         for ct in CaptainType:
             world = new_game(captain_type=ct)
             silvers[ct] = world.captain.silver
-        assert silvers[CaptainType.SMUGGLER] == min(silvers.values())
+        assert silvers[CaptainType.SMUGGLER] < silvers[CaptainType.MERCHANT]
+        assert silvers[CaptainType.SMUGGLER] > silvers[CaptainType.NAVIGATOR]
 
     def test_different_effective_grain_prices(self):
         """Each captain sees different grain prices at the same port."""

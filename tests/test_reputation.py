@@ -428,7 +428,7 @@ class TestSaveLoadReputation:
             ),
         ]
         d = world_to_dict(world)
-        world2, _, _board, _infra, _campaign = world_from_dict(d)
+        world2, _, _board, _infra, _campaign, _narrative = world_from_dict(d)
         assert len(world2.captain.standing.recent_incidents) == 1
         inc = world2.captain.standing.recent_incidents[0]
         assert inc.day == 3

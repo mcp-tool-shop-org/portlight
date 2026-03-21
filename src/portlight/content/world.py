@@ -37,14 +37,18 @@ def new_game(
     standing = ReputationState(
         regional_standing={
             "Mediterranean": seed.mediterranean,
+            "North Atlantic": 0,
             "West Africa": seed.west_africa,
             "East Indies": seed.east_indies,
+            "South Seas": 0,
         },
         port_standing={},
         customs_heat={
             "Mediterranean": seed.customs_heat,
+            "North Atlantic": seed.customs_heat,
             "West Africa": seed.customs_heat,
             "East Indies": seed.customs_heat,
+            "South Seas": seed.customs_heat,
         },
         commercial_trust=seed.commercial_trust,
     )

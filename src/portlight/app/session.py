@@ -51,6 +51,7 @@ from portlight.engine.infrastructure import (
     withdraw_cargo,
 )
 from portlight.engine.campaign import CampaignState, SessionSnapshot, evaluate_milestones
+from portlight.engine.narrative import NarrativeState, evaluate_narrative
 from portlight.engine.save import load_game, save_game
 from portlight.engine.voyage import EventType, advance_day, arrive, depart
 from portlight.receipts.models import ReceiptLedger, TradeReceipt
@@ -66,6 +67,7 @@ class GameSession:
         self.board: ContractBoard = ContractBoard()
         self.infra: InfrastructureState = InfrastructureState()
         self.campaign: CampaignState = CampaignState()
+        self.narrative: NarrativeState = NarrativeState()
         self._trade_seq: int = 0
         self._rng: random.Random = random.Random()
 
@@ -123,6 +125,7 @@ class GameSession:
         self.board = ContractBoard()
         self.infra = InfrastructureState()
         self.campaign = CampaignState()
+        self.narrative = NarrativeState()
         self._trade_seq = 0
         self._save()
 
@@ -131,7 +134,7 @@ class GameSession:
         result = load_game(self.base_path)
         if result is None:
             return False
-        self.world, self.ledger, self.board, self.infra, self.campaign = result
+        self.world, self.ledger, self.board, self.infra, self.campaign, self.narrative = result
         self._rng = random.Random(self.world.seed + self.world.day)
         self._trade_seq = len(self.ledger.receipts)
         return True
@@ -145,7 +148,7 @@ class GameSession:
     def _save(self) -> None:
         """Auto-save after every mutation."""
         if self.world:
-            save_game(self.world, self.ledger, self.board, self.infra, self.campaign, self.base_path)
+            save_game(self.world, self.ledger, self.board, self.infra, self.campaign, self.narrative, self.base_path)
 
     def _recalc(self, port) -> None:
         """Recalculate prices at a port with captain modifiers."""
@@ -224,6 +227,7 @@ class GameSession:
                     self.world.captain.silver += outcome.silver_delta
 
             self._recalc(port)
+            self._evaluate_narrative()
             self._save()
         return result
 
@@ -333,6 +337,9 @@ class GameSession:
 
         # Evaluate campaign milestones
         self._evaluate_campaign()
+
+        # Evaluate narrative beats
+        self._evaluate_narrative(events_this_turn=events)
 
         self._save()
         return events
@@ -670,6 +677,23 @@ class GameSession:
         if victory_newly:
             self.campaign.completed_paths.extend(victory_newly)
         return newly
+
+    # --- Narrative ---
+
+    def _evaluate_narrative(self, events_this_turn: list | None = None) -> list:
+        """Evaluate narrative beats based on current game state."""
+        if not self.world:
+            return []
+        return evaluate_narrative(
+            self.narrative,
+            self.world.captain,
+            self.world,
+            self.board,
+            self.infra,
+            self.ledger,
+            current_port_id=self.current_port_id,
+            events_this_turn=events_this_turn,
+        )
 
     # --- Credit ---
 

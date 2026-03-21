@@ -472,8 +472,9 @@ def _eval_ei_broker(snap: SessionSnapshot) -> tuple[bool, str]:
 
 
 def _eval_galleon_deployed(snap: SessionSnapshot) -> tuple[bool, str]:
-    if _ship_class(snap) == "galleon":
-        return True, "Operating a Merchant Galleon"
+    sc = _ship_class(snap)
+    if sc in ("galleon", "man_of_war"):
+        return True, f"Operating a {sc}"
     return False, ""
 
 
@@ -562,7 +563,7 @@ def _eval_major_contracts_multi_region(snap: SessionSnapshot) -> tuple[bool, str
 
 def _eval_brigantine_acquired(snap: SessionSnapshot) -> tuple[bool, str]:
     sc = _ship_class(snap)
-    if sc in ("brigantine", "galleon"):
+    if sc in ("cutter", "brigantine", "galleon", "man_of_war"):
         return True, f"Operating a {sc}"
     return False, ""
 
@@ -1093,7 +1094,10 @@ def _evaluate_oceanic_reach(snap: SessionSnapshot) -> VictoryPathStatus:
     ei_warehouse = "East Indies" in _regions_with_warehouse(snap)
     has_ei_foothold = ei_broker or ei_warehouse
 
-    ship_ok = ship in ("galleon", "brigantine") if T["ship_class_min"] == "brigantine" else ship == "galleon"
+    min_rank = {"sloop": 0, "cutter": 1, "brigantine": 2, "galleon": 3, "man_of_war": 4}
+    ship_rank = min_rank.get(ship, 0)
+    required_rank = min_rank.get(T["ship_class_min"], 2)
+    ship_ok = ship_rank >= required_rank
 
     reqs = [
         _req(

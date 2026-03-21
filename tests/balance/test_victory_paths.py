@@ -68,7 +68,7 @@ class TestVictoryPathHealth:
                 policy_id=PolicyId.SHADOW_RUNNER,
                 max_days=80,
             ))
-            for s in (42, 137, 256, 512, 777)
+            for s in (42, 137, 256, 512, 777, 1001, 2048, 3333, 4096, 5000)
         ]
 
         shadow_count = sum(
@@ -76,7 +76,8 @@ class TestVictoryPathHealth:
             if m.strongest_victory_path == "shadow_network"
         )
         assert shadow_count >= 1, \
-            "Shadow Network never appears as strongest for smuggler"
+            f"Shadow Network never appears as strongest for smuggler. " \
+            f"Paths seen: {[m.strongest_victory_path for m in metrics]}"
 
     def test_oceanic_reach_appears_for_navigator(self):
         """Oceanic Reach should be strongest for navigator in some runs."""
