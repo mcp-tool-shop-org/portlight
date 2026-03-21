@@ -859,11 +859,13 @@ def _routes_from(routes: list["Route"], port_id: str | None) -> list["Route"]:
 
 
 def _next_upgrade(ship: "Ship | None", silver: int) -> "ShipTemplate | None":
-    """Find the cheapest ship the player doesn't have yet."""
+    """Find the cheapest ship that costs more than the current one (actual upgrade)."""
     if ship is None:
         return None
+    current = SHIPS.get(ship.template_id)
+    current_price = current.price if current else 0
     for template in sorted(SHIPS.values(), key=lambda s: s.price):
-        if template.id != ship.template_id and template.price > 0:
+        if template.id != ship.template_id and template.price > current_price:
             return template
     return None
 

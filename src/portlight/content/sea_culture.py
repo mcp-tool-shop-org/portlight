@@ -581,7 +581,12 @@ WEATHER_NARRATIVES[("North Atlantic", "spring")] = WeatherNarrative(
     mid_voyage_texts=[
         "The Atlantic in spring is uncertain — moments of clarity broken by squalls that arrive from nowhere and vanish just as fast. Your ship is a cork between moods.",
         "An iceberg — small, already half-melted — drifts past on the current. Beautiful and wrong, like a wedding dress in a gutter. The crew watches it pass. Spring in the north still has winter's teeth.",
+        "A berg the size of a chapel drifts silently to starboard. Beneath the waterline, its shadow stretches impossibly far. The helmsman gives it a wide berth without being told.",
+        "Ice fragments crackle against the hull like broken glass. The water here is colder than it should be — somewhere north, a glacier is calving its children into the current.",
+        "Fog banks drift like walls. Your lookout strains forward. In the North Atlantic, what you can't see is what kills you.",
         "The first real warmth of the year arrives in a patch of sunlight that hits the deck at noon. The crew stands in it like cats. Twenty minutes later, it's gone. They remember it for hours.",
+        "A whale surfaces to port, blows once, and dives. The crew marks it as good luck. The bosun marks it as a navigational hazard. Both are right.",
+        "The wind carries the smell of land — peat smoke and pine — though the charts say the coast is still two days east. The crew trusts their noses more than your charts.",
     ],
     arrival_text="The northern port emerges from persistent haze — stone walls, smoke, the sound of industry resuming after winter's pause. Spring arrivals feel like relief — you made it through another season.",
     night_text="Northern spring nights: cold but not killing. Stars appear in the gaps between racing clouds. The aurora occasionally shimmers on the horizon — green fire in a dark sky. The crew watches in silence. Some things are too large for words.",

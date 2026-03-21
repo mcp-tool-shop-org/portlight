@@ -126,8 +126,14 @@ _EVENT_WEIGHTS: list[tuple[EventType, float]] = [
 def _pick_event(
     danger: float, rng: random.Random,
     inspection_mult: float = 1.0,
+    recent_events: list[str] | None = None,
 ) -> EventType:
-    """Weighted random event, danger level scales hostile events."""
+    """Weighted random event, danger level scales hostile events.
+
+    Events that appeared recently have their weight reduced by 80% to avoid
+    repetitive gameplay.
+    """
+    recent = set(recent_events or [])
     weights = []
     for etype, base_w in _EVENT_WEIGHTS:
         w = base_w
@@ -137,6 +143,9 @@ def _pick_event(
             w *= max(0.5, 1 - danger)  # less likely on dangerous routes
         elif etype == EventType.INSPECTION:
             w *= inspection_mult  # captain identity affects inspection frequency
+        # Reduce weight of recently seen events
+        if etype.value in recent:
+            w *= 0.2
         weights.append(w)
     return rng.choices([e for e, _ in _EVENT_WEIGHTS], weights=weights, k=1)[0]
 
@@ -657,9 +666,14 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     if _season_profile:
         danger *= _season_profile.danger_mult
 
-    event_type = _pick_event(danger, rng, inspection_mult)
+    event_type = _pick_event(danger, rng, inspection_mult, voyage.recent_events)
     event = _resolve_event(event_type, rng, captain, captain.ship, world, voyage)
     events.append(event)
+
+    # Track recent events for dedup (cap at 5)
+    voyage.recent_events.append(event_type.value)
+    if len(voyage.recent_events) > 5:
+        voyage.recent_events = voyage.recent_events[-5:]
 
     # Handle pending duel from pirate encounter
     if event._pending_duel is not None:

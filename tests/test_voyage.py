@@ -144,3 +144,58 @@ class TestVoyageEvents:
         # Should have a starvation event
         starvation = [e for e in events if "provisions" in e.message.lower() or "crew" in e.message.lower()]
         assert len(starvation) > 0
+
+    def test_recent_events_tracked(self):
+        """Voyage should track recent event types for dedup."""
+        world = new_game()
+        depart(world, "al_manar")
+        advance_day(world, random.Random(42))
+        assert len(world.voyage.recent_events) > 0
+        assert len(world.voyage.recent_events) <= 5
+
+    def test_recent_events_capped_at_5(self):
+        """Recent events list should never exceed 5."""
+        world = new_game()
+        depart(world, "al_manar")
+        for seed in range(10):
+            advance_day(world, random.Random(seed))
+            if world.voyage.status == VoyageStatus.ARRIVED:
+                break
+        assert len(world.voyage.recent_events) <= 5
+
+
+# ---------------------------------------------------------------------------
+# Next upgrade display
+# ---------------------------------------------------------------------------
+
+class TestNextUpgrade:
+    def test_next_upgrade_is_actually_upgrade(self):
+        """_next_upgrade should return a ship costing more than current."""
+        from portlight.app.views import _next_upgrade
+        from portlight.content.ships import SHIPS
+        from portlight.engine.models import Ship
+
+        # Simulate a player with a Trade Brigantine (price 800)
+        brig = SHIPS.get("trade_brigantine")
+        assert brig is not None
+        ship = Ship(template_id="trade_brigantine", hull=100, hull_max=100,
+                    cargo_capacity=80, speed=6, cannons=8, maneuver=0.3,
+                    crew=8, crew_max=20, name="Test Ship")
+        upgrade = _next_upgrade(ship, 2000)
+        assert upgrade is not None
+        assert upgrade.price > brig.price, f"Got {upgrade.id} at {upgrade.price}, expected > {brig.price}"
+
+    def test_no_downgrade_offered(self):
+        """A galleon owner should not be offered a sloop."""
+        from portlight.app.views import _next_upgrade
+        from portlight.content.ships import SHIPS
+        from portlight.engine.models import Ship
+
+        galleon = SHIPS.get("merchant_galleon")
+        assert galleon is not None
+        ship = Ship(template_id="merchant_galleon", hull=160, hull_max=160,
+                    cargo_capacity=150, speed=4, cannons=16, maneuver=0.2,
+                    crew=15, crew_max=40, name="Big Ship")
+        upgrade = _next_upgrade(ship, 5000)
+        if upgrade:
+            assert upgrade.price > galleon.price

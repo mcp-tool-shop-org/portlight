@@ -540,6 +540,7 @@ class VoyageState:
     progress: int = 0                # distance covered so far
     days_elapsed: int = 0
     status: VoyageStatus = VoyageStatus.IN_PORT
+    recent_events: list[str] = field(default_factory=list)  # last 5 event types for dedup
 
 
 # ---------------------------------------------------------------------------

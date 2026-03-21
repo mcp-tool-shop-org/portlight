@@ -65,7 +65,7 @@ from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"  # legacy filename, kept for migration
 DEFAULT_SLOT = "default"
-CURRENT_SAVE_VERSION = 11
+CURRENT_SAVE_VERSION = 12
 
 
 def save_filename(slot: str = DEFAULT_SLOT) -> str:
@@ -264,6 +264,26 @@ def _migrate_v10_to_v11(data: dict) -> dict:
 
 
 _MIGRATIONS.append((10, 11, _migrate_v10_to_v11))
+
+
+def _migrate_v11_to_v12(data: dict) -> dict:
+    """v11 -> v12: Add recent_events to voyage, breach tracking, bounty fields."""
+    voyage = data.get("voyage")
+    if voyage and isinstance(voyage, dict):
+        voyage.setdefault("recent_events", [])
+    # Future phases will add more fields here with safe defaults
+    captain = data.get("captain", {})
+    captain.setdefault("breach_records", [])
+    captain.setdefault("wanted_level", 0)
+    captain.setdefault("deferred_fees", [])
+    captain.setdefault("active_bounties", [])
+    pirates = data.get("pirates", {})
+    pirates.setdefault("bounty_board", [])
+    data["version"] = 12
+    return data
+
+
+_MIGRATIONS.append((11, 12, _migrate_v11_to_v12))
 
 
 def migrate_save(data: dict) -> dict:
@@ -681,6 +701,7 @@ def _voyage_to_dict(voyage: VoyageState) -> dict:
         "progress": voyage.progress,
         "days_elapsed": voyage.days_elapsed,
         "status": voyage.status.value,
+        "recent_events": voyage.recent_events,
     }
 
 
@@ -692,6 +713,7 @@ def _voyage_from_dict(d: dict) -> VoyageState:
         progress=d.get("progress", 0),
         days_elapsed=d.get("days_elapsed", 0),
         status=VoyageStatus(d["status"]),
+        recent_events=d.get("recent_events", []),
     )
 
 
