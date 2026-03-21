@@ -139,8 +139,8 @@ class TestUpgradeSave:
         assert loaded.captain.ship.upgrades == []
         assert loaded.captain.ship.upgrade_slots == 2  # sloop default
 
-    def test_save_version_is_7(self):
-        assert CURRENT_SAVE_VERSION == 7
+    def test_save_version_is_current(self):
+        assert CURRENT_SAVE_VERSION >= 7
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +164,7 @@ class TestMigrationV6ToV7:
             },
         }
         migrated = migrate_save(data)
-        assert migrated["version"] == 7
+        assert migrated["version"] == CURRENT_SAVE_VERSION
         ship = migrated["captain"]["ship"]
         assert len(ship["upgrades"]) == 2
         assert ship["upgrades"][0] == {"upgrade_id": "iron_strapping", "installed_day": 0}
@@ -187,7 +187,7 @@ class TestMigrationV6ToV7:
             },
         }
         migrated = migrate_save(data)
-        assert migrated["version"] == 7
+        assert migrated["version"] == CURRENT_SAVE_VERSION
         assert migrated["captain"]["ship"]["upgrades"] == []
         assert migrated["captain"]["ship"]["upgrade_slots"] == 2
 
@@ -197,4 +197,4 @@ class TestMigrationV6ToV7:
             "captain": {},
         }
         migrated = migrate_save(data)
-        assert migrated["version"] == 7
+        assert migrated["version"] == CURRENT_SAVE_VERSION

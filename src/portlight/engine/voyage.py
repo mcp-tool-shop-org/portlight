@@ -596,11 +596,14 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         events.append(VoyageEvent(EventType.NOTHING,
             "No provisions! The crew suffers.", crew_delta=-1))
 
-    # Crew wages (paid daily at sea)
+    # Crew wages (paid daily at sea — flagship + docked fleet)
     from portlight.content.ships import SHIPS
     template = SHIPS.get(captain.ship.template_id)
     daily_wage = template.daily_wage if template else 1
     wage_cost = daily_wage * captain.ship.crew
+    # Add docked fleet crew wages
+    from portlight.engine.fleet import fleet_daily_wages
+    wage_cost += fleet_daily_wages(captain)
     if wage_cost > 0 and captain.silver >= wage_cost:
         captain.silver -= wage_cost
     elif wage_cost > 0:

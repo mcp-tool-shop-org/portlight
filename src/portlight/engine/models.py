@@ -177,6 +177,23 @@ class Ship:
     upgrade_slots: int = 2           # set from UPGRADE_SLOTS at creation
 
 
+@dataclass
+class OwnedShip:
+    """A ship in the player's fleet (docked at a port, not the flagship)."""
+    ship: Ship
+    docked_port_id: str              # port where this ship is docked
+    cargo: list["CargoItem"] = field(default_factory=list)
+
+
+def max_fleet_size(commercial_trust: int) -> int:
+    """Maximum fleet size (including flagship) based on commercial trust."""
+    if commercial_trust >= 26:
+        return 5
+    if commercial_trust >= 11:
+        return 3
+    return 2
+
+
 # ---------------------------------------------------------------------------
 # Reputation (multi-axis access model)
 # ---------------------------------------------------------------------------
@@ -256,6 +273,10 @@ class CombatGear:
     armor: str | None = None           # armor id (leather_vest, chain_shirt, etc.)
     melee_weapon: str | None = None    # melee weapon id (cutlass, rapier, etc.)
     weapon_upgrades: dict[str, list[str]] = field(default_factory=dict)  # weapon_id → upgrade_ids
+    # Quality tracking: weapon_id → quality tier string
+    weapon_quality: dict[str, str] = field(default_factory=dict)  # e.g. {"cutlass": "standard"}
+    # Usage counters for degradation: weapon_id → uses since last maintenance
+    weapon_usage: dict[str, int] = field(default_factory=dict)  # e.g. {"cutlass": 7}
 
 
 @dataclass
@@ -275,6 +296,8 @@ class Captain:
     active_style: str | None = None
     combat_gear: CombatGear = field(default_factory=CombatGear)
     injuries: list[ActiveInjury] = field(default_factory=list)
+    # Fleet (Phase 7+)
+    fleet: list[OwnedShip] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

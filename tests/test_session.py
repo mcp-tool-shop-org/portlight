@@ -167,13 +167,29 @@ class TestSessionShipyard:
         err = s.buy_ship("trade_brigantine")
         assert err is not None
 
-    def test_old_ship_trade_in_value(self, tmp_path: Path):
+    def test_old_ship_goes_to_fleet(self, tmp_path: Path):
         s = GameSession(tmp_path)
         s.new()
         s.captain.silver = 800
-        # Sloop is free (price=0), so no trade-in value
+        # Fleet limit is 2, so old sloop goes to fleet (not sold)
         s.buy_ship("trade_brigantine")
-        assert s.captain.silver == 0  # 800 - 800 + 0 trade-in
+        assert s.captain.silver == 0  # 800 - 800 (no trade-in, ship kept)
+        assert len(s.captain.fleet) == 1
+        assert s.captain.fleet[0].ship.template_id == "coastal_sloop"
+
+    def test_old_ship_sold_when_fleet_full(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new()
+        s.captain.silver = 10000
+        # Merchant starts with trust=15 → fleet limit=3
+        # Buy ships until fleet is at limit, then next buy sells old ship
+        s.buy_ship("swift_cutter")   # sloop → fleet, cutter = flagship (fleet: 1+1=2)
+        s.buy_ship("trade_brigantine")  # cutter → fleet, brig = flagship (fleet: 2+1=3 = limit)
+        assert len(s.captain.fleet) == 2
+        # Now fleet is full (3/3), buying again should sell
+        s.buy_ship("merchant_galleon")  # brig sold (40%), galleon = flagship
+        assert len(s.captain.fleet) == 2  # still 2 docked (sloop + cutter)
+        assert s.captain.ship.template_id == "merchant_galleon"
 
 
 class TestSessionUpgrades:
@@ -241,14 +257,17 @@ class TestSessionUpgrades:
         err = s.remove_upgrade("iron_strapping")
         assert err is not None
 
-    def test_buy_ship_clears_upgrades(self, tmp_path: Path):
+    def test_buy_ship_new_ship_has_no_upgrades(self, tmp_path: Path):
         s = GameSession(tmp_path)
         s.new()
         s.captain.silver = 2000
         s.install_upgrade("iron_strapping")
         assert len(s.captain.ship.upgrades) == 1
         s.buy_ship("trade_brigantine")
+        # New ship starts fresh, old ship (with upgrades) is in fleet
         assert len(s.captain.ship.upgrades) == 0
+        assert len(s.captain.fleet) == 1
+        assert len(s.captain.fleet[0].ship.upgrades) == 1
 
     def test_upgrade_persists_after_save_load(self, tmp_path: Path):
         s = GameSession(tmp_path)

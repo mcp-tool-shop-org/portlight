@@ -445,10 +445,26 @@ class GameSession:
         if template.price > self.world.captain.silver:
             return f"Need {template.price} silver, have {self.world.captain.silver}"
 
-        # Sell old ship for 40% of its template price
-        old_template = SHIPS.get(self.world.captain.ship.template_id)
-        if old_template:
-            self.world.captain.silver += int(old_template.price * 0.4)
+        # Fleet: try to dock old ship instead of selling
+        from portlight.engine.models import OwnedShip, max_fleet_size
+        old_ship = self.world.captain.ship
+        trust = self.world.captain.standing.commercial_trust
+        fleet_limit = max_fleet_size(trust)
+        fleet_count = len(self.world.captain.fleet) + 1  # +1 for current flagship
+
+        if fleet_count < fleet_limit:
+            # Add old ship to fleet (docked at this port)
+            self.world.captain.fleet.append(OwnedShip(
+                ship=old_ship,
+                docked_port_id=port.id,
+                cargo=list(self.world.captain.cargo),
+            ))
+            self.world.captain.cargo = []
+        else:
+            # Fleet full — sell old ship for 40% of its template price
+            old_template = SHIPS.get(old_ship.template_id)
+            if old_template:
+                self.world.captain.silver += int(old_template.price * 0.4)
 
         self.world.captain.silver -= template.price
         self.world.captain.ship = create_ship_from_template(template)
@@ -512,6 +528,67 @@ class GameSession:
                 self._save()
                 return None
         return f"Upgrade not installed: {upgrade_id}"
+
+    # --- Fleet ---
+
+    def dock_current_ship(self) -> str | None:
+        """Dock the flagship and switch to another ship at this port."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked"
+        from portlight.engine.fleet import dock_ship
+        err = dock_ship(self.world.captain, port.id)
+        if err:
+            return err
+        self._save()
+        return None
+
+    def board_fleet_ship(self, ship_name: str) -> str | None:
+        """Switch to a docked ship by name."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked"
+        from portlight.engine.fleet import board_ship
+        err = board_ship(self.world.captain, ship_name, port.id)
+        if err:
+            return err
+        self._save()
+        return None
+
+    def transfer_fleet_cargo(self, good_id: str, qty: int, from_ship: str, to_ship: str) -> str | None:
+        """Move cargo between ships at the same port."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked"
+        from portlight.engine.fleet import transfer_cargo
+        err = transfer_cargo(self.world.captain, good_id, qty, from_ship, to_ship, port.id)
+        if err:
+            return err
+        self._save()
+        return None
+
+    def sell_fleet_ship(self, ship_name: str) -> tuple[int, str] | str:
+        """Sell a docked fleet ship at a shipyard."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked"
+        from portlight.engine.models import PortFeature
+        if PortFeature.SHIPYARD not in port.features:
+            return f"{port.name} has no shipyard"
+        from portlight.engine.fleet import sell_docked_ship
+        result = sell_docked_ship(self.world.captain, ship_name, port.id)
+        if isinstance(result, str):
+            return result
+        self._save()
+        return result
 
     # --- Hire crew ---
 

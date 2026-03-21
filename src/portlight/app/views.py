@@ -631,6 +631,60 @@ def ledger_view(ledger: "ReceiptLedger", captain: "Captain") -> Panel:
 # Shipyard view
 # ---------------------------------------------------------------------------
 
+def fleet_view(captain: "Captain") -> Panel:
+    """Show all ships in the player's fleet."""
+    from portlight.content.upgrades import UPGRADES as _UPG
+    from portlight.engine.ship_stats import resolve_cargo_capacity
+
+    table = Table(title="Fleet", show_header=True, header_style="bold")
+    table.add_column("Ship", style="bold")
+    table.add_column("Class")
+    table.add_column("Hull", justify="right")
+    table.add_column("Cargo", justify="right")
+    table.add_column("Crew", justify="right")
+    table.add_column("Location")
+    table.add_column("Upgrades")
+
+    # Flagship
+    if captain.ship:
+        s = captain.ship
+        cargo_used = sum(c.quantity for c in captain.cargo)
+        eff_cargo = resolve_cargo_capacity(s, _UPG)
+        upg_str = str(len(s.upgrades)) if s.upgrades else "[dim]-[/dim]"
+        table.add_row(
+            f"{s.name} [cyan]*flagship[/cyan]",
+            s.template_id.replace("_", " ").title(),
+            f"{s.hull}/{s.hull_max}",
+            f"{cargo_used}/{eff_cargo}",
+            str(s.crew),
+            "[bold cyan]Active[/bold cyan]",
+            upg_str,
+        )
+
+    # Docked fleet
+    for owned in captain.fleet:
+        s = owned.ship
+        cargo_used = sum(c.quantity for c in owned.cargo)
+        eff_cargo = resolve_cargo_capacity(s, _UPG)
+        upg_str = str(len(s.upgrades)) if s.upgrades else "[dim]-[/dim]"
+        table.add_row(
+            s.name,
+            s.template_id.replace("_", " ").title(),
+            f"{s.hull}/{s.hull_max}",
+            f"{cargo_used}/{eff_cargo}",
+            str(s.crew),
+            owned.docked_port_id.replace("_", " ").title(),
+            upg_str,
+        )
+
+    from portlight.engine.models import max_fleet_size
+    limit = max_fleet_size(captain.standing.commercial_trust)
+    total = 1 + len(captain.fleet)
+    footer = f"Fleet: {total}/{limit} ships"
+
+    return Panel(table, subtitle=footer, border_style="blue")
+
+
 def shipyard_view(captain: "Captain") -> Panel:
     """Ship comparison panel for upgrade decisions."""
     current = captain.ship

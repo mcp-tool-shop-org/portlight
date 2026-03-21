@@ -21,6 +21,7 @@ from portlight.engine.models import (
     EncounterState,
     InstalledUpgrade,
     MarketSlot,
+    OwnedShip,
     PendingDuel,
     PirateEncounterRecord,
     PirateState,
@@ -63,7 +64,7 @@ from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"
-CURRENT_SAVE_VERSION = 7
+CURRENT_SAVE_VERSION = 8
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +178,14 @@ def _migrate_v6_to_v7(data: dict) -> dict:
     return data
 
 
+def _migrate_v7_to_v8(data: dict) -> dict:
+    """v7 → v8: Add fleet to captain."""
+    captain = data.get("captain", {})
+    captain.setdefault("fleet", [])
+    data["version"] = 8
+    return data
+
+
 _MIGRATIONS = [
     (1, 2, _migrate_v1_to_v2),
     (2, 3, _migrate_v2_to_v3),
@@ -184,6 +193,7 @@ _MIGRATIONS = [
     (4, 5, _migrate_v4_to_v5),
     (5, 6, _migrate_v5_to_v6),
     (6, 7, _migrate_v6_to_v7),
+    (7, 8, _migrate_v7_to_v8),
 ]
 
 
@@ -311,6 +321,8 @@ def _combat_gear_to_dict(gear: CombatGear) -> dict:
         "armor": gear.armor,
         "melee_weapon": gear.melee_weapon,
         "weapon_upgrades": gear.weapon_upgrades,
+        "weapon_quality": gear.weapon_quality,
+        "weapon_usage": gear.weapon_usage,
     }
 
 
@@ -324,6 +336,8 @@ def _combat_gear_from_dict(d: dict) -> CombatGear:
         armor=d.get("armor"),
         melee_weapon=d.get("melee_weapon"),
         weapon_upgrades=d.get("weapon_upgrades", {}),
+        weapon_quality=d.get("weapon_quality", {}),
+        weapon_usage=d.get("weapon_usage", {}),
     )
 
 
@@ -359,6 +373,7 @@ def _captain_to_dict(captain: Captain) -> dict:
         "active_style": captain.active_style,
         "combat_gear": _combat_gear_to_dict(captain.combat_gear),
         "injuries": [_injury_to_dict(i) for i in captain.injuries],
+        "fleet": [_owned_ship_to_dict(o) for o in captain.fleet],
     }
 
 
@@ -390,6 +405,27 @@ def _captain_from_dict(d: dict) -> Captain:
         active_style=d.get("active_style"),
         combat_gear=gear,
         injuries=injuries,
+        fleet=[_owned_ship_from_dict(o) for o in d.get("fleet", [])],
+    )
+
+
+def _owned_ship_to_dict(owned: OwnedShip) -> dict:
+    return {
+        "ship": _ship_to_dict(owned.ship),
+        "docked_port_id": owned.docked_port_id,
+        "cargo": [{
+            "good_id": c.good_id, "quantity": c.quantity, "cost_basis": c.cost_basis,
+            "acquired_port": c.acquired_port, "acquired_region": c.acquired_region,
+            "acquired_day": c.acquired_day,
+        } for c in owned.cargo],
+    }
+
+
+def _owned_ship_from_dict(d: dict) -> OwnedShip:
+    return OwnedShip(
+        ship=_ship_from_dict(d["ship"]),
+        docked_port_id=d["docked_port_id"],
+        cargo=[_cargo_from_dict(c) for c in d.get("cargo", [])],
     )
 
 

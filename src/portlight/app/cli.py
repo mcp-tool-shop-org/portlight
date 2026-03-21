@@ -432,6 +432,218 @@ def ledger() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Inventory
+# ---------------------------------------------------------------------------
+
+@app.command()
+def inventory() -> None:
+    """Show all personal gear: armor, weapons, styles, ranged, injuries, cargo."""
+    s = _session()
+    gear = s.captain.combat_gear
+
+    # Build gear data dict for the view
+    from portlight.content.armor import ARMOR
+    from portlight.content.melee_weapons import MELEE_WEAPONS
+    from portlight.content.ranged_weapons import RANGED_WEAPONS
+    from portlight.content.fighting_styles import FIGHTING_STYLES
+
+    armor_def = ARMOR.get(gear.armor) if gear.armor else None
+    melee_def = MELEE_WEAPONS.get(gear.melee_weapon) if gear.melee_weapon else None
+    firearm_def = RANGED_WEAPONS.get(gear.firearm) if gear.firearm else None
+    mechanical_def = RANGED_WEAPONS.get(gear.mechanical_weapon) if gear.mechanical_weapon else None
+    style_def = FIGHTING_STYLES.get(s.captain.active_style) if s.captain.active_style else None
+
+    throwing_summary = []
+    for wid, count in gear.throwing_weapons.items():
+        w = RANGED_WEAPONS.get(wid)
+        throwing_summary.append({"name": w.name if w else wid, "count": count})
+
+    from portlight.content.injuries import INJURIES
+    injuries_data = []
+    for inj in s.captain.injuries:
+        idef = INJURIES.get(inj.injury_id)
+        if idef:
+            if inj.heal_remaining is None:
+                healing = "Permanent"
+            elif inj.heal_remaining <= 0:
+                healing = "Healed"
+            else:
+                healing = f"{inj.heal_remaining} days"
+            injuries_data.append({
+                "name": idef.name,
+                "severity": idef.severity,
+                "healing": healing,
+            })
+
+    ship_upgrades = []
+    if s.captain.ship and hasattr(s.captain.ship, 'upgrades'):
+        from portlight.content.upgrades import UPGRADES
+        for u in s.captain.ship.upgrades:
+            uid = u.upgrade_id if hasattr(u, 'upgrade_id') else u
+            udef = UPGRADES.get(uid)
+            ship_upgrades.append(udef.name if udef else uid)
+
+    cargo_used = sum(c.quantity for c in s.captain.cargo)
+    cargo_cap = s.captain.ship.cargo_capacity if s.captain.ship else 0
+
+    gear_data = {
+        "armor_name": armor_def.name if armor_def else "None",
+        "armor_dr": armor_def.damage_reduction if armor_def else 0,
+        "armor_type": armor_def.armor_type if armor_def else "",
+        "melee_name": melee_def.name if melee_def else "Fists",
+        "melee_bonus": f"+{melee_def.damage_bonus} dmg" if melee_def else "",
+        "active_style": style_def.name if style_def else "None",
+        "style_special": style_def.special_action.name if style_def and style_def.special_action else "",
+        "firearm_name": firearm_def.name if firearm_def else "None",
+        "firearm_ammo": gear.firearm_ammo,
+        "mechanical_name": mechanical_def.name if mechanical_def else "None",
+        "mechanical_ammo": gear.mechanical_ammo,
+        "throwing_summary": throwing_summary,
+        "injuries": injuries_data,
+        "ship_upgrades": ship_upgrades,
+        "cargo_used": cargo_used,
+        "cargo_capacity": cargo_cap,
+        "silver": s.captain.silver,
+    }
+    from portlight.app.combat_views import inventory_view as inv_view
+    console.print(inv_view(gear_data))
+
+
+# ---------------------------------------------------------------------------
+# Equip (armor + melee weapon)
+# ---------------------------------------------------------------------------
+
+@app.command()
+def equip(
+    slot: str = typer.Argument(..., help="What to equip: armor, weapon, or 'remove'"),
+    item_id: str = typer.Argument(None, help="Item ID to equip, or slot to remove (armor/weapon)"),
+) -> None:
+    """Equip or unequip armor and melee weapons."""
+    s = _session()
+    gear = s.captain.combat_gear
+
+    if slot == "remove":
+        if item_id == "armor":
+            if gear.armor is None:
+                console.print("[dim]No armor worn.[/dim]")
+                return
+            from portlight.content.armor import ARMOR
+            old = ARMOR.get(gear.armor)
+            gear.armor = None
+            s._save()
+            console.print(f"[yellow]Removed {old.name if old else 'armor'}.[/yellow]")
+        elif item_id == "weapon":
+            if gear.melee_weapon is None:
+                console.print("[dim]No melee weapon equipped.[/dim]")
+                return
+            from portlight.content.melee_weapons import MELEE_WEAPONS
+            old = MELEE_WEAPONS.get(gear.melee_weapon)
+            gear.melee_weapon = None
+            s._save()
+            console.print(f"[yellow]Stowed {old.name if old else 'weapon'}.[/yellow]")
+        else:
+            console.print("[red]Usage: portlight equip remove armor|weapon[/red]")
+        return
+
+    if slot == "armor":
+        if item_id is None:
+            console.print("[red]Usage: portlight equip armor <armor_id>[/red]")
+            return
+        from portlight.content.armor import ARMOR
+        armor_def = ARMOR.get(item_id)
+        if armor_def is None:
+            console.print(f"[red]Unknown armor: {item_id}[/red]")
+            return
+        gear.armor = item_id
+        s._save()
+        console.print(f"[green]Equipped {armor_def.name} (DR {armor_def.damage_reduction}).[/green]")
+
+    elif slot == "weapon":
+        if item_id is None:
+            console.print("[red]Usage: portlight equip weapon <weapon_id>[/red]")
+            return
+        from portlight.content.melee_weapons import MELEE_WEAPONS
+        weapon_def = MELEE_WEAPONS.get(item_id)
+        if weapon_def is None:
+            console.print(f"[red]Unknown weapon: {item_id}[/red]")
+            return
+        gear.melee_weapon = item_id
+        s._save()
+        console.print(f"[green]Equipped {weapon_def.name} (+{weapon_def.damage_bonus} dmg).[/green]")
+
+    else:
+        console.print(f"[red]Unknown slot: {slot}[/red]. Use: armor, weapon, or remove")
+
+
+# ---------------------------------------------------------------------------
+# Merchant
+# ---------------------------------------------------------------------------
+
+@app.command()
+def merchant(
+    merchant_id: str = typer.Argument(None, help="Merchant ID to browse, or omit to list"),
+    buy_item: str = typer.Argument(None, help="Item ID to buy from this merchant"),
+    qty: int = typer.Argument(1, help="Quantity to buy"),
+) -> None:
+    """Browse or buy from port merchants."""
+    s = _session()
+    if not s.current_port:
+        console.print("[yellow]Must be docked to visit merchants.[/yellow]")
+        return
+
+    from portlight.content.merchants import get_merchants_at_port, get_merchant
+    from portlight.engine.merchant import buy_from_merchant, get_merchant_inventory
+    from portlight.app.combat_views import merchant_list_view, merchant_shop_view
+
+    port = s.current_port
+
+    if merchant_id is None:
+        # List merchants at port
+        merchants = get_merchants_at_port(port.id)
+        data = [{
+            "id": m.id, "name": m.name, "title": m.title,
+            "greeting": m.greeting,
+            "inventory_types": list(m.inventory_types),
+            "markup": m.price_markup,
+        } for m in merchants]
+        console.print(merchant_list_view(data, port.name))
+        return
+
+    m = get_merchant(merchant_id)
+    if m is None:
+        # Try partial match
+        merchants = get_merchants_at_port(port.id)
+        matches = [me for me in merchants if merchant_id in me.id]
+        if len(matches) == 1:
+            m = matches[0]
+        else:
+            console.print(f"[red]Unknown merchant: {merchant_id}[/red]")
+            return
+
+    if m.port_id != port.id:
+        console.print(f"[red]{m.name} is not at {port.name}.[/red]")
+        return
+
+    if buy_item is None:
+        # Show merchant's inventory
+        inv = get_merchant_inventory(m, port.region)
+        console.print(merchant_shop_view(m.name, m.greeting, inv, s.captain.silver))
+        return
+
+    # Buy from merchant
+    result = buy_from_merchant(s.captain, m.id, buy_item, qty, port.region)
+    if isinstance(result, str):
+        console.print(f"[red]{result}[/red]")
+        return
+    from portlight.app.formatting import silver
+    console.print(
+        f"\n[green]Bought {result['item_name']} from {m.name} "
+        f"for {silver(result['total_cost'])}[/green]"
+    )
+    s._save()
+
+
+# ---------------------------------------------------------------------------
 # Shipyard
 # ---------------------------------------------------------------------------
 
@@ -452,6 +664,53 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
             console.print(views.status_view(s.world, s.ledger, s.infra))
     else:
         console.print(views.shipyard_view(s.captain))
+
+
+@app.command()
+def fleet() -> None:
+    """Show all ships in your fleet."""
+    s = _session()
+    console.print(views.fleet_view(s.captain))
+
+
+@app.command()
+def dock() -> None:
+    """Park current ship and switch to another at the same port."""
+    s = _session()
+    err = s.dock_current_ship()
+    if err:
+        console.print(f"[red]{err}[/red]")
+    else:
+        console.print("\n[bold green]Switched ships![/bold green]\n")
+        console.print(views.status_view(s.world, s.ledger, s.infra))
+
+
+@app.command()
+def board(ship_name: str = typer.Argument(..., help="Name of ship to board")) -> None:
+    """Switch to a docked ship at the same port."""
+    s = _session()
+    err = s.board_fleet_ship(ship_name)
+    if err:
+        console.print(f"[red]{err}[/red]")
+    else:
+        console.print("\n[bold green]Boarded new flagship![/bold green]\n")
+        console.print(views.status_view(s.world, s.ledger, s.infra))
+
+
+@app.command()
+def transfer(
+    good: str = typer.Argument(..., help="Good ID to transfer"),
+    qty: int = typer.Argument(..., help="Quantity"),
+    from_ship: str = typer.Argument(..., help="Source ship name"),
+    to_ship: str = typer.Argument(..., help="Destination ship name"),
+) -> None:
+    """Move cargo between ships at the same port."""
+    s = _session()
+    err = s.transfer_fleet_cargo(good, qty, from_ship, to_ship)
+    if err:
+        console.print(f"[red]{err}[/red]")
+    else:
+        console.print(f"\n[bold green]Transferred {qty} {good}.[/bold green]\n")
 
 
 @app.command()
@@ -922,6 +1181,18 @@ def guide() -> None:
     lines.append("[bold]Finance[/bold]")
     lines.append("  insure [buy <id>]  — view or purchase insurance")
     lines.append("  credit [action]    — manage credit (open, draw, repay)")
+    lines.append("")
+
+    lines.append("[bold]Combat Gear[/bold]")
+    lines.append("  inventory           — view all personal gear and status")
+    lines.append("  equip <slot> <id>   — equip armor or weapon")
+    lines.append("  equip remove <slot> — unequip armor or weapon")
+    lines.append("  merchant [id] [buy] — browse or buy from port merchants")
+    lines.append("  armory [buy] [qty]  — quick-buy weapons/ammo (no markup)")
+    lines.append("  train [style]       — learn a fighting style")
+    lines.append("  equip-style [id]    — equip or unequip a style")
+    lines.append("  injuries            — view current wounds")
+    lines.append("  upgrade [id]        — view or install ship upgrades")
     lines.append("")
 
     lines.append("[bold]Career[/bold]")
