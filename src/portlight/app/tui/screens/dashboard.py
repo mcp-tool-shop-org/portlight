@@ -579,7 +579,7 @@ class ContentArea(Widget):
         if s.ledger.receipts:
             net = s.ledger.net_profit
             total_trades = len(s.ledger.receipts)
-            profitable = sum(1 for r in s.ledger.receipts if r.profit > 0)
+            profitable = sum(1 for r in s.ledger.receipts if r.action.value == "sell")
 
             lines.append("[bold #e9c46a]Trade Performance[/bold #e9c46a]")
             lines.append("")

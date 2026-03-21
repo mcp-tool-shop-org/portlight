@@ -8,7 +8,6 @@ and rendering crashes that smoke tests can't find.
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 
 from portlight.app.session import GameSession
 from portlight.app.tui.app import PortlightApp
@@ -30,7 +29,7 @@ async def test_app_mounts():
     """App mounts without errors and shows dashboard."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
+    async with app.run_test() as _pilot:
         # App should mount and show the dashboard
         assert app.session.active
         assert app._current_tab == "dashboard"
@@ -45,7 +44,7 @@ async def test_switch_all_tabs():
     """Every tab renders without error."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
+    async with app.run_test() as _pilot:
         tabs_and_keys = [
             ("dashboard", "d"),
             ("market", "m"),
@@ -60,7 +59,7 @@ async def test_switch_all_tabs():
             # skip help — "?" key binding varies by platform
         ]
         for tab_name, key in tabs_and_keys:
-            await pilot.press(key)
+            await _pilot.press(key)
             assert app._current_tab == tab_name, f"Failed to switch to {tab_name}"
 
 
@@ -73,8 +72,8 @@ async def test_dashboard_shows_captain():
     """Dashboard tab shows captain name and silver."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("d")
+    async with app.run_test() as _pilot:
+        await _pilot.press("d")
         # The sidebar should contain captain info
         # Check that the app didn't crash — that's the main goal
         assert app.session.world.captain.name == "Captain Blackwood"
@@ -89,8 +88,8 @@ async def test_market_tab_renders():
     """Market tab shows goods table when docked at a port."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("m")
+    async with app.run_test() as _pilot:
+        await _pilot.press("m")
         assert app._current_tab == "market"
         # Should not crash — port market should be visible
         assert session.current_port is not None
@@ -105,8 +104,8 @@ async def test_routes_tab_renders():
     """Routes tab shows available destinations."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("r")
+    async with app.run_test() as _pilot:
+        await _pilot.press("r")
         assert app._current_tab == "routes"
         # Verify routes exist from the port
         port = session.current_port
@@ -124,9 +123,9 @@ async def test_advance_day_in_port():
     """Pressing 'a' advances the day while in port."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
+    async with app.run_test() as _pilot:
         day_before = session.world.day
-        await pilot.press("a")
+        await _pilot.press("a")
         # Day should advance
         assert session.world.day == day_before + 1
 
@@ -140,8 +139,8 @@ async def test_fleet_tab_renders():
     """Fleet tab shows ship information."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("f")
+    async with app.run_test() as _pilot:
+        await _pilot.press("f")
         assert app._current_tab == "fleet"
         assert session.world.captain.ship is not None
 
@@ -155,8 +154,8 @@ async def test_cargo_tab_renders():
     """Cargo tab renders even with empty hold."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("c")
+    async with app.run_test() as _pilot:
+        await _pilot.press("c")
         assert app._current_tab == "cargo"
 
 
@@ -169,8 +168,8 @@ async def test_contracts_tab_renders():
     """Contracts tab renders the contract board."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("k")
+    async with app.run_test() as _pilot:
+        await _pilot.press("k")
         assert app._current_tab == "contracts"
 
 
@@ -183,8 +182,8 @@ async def test_inventory_tab_renders():
     """Inventory tab builds gear_data and renders."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("i")
+    async with app.run_test() as _pilot:
+        await _pilot.press("i")
         assert app._current_tab == "inventory"
 
 
@@ -197,8 +196,8 @@ async def test_infrastructure_tab_renders():
     """Infrastructure tab renders composite view."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("w")
+    async with app.run_test() as _pilot:
+        await _pilot.press("w")
         assert app._current_tab == "infrastructure"
 
 
@@ -211,8 +210,8 @@ async def test_help_tab_renders():
     """Help tab shows keybinding reference."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("question_mark")
+    async with app.run_test() as _pilot:
+        await _pilot.press("question_mark")
         assert app._current_tab == "help"
 
 
@@ -225,8 +224,8 @@ async def test_port_tab_renders():
     """Port tab shows port info when docked."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("p")
+    async with app.run_test() as _pilot:
+        await _pilot.press("p")
         assert app._current_tab == "port"
 
 
@@ -239,8 +238,8 @@ async def test_ledger_tab_renders():
     """Ledger tab renders even with no trades."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
-        await pilot.press("l")
+    async with app.run_test() as _pilot:
+        await _pilot.press("l")
         assert app._current_tab == "ledger"
 
 
@@ -253,10 +252,10 @@ async def test_rapid_tab_switching():
     """Rapid tab switching doesn't crash."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
+    async with app.run_test() as _pilot:
         for _ in range(3):
             for key in ["d", "m", "r", "c", "i", "f", "k", "p", "l", "w"]:
-                await pilot.press(key)
+                await _pilot.press(key)
         # If we got here without crash, we're good
         assert True
 
@@ -270,7 +269,7 @@ async def test_advance_multiple_days():
     """Advancing multiple days works without error."""
     session = _make_session()
     app = PortlightApp(session=session)
-    async with app.run_test() as pilot:
+    async with app.run_test() as _pilot:
         for _ in range(5):
-            await pilot.press("a")
+            await _pilot.press("a")
         assert session.world.day == 6  # Started at day 1, advanced 5

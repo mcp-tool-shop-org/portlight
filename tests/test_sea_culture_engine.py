@@ -4,7 +4,7 @@ import random
 
 from portlight.content.world import new_game
 from portlight.engine.captain_identity import CaptainType
-from portlight.engine.models import CulturalState, Route, VoyageState, VoyageStatus
+from portlight.engine.models import CulturalState, VoyageState, VoyageStatus
 from portlight.engine.sea_culture_engine import (
     check_superstitions,
     enrich_voyage_day,

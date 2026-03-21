@@ -12,9 +12,6 @@ from portlight.engine.consequences import (
 )
 from portlight.engine.contracts import ContractBoard, ContractOutcome
 from portlight.engine.models import (
-    CargoItem,
-    PirateEncounterRecord,
-    Route,
     VoyageState,
     VoyageStatus,
 )

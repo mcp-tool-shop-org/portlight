@@ -152,15 +152,12 @@ def execute_advance(app, session: "GameSession") -> None:
             if hasattr(ev, "event_type"):
                 from portlight.engine.voyage import EventType
                 etype = ev.event_type
-                if etype == EventType.PIRATE:
+                if etype == EventType.PIRATES:
                     severity = "error"
                     icon = "\u2620"
                 elif etype == EventType.STORM:
                     severity = "warning"
                     icon = "\u26c8"
-                elif etype == EventType.ARRIVAL:
-                    severity = "information"
-                    icon = "\u2693"
                 elif etype == EventType.INSPECTION:
                     severity = "warning"
                     icon = "\u2696"
