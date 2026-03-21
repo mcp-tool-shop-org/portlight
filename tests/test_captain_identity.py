@@ -104,7 +104,7 @@ class TestReputationSeeding:
 
     def test_smuggler_starts_with_heat(self):
         world = new_game(captain_type=CaptainType.SMUGGLER)
-        assert world.captain.standing.customs_heat["Mediterranean"] == 10
+        assert world.captain.standing.customs_heat["Mediterranean"] == 8
 
     def test_navigator_starts_with_east_indies_standing(self):
         world = new_game(captain_type=CaptainType.NAVIGATOR)

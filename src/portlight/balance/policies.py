@@ -239,15 +239,14 @@ def _should_repair(session: "GameSession") -> ActionPlan | None:
 
 
 def _should_hire(session: "GameSession") -> ActionPlan | None:
-    """Hire sailors if undermanned. Fill toward crew_max for best speed."""
+    """Hire sailors if undermanned (below crew_min + 2)."""
     captain = session.captain
     ship = captain.ship
     if not ship or not session.current_port:
         return None
     from portlight.content.ships import SHIPS
     template = SHIPS.get(ship.template_id)
-    if template and ship.crew < template.crew_max:
-        # Hire up to crew_max for optimal speed
+    if template and ship.crew < template.crew_min + 2:
         return ActionPlan("hire", {"count": 99, "role": "sailor"})
     return None
 

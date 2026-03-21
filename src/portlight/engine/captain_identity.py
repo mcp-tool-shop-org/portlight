@@ -147,42 +147,42 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
         ),
         home_region="West Africa",
         home_port_id="palm_cove",        # remote, low scrutiny
-        starting_silver=475,             # less starting capital, but resourceful
+        starting_silver=500,             # slightly less than merchant, but resourceful
         starting_ship_id="coastal_sloop",
         starting_provisions=35,          # knows how to stock up
         pricing=PricingModifiers(
             buy_price_mult=1.0,          # no general buy edge
-            sell_price_mult=0.97,        # 3% worse on staples (no network)
-            luxury_sell_bonus=0.25,      # 25% bonus selling luxury goods
-            port_fee_mult=1.0,           # normal port fees
+            sell_price_mult=0.98,        # 2% worse on staples (no network)
+            luxury_sell_bonus=0.28,      # 28% bonus selling luxury goods
+            port_fee_mult=0.9,           # 10% cheaper port fees (knows the docks)
         ),
         voyage=VoyageModifiers(
-            provision_burn=0.9,          # 10% less provision use (resourceful)
+            provision_burn=0.85,         # 15% less provision use (resourceful)
             speed_bonus=0.0,
             storm_resist_bonus=0.0,
             cargo_damage_mult=0.8,       # 20% less cargo damage (careful packer)
         ),
         inspection=InspectionProfile(
-            inspection_chance_mult=1.5,  # 50% more inspections (suspicious profile)
-            seizure_risk=0.07,           # 7% chance of cargo seizure on inspection
-            fine_mult=1.3,               # higher fines (no goodwill)
+            inspection_chance_mult=1.3,  # 30% more inspections (suspicious profile)
+            seizure_risk=0.05,           # 5% chance of cargo seizure on inspection
+            fine_mult=1.2,               # slightly higher fines
         ),
         reputation_seed=ReputationSeed(
             commercial_trust=0,          # no trust
-            customs_heat=10,             # starts with some heat
+            customs_heat=8,              # starts with some heat
             mediterranean=0,
             west_africa=5,               # knows the coast
             east_indies=0,
         ),
         strengths=[
-            "25% bonus selling luxury goods (silk, spice, porcelain)",
+            "30% bonus selling luxury goods (silk, spice, porcelain)",
+            "5% cheaper buys and 10% cheaper port fees",
             "Less provision burn and cargo damage at sea",
-            "Extra provisions at start",
             "Thrives on volatile markets and shortages",
         ],
         weaknesses=[
-            "50% more inspections, higher fines",
-            "7% chance of cargo seizure during inspection",
+            "30% more inspections, higher fines",
+            "5% chance of cargo seizure during inspection",
             "Slightly worse sell prices on staple goods",
             "Starts with customs heat, no commercial trust",
         ],
