@@ -27,8 +27,8 @@ from portlight.engine.voyage import advance_day
 class TestCaptainTemplates:
     """All three captain types exist and are distinct."""
 
-    def test_eight_types_exist(self):
-        assert len(CAPTAIN_TEMPLATES) == 8
+    def test_nine_types_exist(self):
+        assert len(CAPTAIN_TEMPLATES) == 9  # 8 original + bounty_hunter
         assert CaptainType.MERCHANT in CAPTAIN_TEMPLATES
         assert CaptainType.SMUGGLER in CAPTAIN_TEMPLATES
         assert CaptainType.NAVIGATOR in CAPTAIN_TEMPLATES
@@ -37,6 +37,7 @@ class TestCaptainTemplates:
         assert CaptainType.SCHOLAR in CAPTAIN_TEMPLATES
         assert CaptainType.MERCHANT_PRINCE in CAPTAIN_TEMPLATES
         assert CaptainType.DOCKHAND in CAPTAIN_TEMPLATES
+        assert CaptainType.BOUNTY_HUNTER in CAPTAIN_TEMPLATES
 
     def test_get_captain_template(self):
         t = get_captain_template(CaptainType.MERCHANT)

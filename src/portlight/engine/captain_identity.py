@@ -28,6 +28,7 @@ class CaptainType(str, Enum):
     SCHOLAR = "scholar"
     MERCHANT_PRINCE = "merchant_prince"
     DOCKHAND = "dockhand"
+    BOUNTY_HUNTER = "bounty_hunter"
     CUSTOM = "custom"
 
 
@@ -581,6 +582,70 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
         ),
         mentor_npc_id="ci_dock_master_tao",
         bloc_alignment="free_ports",
+    ),
+
+    CaptainType.BOUNTY_HUNTER: CaptainTemplate(
+        id=CaptainType.BOUNTY_HUNTER,
+        name="The Bounty Hunter",
+        title="Licensed Hunter",
+        description=(
+            "Former port marshal turned freelance hunter. The Pact gave you a "
+            "commission and a fast ship. Your job: track down contract-breakers, "
+            "pirate captains, and anyone with a price on their head. The bounty "
+            "board is your trade route. Combat is your cargo."
+        ),
+        home_region="North Atlantic",
+        home_port_id="crosswind_isle",
+        starting_silver=425,
+        starting_ship_id="swift_cutter",
+        starting_provisions=30,
+        pricing=PricingModifiers(
+            buy_price_mult=1.05,           # worse trader — combat focus
+            sell_price_mult=0.98,
+            luxury_sell_bonus=0.0,         # no luxury knowledge
+            port_fee_mult=0.7,            # authority-aligned, cheaper fees
+        ),
+        voyage=VoyageModifiers(
+            provision_burn=0.9,
+            speed_bonus=0.5,              # fast pursuit ship
+            storm_resist_bonus=0.05,
+            cargo_damage_mult=1.0,
+        ),
+        inspection=InspectionProfile(
+            inspection_chance_mult=0.6,    # authorities respect you
+            seizure_risk=0.0,
+            fine_mult=0.5,
+        ),
+        reputation_seed=ReputationSeed(
+            commercial_trust=3,           # modest starting trust
+            customs_heat=0,
+            north_atlantic=8,
+            mediterranean=3,
+        ),
+        strengths=[
+            "Starts with a Cutter (fast pursuit vessel)",
+            "Bounty board access — earn silver by defeating named pirates",
+            "Nearly inspection-proof (authority commission)",
+            "Low port fees at Pact-aligned ports",
+            "Combat trust from day one",
+        ],
+        weaknesses=[
+            "Poor trader — 5% markup on buys, 2% less on sells",
+            "No luxury knowledge — no bonus on silk/spice/porcelain",
+            "Iron Wolves and Crimson Tide may be hostile",
+            "Must deliver bounties to earn — trade alone won't sustain you",
+        ],
+        backstory=(
+            "You served five years as port marshal at Crosswind Isle, enforcing "
+            "trade law and hunting smugglers through the archipelago. When the "
+            "Pact needed someone to track down contract-breakers and rogue captains, "
+            "you volunteered. They gave you a commission, a cutter, and a list of "
+            "names. The bounty board is always full. The sea is full of people who "
+            "owe debts they'd rather forget."
+        ),
+        mentor_npc_id="ci_dock_master_tao",
+        bloc_alignment="northern_pact",
+        faction_alignment={"northern_pact": 10},
     ),
 }
 

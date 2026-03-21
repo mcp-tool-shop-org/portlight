@@ -52,7 +52,7 @@ def _session() -> GameSession:
 def new(
     name: str = typer.Argument("Captain", help="Captain name"),
     captain_type: str = typer.Option("merchant", "--type", "-t",
-        help="Captain type: merchant, smuggler, navigator, privateer, corsair, scholar, merchant_prince, dockhand, custom"),
+        help="Captain type: merchant, smuggler, navigator, privateer, corsair, scholar, merchant_prince, dockhand, bounty_hunter, custom"),
 ) -> None:
     """Start a new game. Choose your captain type to shape your career."""
     from portlight.engine.captain_identity import CaptainType
@@ -2658,6 +2658,65 @@ def take_all() -> None:
     console.print("\"You lost. Everything you carry is mine now.\"")
 
     _finalize_victory(s, spared=False)
+
+
+# ---------------------------------------------------------------------------
+# Bounty commands
+# ---------------------------------------------------------------------------
+
+@app.command()
+def bounty(
+    action: str = typer.Argument(None, help="list, accept <id>, claim <id>, or omit to view board"),
+    target_id: str = typer.Argument(None, help="Bounty target captain ID"),
+) -> None:
+    """View the bounty board, accept targets, or claim rewards."""
+    from portlight.engine.bounty import generate_bounty_board, accept_bounty, claim_bounty
+    s = _session()
+
+    if action is None or action == "list":
+        targets = generate_bounty_board(s.world.pirates, s._rng)
+        if not targets:
+            console.print("[dim]No bounties available. All known pirates have been defeated.[/dim]")
+            return
+        console.print("\n[bold]Bounty Board[/bold]")
+        for t in targets:
+            active = " [cyan][HUNTING][/cyan]" if t.captain_id in s.captain.active_bounties else ""
+            console.print(f"\n  [bold]{t.captain_name}[/bold] ({t.captain_id}){active}")
+            console.print(f"    Faction: {t.faction_id}  |  Region: {t.region}  |  Difficulty: {t.difficulty}")
+            console.print(f"    Reward: [green]{t.reward} silver[/green]")
+            console.print(f"    {t.description}")
+        console.print(f"\n  Active bounties: {len(s.captain.active_bounties)}/3")
+        console.print("  Use [cyan]bounty accept <id>[/cyan] to hunt a target.")
+        return
+
+    if action == "accept":
+        if not target_id:
+            console.print("[red]Usage: bounty accept <captain_id>[/red]")
+            return
+        err = accept_bounty(s.captain, target_id)
+        if err:
+            console.print(f"[red]{err}[/red]")
+            return
+        console.print(f"\n[bold cyan]Bounty accepted![/bold cyan] Hunting [bold]{target_id}[/bold].")
+        console.print("Defeat them at sea, then return to claim your reward.")
+        s._save()
+        return
+
+    if action == "claim":
+        if not target_id:
+            console.print("[red]Usage: bounty claim <captain_id>[/red]")
+            return
+        result = claim_bounty(s.captain, s.world.pirates, target_id)
+        if isinstance(result, str):
+            console.print(f"[red]{result}[/red]")
+            return
+        console.print(f"\n[bold green]Bounty claimed![/bold green] +{result} silver.")
+        from portlight.app.formatting import silver
+        console.print(f"Silver: {silver(s.captain.silver)}")
+        s._save()
+        return
+
+    console.print(f"[red]Unknown bounty action: {action}[/red]. Use: list, accept, claim")
 
 
 # ---------------------------------------------------------------------------

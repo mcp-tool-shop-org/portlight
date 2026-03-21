@@ -452,6 +452,7 @@ class PirateState:
     naval_victories: int = 0
     naval_defeats: int = 0
     captain_memories: dict = field(default_factory=dict)  # captain_id -> CaptainMemory (engine layer)
+    bounty_board: list[dict] = field(default_factory=list)  # serialized bounty targets
     encounter_phase: str = ""  # persisted encounter phase (approach/naval/boarding/duel/"" = none)
     encounter_state: dict = field(default_factory=dict)  # serialized encounter combat state
 
