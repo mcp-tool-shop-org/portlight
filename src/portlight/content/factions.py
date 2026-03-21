@@ -333,3 +333,162 @@ def get_faction_for_region(region: str) -> list[PirateFaction]:
 def get_captains_for_faction(faction_id: str) -> list[PirateCaptain]:
     """Get all named captains in a faction."""
     return [c for c in PIRATE_CAPTAINS.values() if c.faction_id == faction_id]
+
+
+# ---------------------------------------------------------------------------
+# Faction Relationships — the political map of the underworld
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class FactionRelationship:
+    """How two factions view each other. Static reference data."""
+    faction_a: str
+    faction_b: str
+    disposition: str          # allied / neutral / rival / hostile
+    description: str          # flavor text explaining why
+    spillover: float          # how much standing with A affects B (-1.0 to +0.5)
+    vendetta_trigger: str     # what action triggers a vendetta from B when you help A
+
+
+# Disposition key:
+#   allied:   helping one helps the other (spillover +0.3 to +0.5)
+#   neutral:  no strong feelings (spillover 0.0)
+#   rival:    business competition (spillover -0.1 to -0.3)
+#   hostile:  active conflict (spillover -0.3 to -0.5)
+
+FACTION_RELATIONSHIPS: list[FactionRelationship] = [
+    # === CRIMSON TIDE ↔ MONSOON SYNDICATE ===
+    FactionRelationship(
+        faction_a="crimson_tide",
+        faction_b="monsoon_syndicate",
+        disposition="rival",
+        description=(
+            "Business rivals who respect each other's territory — barely. "
+            "The Tide wants to control the Mediterranean-to-East route. "
+            "The Syndicate wants to control all Eastern trade. "
+            "They cooperate when it suits them and undercut when it doesn't."
+        ),
+        spillover=-0.15,
+        vendetta_trigger="Running opium for the Syndicate through Tide waters.",
+    ),
+
+    # === CRIMSON TIDE ↔ DEEP REEF ===
+    FactionRelationship(
+        faction_a="crimson_tide",
+        faction_b="deep_reef",
+        disposition="hostile",
+        description=(
+            "Fundamental incompatibility. The Tide runs a protection racket — "
+            "pay or suffer. The Brotherhood answers to no one and attacks "
+            "anyone who claims authority over the sea. They've been killing "
+            "each other's captains for decades."
+        ),
+        spillover=-0.4,
+        vendetta_trigger="Supplying weapons to the Tide that get used against Brotherhood ships.",
+    ),
+
+    # === CRIMSON TIDE ↔ IRON WOLVES ===
+    FactionRelationship(
+        faction_a="crimson_tide",
+        faction_b="iron_wolves",
+        disposition="rival",
+        description=(
+            "Former allies who split over territory. Both are organized and "
+            "militaristic, but the Wolves left when the Tide's leader demanded "
+            "tribute from their operations. Now they compete for the same "
+            "weapons trade in overlapping waters."
+        ),
+        spillover=-0.2,
+        vendetta_trigger="Selling black powder to the Tide that was meant for the Wolves.",
+    ),
+
+    # === MONSOON SYNDICATE ↔ DEEP REEF ===
+    FactionRelationship(
+        faction_a="monsoon_syndicate",
+        faction_b="deep_reef",
+        disposition="neutral",
+        description=(
+            "Different worlds, different rules. The Syndicate operates through "
+            "information and politics in the East. The Brotherhood sails the "
+            "Southern reefs on honor and courage. They rarely cross paths, "
+            "and when they do, they nod and move on."
+        ),
+        spillover=0.0,
+        vendetta_trigger="None — they don't care about each other.",
+    ),
+
+    # === MONSOON SYNDICATE ↔ IRON WOLVES ===
+    FactionRelationship(
+        faction_a="monsoon_syndicate",
+        faction_b="iron_wolves",
+        disposition="hostile",
+        description=(
+            "The Wolves tried to muscle into the Eastern weapons trade. "
+            "Raj the Quiet fed their fleet positions to a navy patrol. "
+            "Three Wolf ships burned. The Wolves have never forgiven — "
+            "or forgotten. Syndicate informants are killed on sight."
+        ),
+        spillover=-0.35,
+        vendetta_trigger="Sharing intelligence with the Syndicate about Wolf positions.",
+    ),
+
+    # === DEEP REEF ↔ IRON WOLVES ===
+    FactionRelationship(
+        faction_a="deep_reef",
+        faction_b="iron_wolves",
+        disposition="hostile",
+        description=(
+            "Mutual contempt. The Brotherhood sees the Wolves as soulless "
+            "mercenaries who fight without honor. The Wolves see the Brotherhood "
+            "as romantic fools who'll die for principles instead of profit. "
+            "They attack each other whenever their paths cross."
+        ),
+        spillover=-0.3,
+        vendetta_trigger="Fencing stolen cargo from Brotherhood raids through Wolf contacts.",
+    ),
+]
+
+
+def get_relationship(faction_a: str, faction_b: str) -> FactionRelationship | None:
+    """Get the relationship between two factions (order-independent)."""
+    for rel in FACTION_RELATIONSHIPS:
+        if (rel.faction_a == faction_a and rel.faction_b == faction_b) or \
+           (rel.faction_a == faction_b and rel.faction_b == faction_a):
+            return rel
+    return None
+
+
+def get_allies(faction_id: str) -> list[str]:
+    """Get faction IDs that are allied with the given faction."""
+    allies = []
+    for rel in FACTION_RELATIONSHIPS:
+        if rel.disposition == "allied":
+            if rel.faction_a == faction_id:
+                allies.append(rel.faction_b)
+            elif rel.faction_b == faction_id:
+                allies.append(rel.faction_a)
+    return allies
+
+
+def get_enemies(faction_id: str) -> list[str]:
+    """Get faction IDs that are hostile to the given faction."""
+    enemies = []
+    for rel in FACTION_RELATIONSHIPS:
+        if rel.disposition == "hostile":
+            if rel.faction_a == faction_id:
+                enemies.append(rel.faction_b)
+            elif rel.faction_b == faction_id:
+                enemies.append(rel.faction_a)
+    return enemies
+
+
+def get_rivals(faction_id: str) -> list[str]:
+    """Get faction IDs that are rivals (competitive but not at war)."""
+    rivals = []
+    for rel in FACTION_RELATIONSHIPS:
+        if rel.disposition == "rival":
+            if rel.faction_a == faction_id:
+                rivals.append(rel.faction_b)
+            elif rel.faction_b == faction_id:
+                rivals.append(rel.faction_a)
+    return rivals

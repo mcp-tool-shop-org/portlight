@@ -500,6 +500,49 @@ _BEATS: list[NarrativeBeat] = [
             "in the Known World."
         ),
     ),
+
+    # === FACTION POLITICS BEATS ===
+    NarrativeBeat(
+        id="faction_spillover",
+        phase=NarrativePhase.TESTS,
+        title="The Price of Friends",
+        text=(
+            "You helped one faction, and another noticed. In the underworld, "
+            "every friendship casts a shadow. The enemies of your friends are now "
+            "watching you with different eyes."
+        ),
+        hint="Standing with one faction affects your reputation with their rivals and enemies.",
+    ),
+    NarrativeBeat(
+        id="vendetta_declared",
+        phase=NarrativePhase.ORDEAL,
+        title="Blood in the Ledger",
+        text=(
+            "A faction has declared vendetta. Your alliance with their enemy "
+            "has made you a target — not just a stranger, but a marked captain. "
+            "Their ships will hunt you in their waters. Choose your routes carefully."
+        ),
+    ),
+    NarrativeBeat(
+        id="political_survivor",
+        phase=NarrativePhase.REWARD,
+        title="Walking the Wire",
+        text=(
+            "You've navigated the underworld's politics without being destroyed by them. "
+            "Trade partners on one side, enemies on the other, and you in the middle — "
+            "still sailing, still trading, still alive. That's an achievement few can claim."
+        ),
+    ),
+    NarrativeBeat(
+        id="faction_diplomat",
+        phase=NarrativePhase.THE_RETURN,
+        title="The Pirate's Diplomat",
+        text=(
+            "Factions that hate each other both trust you. You've done what no "
+            "navy, no governor, no merchant guild has managed: earned standing "
+            "on both sides of a pirate war. The sea's politics flow through you."
+        ),
+    ),
 ]
 
 _BEATS_BY_ID: dict[str, NarrativeBeat] = {b.id: b for b in _BEATS}
@@ -741,5 +784,36 @@ def evaluate_narrative(
     factions_with_standing = sum(1 for v in uw_standing.values() if v >= 25)
     if factions_with_standing >= 3:
         _fire("shadow_master")
+
+    # === FACTION POLITICS BEATS ===
+    from portlight.engine.underworld import check_vendetta
+
+    # Spillover: standing 15+ with any faction (they have enemies who noticed)
+    if any(v >= 15 for v in uw_standing.values()):
+        _fire("faction_spillover")
+
+    # Vendetta declared: any faction holds a vendetta
+    for fid in uw_standing:
+        vendettas = check_vendetta(uw_standing, fid)
+        if vendettas:
+            _fire("vendetta_declared")
+            break
+
+    # Political survivor: standing 10+ with 2+ factions that are enemies of each other
+    from portlight.content.factions import get_enemies
+    factions_above_10 = [fid for fid, v in uw_standing.items() if v >= 10]
+    for i, a in enumerate(factions_above_10):
+        for b in factions_above_10[i + 1:]:
+            enemies_of_a = get_enemies(a)
+            if b in enemies_of_a:
+                _fire("political_survivor")
+
+    # Faction diplomat: standing 25+ with 2 factions that are hostile to each other
+    factions_above_25 = [fid for fid, v in uw_standing.items() if v >= 25]
+    for i, a in enumerate(factions_above_25):
+        for b in factions_above_25[i + 1:]:
+            enemies_of_a = get_enemies(a)
+            if b in enemies_of_a:
+                _fire("faction_diplomat")
 
     return newly_fired
