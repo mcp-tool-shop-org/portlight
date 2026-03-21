@@ -1,0 +1,133 @@
+"""Tests for port institutional profiles — NPCs, institutions, relationships."""
+
+from portlight.content.port_institutions import (
+    ALL_INSTITUTIONS,
+    ALL_NPCS,
+    PORT_INSTITUTIONAL_PROFILES,
+)
+from portlight.content.ports import PORTS
+
+
+class TestPortoNovoProfile:
+    """Porto Novo must have a complete institutional profile."""
+
+    def test_porto_novo_exists(self):
+        assert "porto_novo" in PORT_INSTITUTIONAL_PROFILES
+
+    def test_has_seven_institutions(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["porto_novo"]
+        assert len(profile.institutions) == 7
+
+    def test_has_seven_npcs(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["porto_novo"]
+        assert len(profile.npcs) == 7
+
+    def test_institution_types_complete(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["porto_novo"]
+        types = {inst.institution_type for inst in profile.institutions}
+        expected = {"harbor_master", "exchange", "shipyard", "broker", "tavern", "customs", "governor"}
+        assert types == expected
+
+    def test_every_institution_has_npc(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["porto_novo"]
+        npc_ids = {npc.id for npc in profile.npcs}
+        for inst in profile.institutions:
+            assert inst.npc_id in npc_ids, f"Institution {inst.id} references missing NPC {inst.npc_id}"
+
+    def test_power_structure_defined(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["porto_novo"]
+        assert profile.power_structure
+        assert profile.internal_tension
+
+    def test_governor_title(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["porto_novo"]
+        assert profile.governor_title == "Port Governor"
+
+
+class TestNPCQuality:
+    """All NPCs must have complete personality data."""
+
+    def test_all_npcs_have_name(self):
+        for npc_id, npc in ALL_NPCS.items():
+            assert npc.name, f"{npc_id} missing name"
+
+    def test_all_npcs_have_description(self):
+        for npc_id, npc in ALL_NPCS.items():
+            assert npc.description, f"{npc_id} missing description"
+
+    def test_all_npcs_have_agenda(self):
+        for npc_id, npc in ALL_NPCS.items():
+            assert npc.agenda, f"{npc_id} missing agenda"
+
+    def test_all_npcs_have_three_greetings(self):
+        for npc_id, npc in ALL_NPCS.items():
+            assert npc.greeting_neutral, f"{npc_id} missing greeting_neutral"
+            assert npc.greeting_friendly, f"{npc_id} missing greeting_friendly"
+            assert npc.greeting_hostile, f"{npc_id} missing greeting_hostile"
+
+    def test_all_npcs_have_rumor(self):
+        for npc_id, npc in ALL_NPCS.items():
+            assert npc.rumor, f"{npc_id} missing rumor"
+
+    def test_all_npcs_have_relationship_notes(self):
+        for npc_id, npc in ALL_NPCS.items():
+            assert len(npc.relationship_notes) >= 3, (
+                f"{npc_id} needs >= 3 relationship notes, has {len(npc.relationship_notes)}"
+            )
+
+    def test_relationship_notes_reference_valid_npcs(self):
+        for npc_id, npc in ALL_NPCS.items():
+            for ref_id in npc.relationship_notes:
+                assert ref_id in ALL_NPCS, (
+                    f"{npc_id} references unknown NPC '{ref_id}'"
+                )
+
+    def test_npc_port_ids_valid(self):
+        for npc_id, npc in ALL_NPCS.items():
+            assert npc.port_id in PORTS, f"{npc_id} references unknown port '{npc.port_id}'"
+
+
+class TestInstitutionQuality:
+    """All institutions must have complete data."""
+
+    def test_all_institutions_have_description(self):
+        for inst_id, inst in ALL_INSTITUTIONS.items():
+            assert inst.description, f"{inst_id} missing description"
+
+    def test_all_institutions_have_function(self):
+        for inst_id, inst in ALL_INSTITUTIONS.items():
+            assert inst.function, f"{inst_id} missing function"
+
+    def test_all_institutions_have_political_leaning(self):
+        for inst_id, inst in ALL_INSTITUTIONS.items():
+            assert inst.political_leaning, f"{inst_id} missing political_leaning"
+
+    def test_institution_port_ids_valid(self):
+        for inst_id, inst in ALL_INSTITUTIONS.items():
+            assert inst.port_id in PORTS, f"{inst_id} references unknown port '{inst.port_id}'"
+
+
+class TestNPCRelationshipWeb:
+    """Porto Novo NPCs should form a connected relationship web."""
+
+    def test_no_npc_is_isolated(self):
+        """Every NPC should be referenced by at least one other NPC."""
+        referenced = set()
+        for npc in ALL_NPCS.values():
+            for ref_id in npc.relationship_notes:
+                referenced.add(ref_id)
+        for npc_id in ALL_NPCS:
+            assert npc_id in referenced, f"{npc_id} is never referenced by another NPC"
+
+    def test_key_tension_exists(self):
+        """Marta and Costa should reference each other as rivals."""
+        marta = ALL_NPCS["pn_marta"]
+        costa = ALL_NPCS["pn_senhora_costa"]
+        assert "pn_senhora_costa" in marta.relationship_notes
+        assert "pn_marta" in costa.relationship_notes
+
+    def test_enzo_feared_by_no_one_but_salva(self):
+        """Enzo should fear Salva specifically."""
+        enzo = ALL_NPCS["pn_old_enzo"]
+        assert "pn_inspector_salva" in enzo.relationship_notes
+        assert "fear" in enzo.relationship_notes["pn_inspector_salva"].lower()

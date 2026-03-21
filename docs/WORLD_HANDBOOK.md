@@ -161,6 +161,69 @@ vessels. The tariff lasted three days.
 **Exports:** Grain (primary), rum
 **Wants:** Cotton, dyes
 
+#### Institutions
+
+**The Harbor Master's Tower** — Stone tower at the harbor mouth. Brass telescope
+on the roof, ledger room that smells of ink and sealing wax.
+- **Harbor Master Vasco da Reira** (meticulous) — Has logged every ship for 31 years.
+  Knows your tonnage before you drop anchor. Despises smugglers, respects clean paperwork.
+  *"Manifest and tonnage, Captain. I'll assign your berth once I've reviewed them."*
+
+**The Grain Exchange** — Columned hall on the waterfront, largest building in port.
+Dawn rates read from the steps every morning.
+- **Guild Factor Marta Soares** (shrewd) — The woman who reads the dawn rates.
+  Never wrong about grain prices. Once cornered the entire Mediterranean cotton
+  market for three weeks. Wants Porto Novo to remain the price-setting authority.
+  *"You're here for the rates? They were posted at dawn."*
+
+**Andros & Sons Shipyard** — Sprawling yard of slipways and dry docks. Three hulls
+always under construction. The sons are long grown — just Dimitri and his apprentices.
+- **Master Shipwright Dimitri Andros** (gruff) — Judges captains by their ship's
+  condition, not their silver. Refused to build warships for the Iron Pact — earned
+  the Brotherhood's loyalty. Told Scarlet Ana to build her flagship herself.
+  *"Let me see your hull before we talk price. I don't repair what I wouldn't sail."*
+
+**The Governor's Residence** — Modest stone house, distinguished only by the
+Alliance banner. No throne — just a desk covered in charts and correspondence.
+- **Port Governor Senhora Isabela Costa** (diplomatic) — Twelve years governing,
+  longer than any predecessor. Former trader (ran the Al-Manar to Sun Harbor route
+  for 15 years). Proposed the Alliance-wide weapons embargo against pirate-linked
+  captains. Rumored to keep a ship hidden in Silva Bay, just in case.
+  *"Welcome to Porto Novo, Captain. Our markets are fair and our laws clear."*
+
+**The Harbor Bell** (tavern) — Built from ship timbers, salvaged bell over the door.
+Too warm, too loud, too crowded. The food is terrible. The rum is excellent.
+- **Old Enzo** (jovial) — Tavern keeper since before Vasco started keeping records.
+  Knows everyone's secrets, tells none — unless the rum is good enough. Missing two
+  fingers on his left hand. Was a pirate once, or so the story goes.
+  *"Sit! Drink! First one's on the house — I'll put it on your next cargo."*
+
+**The Customs House** — Clean whitewashed building, iron bars on every window,
+locked evidence room in the basement.
+- **Inspector Salva** (relentless) — Thin as a blade, memory for cargo that borders
+  on supernatural. Never accepted a bribe. Brother was killed by smuggled black
+  powder — every seizure is personal. Once inspected a ship for nine hours straight.
+  *"Cargo manifest. All of it. I'll inspect the hold at my discretion."*
+
+**The Broker's Desk** — Cramped office behind the Exchange. Walls covered in pinned
+contracts and route maps.
+- **Senior Broker Fernanda Reis** (calculating) — Tracks six contracts simultaneously
+  without writing anything down. Takes a cut of everything she brokers. Steers good
+  contracts toward reliable captains, leaves scraps for unknowns.
+  *"New captain? I have contracts. Small ones, for now. Complete them on time and we'll talk."*
+
+#### Power Dynamics
+
+Power is triangulated: Costa sets policy, Marta controls prices, Salva enforces
+the law. Dimitri's shipyard is independent — the Brotherhood answers to craft.
+Enzo's tavern is the shadow channel where information flows that officials pretend
+doesn't exist. Fernanda decides which contracts reach which captains.
+
+**Core tension:** Marta vs. Costa. Marta wants market dominance; Costa wants
+political stability. They need each other — Costa can't govern without Guild
+revenue, Marta can't trade without Costa's protection. This tension keeps Porto
+Novo honest.
+
 ---
 
 ### 2. Al-Manar (Mediterranean)
