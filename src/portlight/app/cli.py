@@ -1938,6 +1938,7 @@ def fight(
             console.print("\n[bold]Choose:[/bold]")
             console.print("  [cyan]portlight spare[/cyan]     — Show mercy. (+25 respect, -10 grudge, +5 underworld standing)")
             console.print("  [cyan]portlight take-all[/cyan]  — Take everything. (+5 fear, +10 grudge, more silver)")
+            _sync_encounter_phase(s)
             s._save()
             return  # DON'T clear encounter yet — spare/take-all commands will finalize
 

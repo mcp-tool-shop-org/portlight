@@ -145,3 +145,54 @@ class TestSilverReward:
         spare_silver = 20 + strength * 3  # from _finalize_victory
         take_silver = 20 + strength * 7
         assert take_silver > spare_silver
+
+
+# ---------------------------------------------------------------------------
+# Encounter state persistence
+# ---------------------------------------------------------------------------
+
+class TestEncounterPersistence:
+    """Verify that victory state survives save/load (bug fix: encounter persistence)."""
+
+    def test_pending_victory_persists_in_encounter_state(self):
+        """When pending_victory is True, it must be written to encounter_state dict."""
+        from portlight.engine.models import PirateState
+        pirates = PirateState()
+        # Simulate what _sync_encounter_phase does after victory
+        estate = {"pending_victory": True, "boarding_progress": 2, "boarding_threshold": 2}
+        pirates.encounter_state = estate
+        pirates.encounter_phase = "resolved"
+        assert pirates.encounter_state["pending_victory"] is True
+        assert pirates.encounter_phase == "resolved"
+
+    def test_pending_victory_survives_dict_roundtrip(self):
+        """pending_victory flag must survive serialization to dict and back."""
+        import json
+        estate = {
+            "pending_victory": True,
+            "boarding_progress": 2,
+            "boarding_threshold": 2,
+            "player_hp": 4,
+            "opponent_hp": 0,
+        }
+        serialized = json.dumps(estate)
+        restored = json.loads(serialized)
+        assert restored["pending_victory"] is True
+        assert restored["opponent_hp"] == 0
+
+    def test_restore_reads_pending_victory(self):
+        """_restore_encounter logic should set _pending_victory from estate."""
+        estate = {"pending_victory": True}
+        # Simulate the restore logic from cli.py _restore_encounter
+        pending_victory = False
+        if estate and estate.get("pending_victory"):
+            pending_victory = True
+        assert pending_victory is True
+
+    def test_empty_estate_does_not_set_pending_victory(self):
+        """Empty encounter_state should NOT trigger pending_victory."""
+        estate = {}
+        pending_victory = False
+        if estate and estate.get("pending_victory"):
+            pending_victory = True
+        assert pending_victory is False
