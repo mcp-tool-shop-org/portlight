@@ -268,11 +268,57 @@ def sail(destination: str) -> None:
 @app.command()
 def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
     """Advance time (sail if at sea, wait if in port)."""
+    global _active_encounter, _player_combatant, _opponent_combatant
     s = _session()
     for _ in range(days):
         events = s.advance()
 
-        if events:
+        # Check for pirate encounter — intercept and create interactive encounter
+        pirate_event = None
+        for evt in events:
+            if hasattr(evt, '_pending_duel') and evt._pending_duel is not None:
+                pirate_event = evt
+                break
+
+        if pirate_event and pirate_event._pending_duel:
+            console.print(views.voyage_view(s.world, events))
+            # Create interactive encounter from the pending duel
+            from portlight.engine.encounter import create_encounter
+            enc = create_encounter(
+                s.world.ports, s.world.voyage.destination_id if s.world.voyage else "porto_novo",
+                s._rng,
+            )
+            if enc:
+                # Override with the specific captain from the event
+                pd = pirate_event._pending_duel
+                enc.enemy_captain_id = pd.captain_id
+                enc.enemy_captain_name = pd.captain_name
+                enc.enemy_faction_id = pd.faction_id
+                enc.enemy_personality = pd.personality
+                enc.enemy_strength = pd.strength
+                enc.enemy_region = pd.region
+
+                _active_encounter = enc
+                _player_combatant = None
+                _opponent_combatant = None
+                s.world.pirates.pending_duel = None  # clear old-style pending
+
+                from portlight.app import combat_views
+                from portlight.content.factions import FACTIONS, PIRATE_CAPTAINS
+                faction = FACTIONS.get(pd.faction_id)
+                captain_data = PIRATE_CAPTAINS.get(pd.captain_id)
+                console.print(combat_views.encounter_view(
+                    pd.captain_name,
+                    faction.name if faction else "Unknown",
+                    pd.personality, pd.strength,
+                    f"{pd.captain_name}'s Ship",
+                    captain_data.encounter_text if captain_data else "",
+                ))
+                console.print("\n[bold]Use [cyan]portlight encounter <negotiate|flee|fight>[/cyan][/bold]")
+                break  # stop advancing — player must respond to encounter
+            else:
+                console.print(views.voyage_view(s.world, events))
+        elif events:
             console.print(views.voyage_view(s.world, events))
         else:
             console.print(f"[dim]Day {s.world.day}. Markets shift.[/dim]")
@@ -289,6 +335,89 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
         if s.captain.ship and s.captain.ship.hull <= 0:
             console.print("\n[bold red]Your ship has broken apart. The voyage ends here.[/bold red]")
             break
+
+
+# ---------------------------------------------------------------------------
+# Duel
+# ---------------------------------------------------------------------------
+
+@app.command()
+def duel(
+    stances: str = typer.Argument(..., help="Comma-separated stances: thrust,slash,parry (5 rounds)"),
+) -> None:
+    """Fight a pirate captain in a sword duel. Stances: thrust, slash, parry."""
+    s = _session()
+    pending = s.world.pirates.pending_duel
+    if pending is None:
+        console.print("[yellow]No pirate has challenged you. Duels happen during pirate encounters at sea.[/yellow]")
+        return
+
+    # Parse stances
+    stance_list = [st.strip().lower() for st in stances.split(",")]
+    valid = {"thrust", "slash", "parry"}
+    for st in stance_list:
+        if st not in valid:
+            console.print(f"[red]Invalid stance: {st}[/red]. Use: thrust, slash, parry")
+            return
+    if len(stance_list) < 3:
+        console.print("[red]Provide at least 3 stances (e.g. thrust,parry,slash,thrust,parry)[/red]")
+        return
+
+    from portlight.engine.duel import resolve_duel
+    from portlight.engine.models import PirateEncounterRecord
+
+    result = resolve_duel(
+        player_stances=stance_list,
+        opponent_id=pending.captain_id,
+        opponent_name=pending.captain_name,
+        opponent_personality=pending.personality,
+        opponent_strength=pending.strength,
+        rng=s._rng,
+        player_crew=s.captain.ship.crew if s.captain.ship else 5,
+    )
+
+    # Show round-by-round
+    console.print(f"\n[bold]Duel vs {pending.captain_name}[/bold] (strength {pending.strength}, {pending.personality})\n")
+    for i, r in enumerate(result.rounds, 1):
+        outcome = "WIN" if r.damage_to_opponent > 0 and r.damage_to_player == 0 else (
+            "LOSE" if r.damage_to_player > 0 and r.damage_to_opponent == 0 else "DRAW"
+        )
+        console.print(f"  Round {i}: You [{r.player_stance}] vs [{r.opponent_stance}] — {outcome}")
+        console.print(f"    {r.flavor}")
+
+    # Show result
+    if result.player_won:
+        console.print(f"\n[bold green]VICTORY![/bold green] You defeated {pending.captain_name}.")
+    elif result.draw:
+        console.print(f"\n[bold yellow]DRAW.[/bold yellow] Neither captain falls.")
+    else:
+        console.print(f"\n[bold red]DEFEAT.[/bold red] {pending.captain_name} bests you.")
+
+    # Apply consequences
+    s.captain.silver = max(0, s.captain.silver + result.silver_delta)
+    from portlight.app.formatting import silver
+    if result.silver_delta >= 0:
+        console.print(f"  Silver: +{silver(result.silver_delta)}")
+    else:
+        console.print(f"  Silver: -{silver(abs(result.silver_delta))}")
+
+    # Record encounter
+    outcome_str = "duel_win" if result.player_won else ("duel_draw" if result.draw else "duel_loss")
+    s.world.pirates.encounters.append(PirateEncounterRecord(
+        captain_id=pending.captain_id,
+        faction_id=pending.faction_id,
+        day=s.world.day,
+        outcome=outcome_str,
+        region=pending.region,
+    ))
+    if result.player_won:
+        s.world.pirates.duels_won += 1
+    elif not result.draw:
+        s.world.pirates.duels_lost += 1
+
+    # Clear pending duel
+    s.world.pirates.pending_duel = None
+    s._save()
 
 
 # ---------------------------------------------------------------------------
@@ -745,6 +874,7 @@ def guide() -> None:
     lines.append("  provision [n]   — buy provisions")
     lines.append("  repair [n]      — repair hull")
     lines.append("  hire [n]        — hire crew")
+    lines.append("  duel <stances>  — fight a pirate captain (e.g. thrust,parry,slash)")
     lines.append("")
 
     lines.append("[bold]Contracts[/bold]")
@@ -803,6 +933,469 @@ def load() -> None:
         console.print(views.status_view(s.world, s.ledger, s.infra))
     else:
         console.print("[red]No saved game found.[/red]")
+
+
+# ---------------------------------------------------------------------------
+# Combat system commands (Phase 5+)
+# ---------------------------------------------------------------------------
+
+# Active encounter + combatant state held in module-level for interactive turns
+_active_encounter: "EncounterState | None" = None
+_player_combatant: "CombatantState | None" = None
+_opponent_combatant: "CombatantState | None" = None
+
+
+@app.command()
+def encounter(
+    choice: str = typer.Argument(..., help="negotiate, flee, or fight"),
+) -> None:
+    """Respond to a pirate encounter: negotiate, flee, or fight."""
+    global _active_encounter
+    from portlight.app import combat_views
+    from portlight.engine.encounter import (
+        begin_fight,
+        resolve_flee,
+        resolve_negotiate,
+    )
+
+    s = _session()
+    if _active_encounter is None or _active_encounter.phase != "approach":
+        console.print("[yellow]No active encounter. Encounters happen during pirate events at sea.[/yellow]")
+        return
+
+    enc = _active_encounter
+    choice = choice.lower().strip()
+
+    # Resolve ship stats (upgrades applied) for combat calculations
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.ship_stats import resolved_ship
+    combat_ship = resolved_ship(s.captain.ship, UPGRADES)
+
+    if choice == "negotiate":
+        success, msg = resolve_negotiate(
+            enc, s.captain.standing.underworld_standing,
+            s.captain.captain_type, s._rng,
+        )
+        console.print(f"\n{msg}")
+        if not success:
+            msg2 = begin_fight(enc, combat_ship)
+            console.print(f"\n{msg2}")
+            console.print(combat_views.naval_status_view(
+                s.captain.ship.hull, s.captain.ship.hull_max,
+                s.captain.ship.crew, s.captain.ship.cannons,
+                enc.enemy_ship_hull, enc.enemy_ship_hull_max,
+                enc.enemy_ship_crew, enc.enemy_ship_cannons,
+                enc.boarding_progress, enc.boarding_threshold, 0,
+            ))
+        else:
+            _active_encounter = None
+        s._save()
+
+    elif choice == "flee":
+        escaped, dmg, msg = resolve_flee(enc, combat_ship, s._rng)
+        console.print(f"\n{msg}")
+        if dmg > 0:
+            s.captain.ship.hull = max(0, s.captain.ship.hull - dmg)
+        if escaped:
+            _active_encounter = None
+        else:
+            msg2 = begin_fight(enc, combat_ship)
+            console.print(f"\n{msg2}")
+        s._save()
+
+    elif choice == "fight":
+        msg = begin_fight(enc, combat_ship)
+        console.print(f"\n{msg}")
+        console.print(combat_views.naval_status_view(
+            s.captain.ship.hull, s.captain.ship.hull_max,
+            s.captain.ship.crew, s.captain.ship.cannons,
+            enc.enemy_ship_hull, enc.enemy_ship_hull_max,
+            enc.enemy_ship_crew, enc.enemy_ship_cannons,
+            enc.boarding_progress, enc.boarding_threshold, 0,
+        ))
+        s._save()
+
+    else:
+        console.print("[red]Choose: negotiate, flee, or fight[/red]")
+
+
+@app.command()
+def naval(
+    action: str = typer.Argument(..., help="broadside, close, evade, or rake"),
+) -> None:
+    """Execute a naval combat action."""
+    global _active_encounter
+    from portlight.app import combat_views
+    from portlight.engine.encounter import (
+        get_encounter_naval_actions,
+        resolve_boarding_phase,
+        resolve_naval_turn,
+    )
+
+    s = _session()
+    if _active_encounter is None or _active_encounter.phase != "naval":
+        console.print("[yellow]Not in naval combat.[/yellow]")
+        return
+
+    enc = _active_encounter
+
+    # Resolve ship stats (upgrades applied) for combat calculations
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.ship_stats import resolved_ship, resolve_cannons
+    effective_cannons = resolve_cannons(s.captain.ship, UPGRADES)
+    valid = get_encounter_naval_actions(effective_cannons)
+    action = action.lower().strip()
+    if action not in valid:
+        console.print(f"[red]Invalid action. Available: {', '.join(valid)}[/red]")
+        return
+
+    combat_ship = resolved_ship(s.captain.ship, UPGRADES)
+    result = resolve_naval_turn(enc, action, combat_ship, s._rng)
+
+    # Apply hull/crew damage to player ship
+    s.captain.ship.hull = max(0, s.captain.ship.hull + result["player_hull_delta"])
+    s.captain.ship.crew = max(0, s.captain.ship.crew + result["player_crew_delta"])
+
+    console.print(combat_views.naval_round_view(result))
+
+    if result["enemy_sunk"]:
+        console.print("\n[bold green]Enemy ship sinks beneath the waves![/bold green]")
+        s.world.pirates.naval_victories += 1
+        _active_encounter = None
+    elif result["boarding_triggered"]:
+        console.print("\n[bold yellow]Boarding action![/bold yellow]")
+        boarding = resolve_boarding_phase(enc, s.captain.ship.crew, s._rng)
+        s.captain.ship.crew = max(0, s.captain.ship.crew - boarding["player_crew_lost"])
+        console.print(f"\n{boarding['flavor']}")
+        console.print("\n[bold]Personal combat begins! Use [cyan]portlight fight <action>[/cyan][/bold]")
+    elif s.captain.ship.hull <= 0:
+        console.print("\n[bold red]Your ship is sinking![/bold red]")
+        s.world.pirates.naval_defeats += 1
+        _active_encounter = None
+    else:
+        console.print(combat_views.naval_status_view(
+            s.captain.ship.hull, s.captain.ship.hull_max,
+            s.captain.ship.crew, s.captain.ship.cannons,
+            enc.enemy_ship_hull, enc.enemy_ship_hull_max,
+            enc.enemy_ship_crew, enc.enemy_ship_cannons,
+            enc.boarding_progress, enc.boarding_threshold, enc.naval_turns,
+        ))
+
+    s._save()
+
+
+@app.command()
+def fight(
+    action: str = typer.Argument(..., help="thrust, slash, parry, shoot, throw, dodge, or style action"),
+) -> None:
+    """Execute a personal combat action."""
+    global _active_encounter, _player_combatant, _opponent_combatant
+    from portlight.app import combat_views
+    from portlight.engine.encounter import (
+        create_duel_combatants,
+        get_encounter_combat_actions,
+        resolve_duel_turn,
+    )
+    from portlight.engine.injuries import create_injury
+
+    s = _session()
+    enc = _active_encounter
+    if enc is None or enc.phase != "duel":
+        console.print("[yellow]Not in personal combat.[/yellow]")
+        return
+
+    # Initialize combatants on first fight turn
+    if _player_combatant is None or _opponent_combatant is None:
+        gear = s.captain.combat_gear
+        total_throwing = sum(gear.throwing_weapons.values()) if gear.throwing_weapons else 0
+        _player_combatant, _opponent_combatant = create_duel_combatants(
+            enc,
+            player_crew=s.captain.ship.crew if s.captain.ship else 5,
+            player_style=s.captain.active_style,
+            player_injury_ids=[inj.injury_id for inj in s.captain.injuries],
+            player_firearm=gear.firearm,
+            player_ammo=gear.firearm_ammo,
+            player_throwing=total_throwing,
+            player_mechanical=gear.mechanical_weapon,
+            player_mechanical_ammo=gear.mechanical_ammo,
+        )
+
+    p, o = _player_combatant, _opponent_combatant
+    valid = get_encounter_combat_actions(p)
+    action = action.lower().strip()
+    if action not in valid:
+        console.print(f"[red]Invalid action. Available: {', '.join(valid)}[/red]")
+        return
+
+    result = resolve_duel_turn(enc, action, p, o, s._rng)
+
+    console.print(combat_views.combat_round_view({
+        "turn": result.turn,
+        "player_action": result.player_action,
+        "opponent_action": result.opponent_action,
+        "damage_to_opponent": result.damage_to_opponent,
+        "damage_to_player": result.damage_to_player,
+        "player_stamina_delta": result.player_stamina_delta,
+        "injury_inflicted": result.injury_inflicted,
+        "opponent_injury": result.opponent_injury,
+        "flavor": result.flavor,
+        "style_effect": result.style_effect,
+    }))
+
+    # Show status
+    console.print(combat_views.combat_status_view(
+        p.hp, p.hp_max, p.stamina, p.stamina_max,
+        o.hp, o.hp_max, enc.enemy_captain_name,
+        p.ammo, p.throwing_weapons, s.captain.active_style,
+        [inj.injury_id for inj in s.captain.injuries] + (
+            [result.injury_inflicted] if result.injury_inflicted else []
+        ),
+        get_encounter_combat_actions(p), result.turn,
+    ))
+
+    # Check fight over
+    if enc.phase == "resolved":
+        player_won = o.hp <= 0 and p.hp > 0
+        draw = p.hp <= 0 and o.hp <= 0
+
+        if player_won:
+            silver_gain = 20 + enc.enemy_strength * 5
+            s.captain.silver += silver_gain
+            s.world.pirates.duels_won += 1
+            console.print(f"\n[bold green]Victory! +{silver_gain} silver, +5 standing[/bold green]")
+        elif draw:
+            s.world.pirates.duels_won += 1  # mutual respect
+            console.print("\n[bold yellow]Draw! Mutual respect earned.[/bold yellow]")
+        else:
+            silver_loss = 15 + enc.enemy_strength * 3
+            s.captain.silver = max(0, s.captain.silver - silver_loss)
+            s.world.pirates.duels_lost += 1
+            console.print(f"\n[bold red]Defeated. -{silver_loss} silver.[/bold red]")
+
+        # Apply injuries to captain
+        if result.injury_inflicted:
+            new_injury = create_injury(result.injury_inflicted, s.world.day)
+            s.captain.injuries.append(new_injury)
+            from portlight.content.injuries import INJURIES
+            inj_def = INJURIES.get(result.injury_inflicted)
+            if inj_def:
+                console.print(f"\n[bold red]Injury: {inj_def.name} — {inj_def.description}[/bold red]")
+
+        # Sync ammo back to captain
+        gear = s.captain.combat_gear
+        gear.firearm_ammo = p.ammo
+        gear.mechanical_ammo = p.mechanical_ammo
+        # Rough sync for throwing weapons
+        if gear.throwing_weapons:
+            total_before = sum(gear.throwing_weapons.values())
+            spent = total_before - p.throwing_weapons
+            for wid in gear.throwing_weapons:
+                if spent <= 0:
+                    break
+                can_take = min(spent, gear.throwing_weapons[wid])
+                gear.throwing_weapons[wid] -= can_take
+                spent -= can_take
+
+        _active_encounter = None
+        _player_combatant = None
+        _opponent_combatant = None
+
+    s._save()
+
+
+@app.command()
+def train(
+    style_id: str = typer.Argument(None, help="Style to learn (e.g. la_destreza, dambe)"),
+) -> None:
+    """Learn a fighting style from a regional master."""
+    from portlight.app import combat_views
+    from portlight.content.injuries import get_injured_body_parts
+    from portlight.engine.training import can_learn_style, get_masters_at_port, learn_style
+
+    s = _session()
+    port = s.current_port
+    if not port:
+        console.print("[yellow]Must be docked at a port to train.[/yellow]")
+        return
+
+    masters = get_masters_at_port(port.id)
+    if not masters and style_id is None:
+        console.print("[dim]No fighting masters at this port.[/dim]")
+        return
+
+    if style_id is None:
+        from portlight.content.fighting_styles import FIGHTING_STYLES
+        master_dicts = []
+        for m in masters:
+            style = FIGHTING_STYLES.get(m.style_id)
+            master_dicts.append({
+                "name": m.name,
+                "style": style.name if style else m.style_id,
+                "style_id": m.style_id,
+                "region": style.region if style else "",
+                "cost": style.silver_cost if style else 0,
+                "days": style.training_days if style else 0,
+                "prereqs": style.prerequisite_styles if style else 0,
+                "dialog": m.dialog,
+                "description": m.description,
+            })
+        console.print(combat_views.training_view(
+            port.name, master_dicts, s.captain.learned_styles, s.captain.silver,
+        ))
+        return
+
+    injured_parts = get_injured_body_parts([inj.injury_id for inj in s.captain.injuries])
+    error = can_learn_style(
+        s.captain.learned_styles, injured_parts,
+        s.captain.silver, port.id, style_id,
+    )
+    if error:
+        console.print(f"[red]{error}[/red]")
+        return
+
+    from portlight.content.fighting_styles import FIGHTING_STYLES
+    style = FIGHTING_STYLES[style_id]
+    s.captain.learned_styles, s.captain.silver = learn_style(
+        s.captain.learned_styles, s.captain.silver, style_id,
+    )
+    # Training days advance the clock
+    for _ in range(style.training_days):
+        s.advance()
+    console.print(f"\n[bold green]Learned {style.name}![/bold green] ({style.training_days} days, {style.silver_cost} silver)")
+    s._save()
+
+
+@app.command(name="equip-style")
+def equip_style(
+    style_id: str = typer.Argument(None, help="Style to equip (or omit to unequip)"),
+) -> None:
+    """Equip or unequip a fighting style."""
+    s = _session()
+    if style_id is None:
+        s.captain.active_style = None
+        console.print("[dim]Fighting style unequipped.[/dim]")
+        s._save()
+        return
+
+    if style_id not in s.captain.learned_styles:
+        console.print(f"[red]You haven't learned {style_id}. Use [bold]portlight train[/bold] at the right port.[/red]")
+        return
+
+    from portlight.content.injuries import get_injured_body_parts
+    from portlight.engine.training import check_style_usable
+    injured_parts = get_injured_body_parts([inj.injury_id for inj in s.captain.injuries])
+    if not check_style_usable(style_id, injured_parts):
+        console.print(f"[red]Your injuries prevent using this style.[/red]")
+        return
+
+    s.captain.active_style = style_id
+    from portlight.content.fighting_styles import FIGHTING_STYLES
+    style = FIGHTING_STYLES[style_id]
+    console.print(f"[bold green]Equipped: {style.name}[/bold green]")
+    s._save()
+
+
+@app.command()
+def armory(
+    buy: str = typer.Argument(None, help="Weapon or ammo ID to buy"),
+    qty: int = typer.Argument(1, help="Quantity to buy"),
+) -> None:
+    """View or buy ranged weapons and ammunition."""
+    from portlight.app import combat_views
+    from portlight.content.ranged_weapons import AMMO, RANGED_WEAPONS, get_ammo_for_region, get_weapons_for_region
+
+    s = _session()
+    port = s.current_port
+    if not port:
+        console.print("[yellow]Must be docked to visit the armory.[/yellow]")
+        return
+
+    if buy is None:
+        weapons = get_weapons_for_region(port.region)
+        ammo = get_ammo_for_region(port.region)
+        console.print(combat_views.armory_view(
+            [{"id": w.id, "name": w.name, "type": w.weapon_type, "damage": f"{w.damage_min}-{w.damage_max}",
+              "accuracy": f"{w.accuracy:.0%}", "cost": w.silver_cost, "reload": w.reload_turns}
+             for w in weapons],
+            {"firearm": s.captain.combat_gear.firearm, "firearm_ammo": s.captain.combat_gear.firearm_ammo,
+             "throwing": s.captain.combat_gear.throwing_weapons,
+             "mechanical": s.captain.combat_gear.mechanical_weapon,
+             "mechanical_ammo": s.captain.combat_gear.mechanical_ammo},
+        ))
+        return
+
+    gear = s.captain.combat_gear
+
+    # Try weapon purchase
+    if buy in RANGED_WEAPONS:
+        weapon = RANGED_WEAPONS[buy]
+        if port.region not in weapon.available_regions:
+            console.print(f"[red]{weapon.name} not available in {port.region}.[/red]")
+            return
+        cost = weapon.silver_cost * qty
+        if s.captain.silver < cost:
+            console.print(f"[red]Need {cost} silver.[/red]")
+            return
+        s.captain.silver -= cost
+        if weapon.weapon_type == "firearm":
+            gear.firearm = buy
+            console.print(f"[green]Bought {weapon.name}![/green]")
+        elif weapon.weapon_type == "mechanical":
+            gear.mechanical_weapon = buy
+            console.print(f"[green]Bought {weapon.name}![/green]")
+        elif weapon.weapon_type == "thrown":
+            current = gear.throwing_weapons.get(buy, 0)
+            gear.throwing_weapons[buy] = current + qty * weapon.ammo_per_purchase
+            console.print(f"[green]Bought {qty * weapon.ammo_per_purchase}x {weapon.name}![/green]")
+        s._save()
+        return
+
+    # Try ammo purchase
+    if buy in AMMO:
+        ammo_def = AMMO[buy]
+        if port.region not in ammo_def.available_regions:
+            console.print(f"[red]{ammo_def.name} not available in {port.region}.[/red]")
+            return
+        cost = ammo_def.silver_cost * qty
+        if s.captain.silver < cost:
+            console.print(f"[red]Need {cost} silver.[/red]")
+            return
+        s.captain.silver -= cost
+        if ammo_def.weapon_type == "firearm":
+            gear.firearm_ammo += qty * ammo_def.quantity
+        elif ammo_def.weapon_type == "mechanical":
+            gear.mechanical_ammo += qty * ammo_def.quantity
+        console.print(f"[green]Bought {qty * ammo_def.quantity}x {ammo_def.name}![/green]")
+        s._save()
+        return
+
+    console.print(f"[red]Unknown item: {buy}[/red]")
+
+
+@app.command()
+def injuries() -> None:
+    """Show current injuries and healing status."""
+    from portlight.app import combat_views
+    from portlight.content.injuries import INJURIES
+
+    s = _session()
+    if not s.captain.injuries:
+        console.print("[dim]No injuries. You're in fighting shape.[/dim]")
+        return
+
+    injury_data = []
+    for inj in s.captain.injuries:
+        defn = INJURIES.get(inj.injury_id)
+        if defn:
+            injury_data.append({
+                "name": defn.name,
+                "severity": defn.severity,
+                "body_part": defn.body_part,
+                "description": defn.description,
+                "heal_remaining": inj.heal_remaining,
+                "treated": inj.treated,
+            })
+    console.print(combat_views.injuries_view(injury_data))
 
 
 if __name__ == "__main__":

@@ -78,6 +78,7 @@ class VoyageEvent:
     speed_modifier: float = 1.0
     cargo_lost: dict[str, int] | None = None  # good_id -> qty lost
     flavor: str = ""                           # atmospheric color text
+    _pending_duel: object = None               # PendingDuel when pirate issues challenge
 
 
 # ---------------------------------------------------------------------------
@@ -143,16 +144,23 @@ def _pick_event(
 def _resolve_event(
     event_type: EventType, rng: random.Random,
     captain: "Captain", ship: "Ship",
+    world: "WorldState | None" = None,
+    voyage: "VoyageState | None" = None,
 ) -> VoyageEvent:
     """Generate concrete effects for an event type, aware of ship and cargo."""
     from portlight.content.ships import SHIPS
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.ship_stats import resolve_storm_resist
     template = SHIPS.get(ship.template_id)
-    storm_resist = template.storm_resist if template else 0.0
+    if template:
+        storm_resist = resolve_storm_resist(ship, template, UPGRADES)
+    else:
+        storm_resist = 0.0
 
     # Captain identity modifiers
     cap_mods = _get_captain_mods(captain)
     if cap_mods:
-        storm_resist = min(0.8, storm_resist + cap_mods.voyage.storm_resist_bonus)
+        storm_resist = min(0.9, storm_resist + cap_mods.voyage.storm_resist_bonus)
         cargo_dmg_mult = cap_mods.voyage.cargo_damage_mult
         insp = cap_mods.inspection
     else:
@@ -170,7 +178,41 @@ def _resolve_event(
             return VoyageEvent(EventType.STORM, msg, hull_delta=-dmg, speed_modifier=0.5)
 
         case EventType.PIRATES:
-            # Pirates target valuable cargo
+            # Pirates target valuable cargo — chance of named captain duel
+            from portlight.content.factions import FACTIONS, get_captains_for_faction, get_faction_for_region
+            from portlight.engine.models import PendingDuel
+
+            # 40% chance a named pirate captain issues a duel challenge
+            duel_roll = rng.random()
+            if duel_roll < 0.40 and world is not None and voyage is not None:
+                # Pick a faction active in this area
+                dest_port = world.ports.get(voyage.destination_id)
+                region = dest_port.region if dest_port else "Mediterranean"
+                active_factions = get_faction_for_region(region)
+                if not active_factions:
+                    active_factions = list(FACTIONS.values())[:1]
+                faction = rng.choice(active_factions)
+                faction_captains = get_captains_for_faction(faction.id)
+                pirate_captain = rng.choice(faction_captains) if faction_captains else None
+
+                if pirate_captain is not None:
+                    pending = PendingDuel(
+                        captain_id=pirate_captain.id,
+                        captain_name=pirate_captain.name,
+                        faction_id=faction.id,
+                        personality=pirate_captain.personality,
+                        strength=pirate_captain.strength,
+                        region=region,
+                    )
+                    return VoyageEvent(
+                        EventType.PIRATES,
+                        f"{pirate_captain.name} of the {faction.name} blocks your path and demands a duel! "
+                        f"Use [bold]portlight duel <stance>[/bold] to fight (thrust/slash/parry, 5 rounds).",
+                        flavor=f"Strength {pirate_captain.strength}, {pirate_captain.personality} fighter.",
+                        _pending_duel=pending,
+                    )
+
+            # No duel — standard pirate raid
             cargo_value = sum(c.quantity * 10 for c in captain.cargo)  # rough estimate
             base_loss = rng.randint(10, 40)
             silver_loss = min(base_loss + cargo_value // 10, captain.silver)
@@ -586,8 +628,12 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         danger *= _season_profile.danger_mult
 
     event_type = _pick_event(danger, rng, inspection_mult)
-    event = _resolve_event(event_type, rng, captain, captain.ship)
+    event = _resolve_event(event_type, rng, captain, captain.ship, world, voyage)
     events.append(event)
+
+    # Handle pending duel from pirate encounter
+    if event._pending_duel is not None:
+        world.pirates.pending_duel = event._pending_duel
 
     # Apply event effects
     captain.ship.hull = max(0, captain.ship.hull + event.hull_delta)
@@ -606,7 +652,10 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
                     break
 
     # Progress (undermanned penalty + captain speed bonus + seasonal modifier)
-    base_speed = captain.ship.speed + speed_bonus
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.ship_stats import resolve_speed
+    resolved_speed = resolve_speed(captain.ship, UPGRADES)
+    base_speed = resolved_speed + speed_bonus
     crew_min = template.crew_min if template else 1
     if captain.ship.crew < crew_min:
         base_speed *= 0.5  # half speed when undermanned

@@ -93,7 +93,7 @@ def tick_markets(
                     pass
                 elif abs(diff) > slot.restock_rate:
                     # Proportional restock: faster recovery when further from target
-                    pull = slot.restock_rate * (1 + abs(diff) / slot.stock_target * 0.5)
+                    pull = slot.restock_rate * (1 + abs(diff) / max(slot.stock_target, 1) * 0.5)
                     pull = pull if diff > 0 else -pull * 0.5
                     slot.stock_current += int(round(pull))
                 else:
@@ -169,14 +169,17 @@ def execute_buy(
     if total > captain.silver:
         return f"Need {total} silver, have {captain.silver}"
 
-    # Check cargo capacity
+    # Check cargo capacity (with upgrade bonuses)
     ship = captain.ship
     if ship is None:
         return "No ship"
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.ship_stats import resolve_cargo_capacity
+    effective_capacity = resolve_cargo_capacity(ship, UPGRADES)
     current_weight = _cargo_weight(captain)
     good = goods_table.get(good_id)
     weight_per = good.weight_per_unit if good else 1.0  # type: ignore[union-attr]
-    if current_weight + qty * weight_per > ship.cargo_capacity:
+    if current_weight + qty * weight_per > effective_capacity:
         return "Not enough cargo space"
 
     # Execute
