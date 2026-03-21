@@ -183,6 +183,21 @@ class TestBuySell:
         execute_sell(world.captain, port, "grain", 5)
         assert len(world.captain.cargo) == 0
 
+    def test_partial_sell_preserves_cost_basis(self):
+        """Selling part of a uniform batch should not inflate avg cost."""
+        world = new_game()
+        port = world.ports["porto_novo"]
+        recalculate_prices(port, GOODS)
+        execute_buy(world.captain, port, "grain", 10, GOODS)
+        item = world.captain.cargo[0]
+        original_cost_per_unit = item.cost_basis / item.quantity
+        execute_sell(world.captain, port, "grain", 5)
+        remaining = world.captain.cargo[0]
+        new_cost_per_unit = remaining.cost_basis / remaining.quantity
+        assert new_cost_per_unit == round(original_cost_per_unit), (
+            f"Avg cost changed from {original_cost_per_unit} to {new_cost_per_unit} after partial sell"
+        )
+
     def test_buy_reduces_port_stock(self):
         world = new_game()
         port = world.ports["porto_novo"]

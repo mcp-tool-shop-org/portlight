@@ -868,12 +868,18 @@ def merchant(
 @app.command()
 def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -> None:
     """View or buy ships at the shipyard."""
+    from portlight.engine.models import PortFeature
     s = _session()
     if not s.current_port:
         console.print("[yellow]Must be docked to visit the shipyard.[/yellow]")
         return
 
+    has_shipyard = PortFeature.SHIPYARD in s.current_port.features
+
     if buy_ship:
+        if not has_shipyard:
+            console.print(f"[yellow]{s.current_port.name} has no shipyard.[/yellow]")
+            return
         err = s.buy_ship(buy_ship)
         if err:
             console.print(f"[red]{err}[/red]")
@@ -881,6 +887,8 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
             console.print("\n[bold green]Ship purchased![/bold green]\n")
             console.print(views.status_view(s.world, s.ledger, s.infra))
     else:
+        if not has_shipyard:
+            console.print(f"[yellow]{s.current_port.name} has no shipyard. Browse only — no purchases available.[/yellow]\n")
         console.print(views.shipyard_view(s.captain))
 
 
@@ -2083,10 +2091,10 @@ def armory(
             [{"id": w.id, "name": w.name, "type": w.weapon_type, "damage": f"{w.damage_min}-{w.damage_max}",
               "accuracy": f"{w.accuracy:.0%}", "cost": w.silver_cost, "reload": w.reload_turns}
              for w in weapons],
-            {"firearm": s.captain.combat_gear.firearm, "firearm_ammo": s.captain.combat_gear.firearm_ammo,
-             "throwing": s.captain.combat_gear.throwing_weapons,
-             "mechanical": s.captain.combat_gear.mechanical_weapon,
-             "mechanical_ammo": s.captain.combat_gear.mechanical_ammo},
+            {"melee": s.captain.combat_gear.melee_weapon or "fists",
+             "ranged": s.captain.combat_gear.firearm or s.captain.combat_gear.mechanical_weapon or "none",
+             "ammo": s.captain.combat_gear.firearm_ammo + s.captain.combat_gear.mechanical_ammo,
+             "throwing": s.captain.combat_gear.throwing_weapons},
         ))
         return
 

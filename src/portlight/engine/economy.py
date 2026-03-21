@@ -254,9 +254,12 @@ def execute_sell(
     flood_increase = qty / max(slot.stock_target, 1) * 0.3
     slot.flood_penalty = min(1.0, slot.flood_penalty + flood_increase)
 
-    # Update cargo
-    existing.quantity -= qty
-    if existing.quantity == 0:
+    # Update cargo — adjust cost_basis proportionally on partial sell
+    if existing.quantity > qty:
+        cost_per_unit = existing.cost_basis / existing.quantity
+        existing.quantity -= qty
+        existing.cost_basis = round(cost_per_unit * existing.quantity)
+    else:
         captain.cargo.remove(existing)
 
     return TradeReceipt(
