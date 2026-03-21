@@ -6,12 +6,12 @@ advance_day() produces its base events, adding flavor events that make
 every voyage feel unique.
 
 Contract:
-  enrich_voyage_day(world, route, events, rng) → list[VoyageEvent]
+  enrich_voyage_day(world, route, events, rng) -> list[VoyageEvent]
     - Takes base events from advance_day()
     - Adds route encounters, NPC sightings, weather, crew mood
     - Returns enriched event list
 
-  check_superstitions(world, cultural_state) → list[SeaSuperstition]
+  check_superstitions(world, cultural_state) -> list[SeaSuperstition]
     - Checks for one-time triggers
     - Returns newly fired superstitions
 """

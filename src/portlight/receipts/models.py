@@ -1,6 +1,6 @@
 """Trade receipt schema — the verifiable proof trail.
 
-Receipts are deterministic: same inputs → same ID and hash.
+Receipts are deterministic: same inputs -> same ID and hash.
 This module defines the schema only; hashing and export live in receipts.core.
 """
 

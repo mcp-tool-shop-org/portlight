@@ -541,6 +541,13 @@ def depart(world: "WorldState", destination_id: str) -> VoyageState | str:
     if suitability and suitability.startswith("BLOCKED"):
         return suitability
 
+    # Crew minimum check
+    from portlight.content.ships import SHIPS
+    template = SHIPS.get(captain.ship.template_id)
+    crew_min = template.crew_min if template else 1
+    if captain.ship.crew < crew_min:
+        return f"Need at least {crew_min} crew to sail, have {captain.ship.crew}. Hire crew first."
+
     # Pay port fee (captain modifier applies)
     port = world.ports.get(current_port_id)
     if port:

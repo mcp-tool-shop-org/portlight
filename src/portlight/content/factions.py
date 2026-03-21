@@ -30,7 +30,7 @@ class PirateFaction:
     ethos: str                       # one-liner philosophy
     smuggler_attitude: str           # friendly / neutral / hostile toward smugglers
     merchant_attitude: str           # toward merchants
-    seasonal_activity: dict[Season, float] = field(default_factory=dict)  # season → mult
+    seasonal_activity: dict[Season, float] = field(default_factory=dict)  # season -> mult
     encounter_flavor: list[str] = field(default_factory=list)
 
 
@@ -357,7 +357,7 @@ class FactionRelationship:
 #   hostile:  active conflict (spillover -0.3 to -0.5)
 
 FACTION_RELATIONSHIPS: list[FactionRelationship] = [
-    # === CRIMSON TIDE ↔ MONSOON SYNDICATE ===
+    # === CRIMSON TIDE <-> MONSOON SYNDICATE ===
     FactionRelationship(
         faction_a="crimson_tide",
         faction_b="monsoon_syndicate",
@@ -372,7 +372,7 @@ FACTION_RELATIONSHIPS: list[FactionRelationship] = [
         vendetta_trigger="Running opium for the Syndicate through Tide waters.",
     ),
 
-    # === CRIMSON TIDE ↔ DEEP REEF ===
+    # === CRIMSON TIDE <-> DEEP REEF ===
     FactionRelationship(
         faction_a="crimson_tide",
         faction_b="deep_reef",
@@ -387,7 +387,7 @@ FACTION_RELATIONSHIPS: list[FactionRelationship] = [
         vendetta_trigger="Supplying weapons to the Tide that get used against Brotherhood ships.",
     ),
 
-    # === CRIMSON TIDE ↔ IRON WOLVES ===
+    # === CRIMSON TIDE <-> IRON WOLVES ===
     FactionRelationship(
         faction_a="crimson_tide",
         faction_b="iron_wolves",
@@ -402,7 +402,7 @@ FACTION_RELATIONSHIPS: list[FactionRelationship] = [
         vendetta_trigger="Selling black powder to the Tide that was meant for the Wolves.",
     ),
 
-    # === MONSOON SYNDICATE ↔ DEEP REEF ===
+    # === MONSOON SYNDICATE <-> DEEP REEF ===
     FactionRelationship(
         faction_a="monsoon_syndicate",
         faction_b="deep_reef",
@@ -417,7 +417,7 @@ FACTION_RELATIONSHIPS: list[FactionRelationship] = [
         vendetta_trigger="None — they don't care about each other.",
     ),
 
-    # === MONSOON SYNDICATE ↔ IRON WOLVES ===
+    # === MONSOON SYNDICATE <-> IRON WOLVES ===
     FactionRelationship(
         faction_a="monsoon_syndicate",
         faction_b="iron_wolves",
@@ -432,7 +432,7 @@ FACTION_RELATIONSHIPS: list[FactionRelationship] = [
         vendetta_trigger="Sharing intelligence with the Syndicate about Wolf positions.",
     ),
 
-    # === DEEP REEF ↔ IRON WOLVES ===
+    # === DEEP REEF <-> IRON WOLVES ===
     FactionRelationship(
         faction_a="deep_reef",
         faction_b="iron_wolves",

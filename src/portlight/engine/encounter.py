@@ -1,7 +1,7 @@
 """Encounter engine — pirate encounter state machine.
 
 Bridges voyage events to the combat system. A pirate encounter flows through
-phases: approach → naval → boarding → duel → resolved.
+phases: approach -> naval -> boarding -> duel -> resolved.
 
 At each phase, the player chooses an action:
   approach: negotiate / flee / fight

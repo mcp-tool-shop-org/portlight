@@ -6,9 +6,9 @@ Everything here is mechanically grounded in ledger, contracts, reputation,
 infrastructure, and ship history.
 
 Core functions:
-  - evaluate_milestones(session_snapshot) → newly completed milestones
-  - compute_career_profile(session_snapshot) → ranked profile tags
-  - compute_victory_progress(session_snapshot) → per-path progress
+  - evaluate_milestones(session_snapshot) -> newly completed milestones
+  - compute_career_profile(session_snapshot) -> ranked profile tags
+  - compute_victory_progress(session_snapshot) -> per-path progress
 
 Design law:
   - Milestones derive from actual business history, not flags or counters.
@@ -296,7 +296,7 @@ def _regions_with_broker(snap: SessionSnapshot) -> set[str]:
 
 
 def _regions_with_warehouse(snap: SessionSnapshot) -> set[str]:
-    """Regions that have an active warehouse (need port→region mapping)."""
+    """Regions that have an active warehouse (need port->region mapping)."""
     regions = set()
     for w in snap.infra.warehouses:
         if not w.active:
@@ -791,7 +791,7 @@ def _milestone_scores(snap: SessionSnapshot) -> dict[str, tuple[float, float]]:
     lifetime: dict[str, float] = {}
     recent: dict[str, float] = {}
 
-    # Build family→tag reverse map
+    # Build family->tag reverse map
     family_to_tags: dict[str, list[str]] = {}
     for tag, families in PROFILE_MILESTONE_FAMILIES.items():
         for fam in families:
@@ -977,7 +977,7 @@ def _evaluate_lawful_trade_house(snap: SessionSnapshot) -> VictoryPathStatus:
             f"Complete {T['contracts_completed'] - contracts} more contracts" if contracts < T["contracts_completed"] else "",
         ),
         _req(
-            f"Max heat ≤ {T['max_heat_cap']}",
+            f"Max heat <= {T['max_heat_cap']}",
             max_h <= T["max_heat_cap"],
             f"Max heat: {max_h}",
             f"Reduce customs heat from {max_h} to {T['max_heat_cap']} or below",
@@ -1032,14 +1032,14 @@ def _evaluate_shadow_network(snap: SessionSnapshot) -> VictoryPathStatus:
             f"Complete {T['discreet_completions'] - discreet} more discreet luxury deliveries" if discreet < T["discreet_completions"] else "",
         ),
         _req(
-            f"Operated under meaningful heat (≥ {T['heat_floor']})",
+            f"Operated under meaningful heat (>= {T['heat_floor']})",
             max_h >= T["heat_floor"],
             f"Max heat: {max_h}",
             f"Shadow commerce requires operating under customs pressure (heat {max_h}, need {T['heat_floor']}+)",
             blocker=max_h < T["heat_floor"] and profit > 1000,  # blocker if profitable but clean
         ),
         _req(
-            f"Heat manageable (≤ {T['heat_ceiling']})",
+            f"Heat manageable (<= {T['heat_ceiling']})",
             max_h <= T["heat_ceiling"],
             f"Max heat: {max_h}",
             f"Reduce heat from {max_h} — network collapses above {T['heat_ceiling']}",
@@ -1115,7 +1115,7 @@ def _evaluate_oceanic_reach(snap: SessionSnapshot) -> VictoryPathStatus:
             "Open a broker office or warehouse in the East Indies",
         ),
         _req(
-            f"East Indies standing ≥ {T['ei_standing']}",
+            f"East Indies standing >= {T['ei_standing']}",
             ei_standing >= T["ei_standing"],
             f"EI standing: {ei_standing}",
             f"Build East Indies standing from {ei_standing} to {T['ei_standing']}",

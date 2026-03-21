@@ -89,7 +89,7 @@ def derive_breakpoint(rel: CaptainRelationship) -> str:
 # Encounter recording
 # ---------------------------------------------------------------------------
 
-# Delta tables: outcome → (respect, fear, grudge, familiarity)
+# Delta tables: outcome -> (respect, fear, grudge, familiarity)
 _OUTCOME_DELTAS: dict[str, tuple[int, int, int, int]] = {
     "player_won":       (15, 10, 5, 10),
     "player_won_spared": (25, 5, -10, 15),

@@ -171,10 +171,10 @@ def maintain_weapon(
 
 # Cost to upgrade one tier (escalating)
 UPGRADE_COST = {
-    "rusted": 20,       # rusted → worn
-    "worn": 40,         # worn → standard
-    "standard": 100,    # standard → fine
-    "fine": 300,        # fine → masterwork
+    "rusted": 20,       # rusted -> worn
+    "worn": 40,         # worn -> standard
+    "standard": 100,    # standard -> fine
+    "fine": 300,        # fine -> masterwork
 }
 
 UPGRADE_DAYS = {

@@ -31,7 +31,7 @@ def can_learn_skill(
     if current_level >= skill.max_level:
         return f"Already at maximum {skill.name} level ({skill.levels[current_level - 1].name})."
 
-    next_level = skill.levels[current_level]  # 0-indexed: level 0→levels[0], etc.
+    next_level = skill.levels[current_level]  # 0-indexed: level 0->levels[0], etc.
 
     # Check trainer at port
     trainers = get_trainers_at_port(current_port_id, skill_id)
@@ -109,7 +109,7 @@ def get_degrade_threshold_bonus(blacksmith_level: int) -> int:
     """Get extra uses before degradation from blacksmith skill.
 
     Returns additional uses to add to the base threshold.
-    E.g. base 10, level 3 (60% slow) → +6 extra uses → effective threshold 16.
+    E.g. base 10, level 3 (60% slow) -> +6 extra uses -> effective threshold 16.
     """
     effects = get_blacksmith_effects(blacksmith_level)
     slow = effects["degrade_slow"]
@@ -137,7 +137,7 @@ def field_repair_weapon(
 ) -> tuple[bool, str | None]:
     """Attempt field repair at sea. Returns (success, error_or_None).
 
-    Field repair resets usage counter and can restore worn→standard (level 2+).
+    Field repair resets usage counter and can restore worn->standard (level 2+).
     """
     if not can_field_repair(blacksmith_level):
         return False, "Need Journeyman blacksmith skill to repair at sea."

@@ -277,7 +277,7 @@ class ReputationState:
     # Recent incidents (capped at 20, newest first)
     recent_incidents: list[ReputationIncident] = field(default_factory=list)
     # Underworld standing (per pirate faction)
-    underworld_standing: dict[str, int] = field(default_factory=dict)  # faction_id → 0-100
+    underworld_standing: dict[str, int] = field(default_factory=dict)  # faction_id -> 0-100
     underworld_heat: int = 0  # snitch factor — rises from betraying pirates
 
 
@@ -310,17 +310,17 @@ class CombatGear:
     """Weapons, armor, and ammunition carried by the captain."""
     firearm: str | None = None         # weapon id (matchlock_pistol, etc.)
     firearm_ammo: int = 0
-    throwing_weapons: dict[str, int] = field(default_factory=dict)  # weapon_id → count
+    throwing_weapons: dict[str, int] = field(default_factory=dict)  # weapon_id -> count
     mechanical_weapon: str | None = None  # hand_crossbow, etc.
     mechanical_ammo: int = 0
     armor: str | None = None           # armor id (leather_vest, chain_shirt, etc.)
     melee_weapon: str | None = None    # melee weapon id (cutlass, rapier, etc.)
-    weapon_upgrades: dict[str, list[str]] = field(default_factory=dict)  # weapon_id → upgrade_ids
-    # Quality tracking: weapon_id → quality tier string
+    weapon_upgrades: dict[str, list[str]] = field(default_factory=dict)  # weapon_id -> upgrade_ids
+    # Quality tracking: weapon_id -> quality tier string
     weapon_quality: dict[str, str] = field(default_factory=dict)  # e.g. {"cutlass": "standard"}
-    # Usage counters for degradation: weapon_id → uses since last maintenance
+    # Usage counters for degradation: weapon_id -> uses since last maintenance
     weapon_usage: dict[str, int] = field(default_factory=dict)  # e.g. {"cutlass": 7}
-    weapon_provenance: dict = field(default_factory=dict)  # weapon_id → WeaponProvenance (serialized)
+    weapon_provenance: dict = field(default_factory=dict)  # weapon_id -> WeaponProvenance (serialized)
 
 
 @dataclass
@@ -341,7 +341,7 @@ class Captain:
     combat_gear: CombatGear = field(default_factory=CombatGear)
     injuries: list[ActiveInjury] = field(default_factory=list)
     # Skills
-    skills: dict[str, int] = field(default_factory=dict)  # skill_id → level (0-3)
+    skills: dict[str, int] = field(default_factory=dict)  # skill_id -> level (0-3)
     # Companions
     party: dict = field(default_factory=lambda: {"companions": [], "max_size": 2, "departed": []})
     # Fleet (Phase 7+)
@@ -371,7 +371,7 @@ class SeasonalProfile:
     region: str
     danger_mult: float = 1.0         # multiplier on route danger
     speed_mult: float = 1.0          # multiplier on travel speed
-    market_effects: dict[str, float] = field(default_factory=dict)  # good_id → demand mult
+    market_effects: dict[str, float] = field(default_factory=dict)  # good_id -> demand mult
     weather_flavor: list[str] = field(default_factory=list)
     travel_warning: str = ""         # shown before departure
 
@@ -446,7 +446,7 @@ class PirateState:
     pending_duel: PendingDuel | None = None
     naval_victories: int = 0
     naval_defeats: int = 0
-    captain_memories: dict = field(default_factory=dict)  # captain_id → CaptainMemory (engine layer)
+    captain_memories: dict = field(default_factory=dict)  # captain_id -> CaptainMemory (engine layer)
     encounter_phase: str = ""  # persisted encounter phase (approach/naval/boarding/duel/"" = none)
     encounter_state: dict = field(default_factory=dict)  # serialized encounter combat state
 
@@ -455,7 +455,7 @@ class PirateState:
 class EncounterState:
     """Active pirate encounter — multi-phase state machine.
 
-    Phases: approach → naval → boarding → duel → resolved
+    Phases: approach -> naval -> boarding -> duel -> resolved
     """
     enemy_captain_id: str = ""
     enemy_captain_name: str = ""
@@ -574,7 +574,7 @@ class Festival:
     description: str
     region: str
     frequency_days: int              # roughly how often (stochastic trigger)
-    market_effects: dict[str, float] = field(default_factory=dict)  # good_id → demand mult
+    market_effects: dict[str, float] = field(default_factory=dict)  # good_id -> demand mult
     duration_days: int = 3
     standing_bonus: int = 0          # bonus standing for trading during festival
 
@@ -625,7 +625,7 @@ class CulturalState:
     active_festivals: list[ActiveFestival] = field(default_factory=list)
     regions_entered: list[str] = field(default_factory=list)
     cultural_encounters: int = 0
-    port_visits: dict[str, int] = field(default_factory=dict)  # port_id → count
+    port_visits: dict[str, int] = field(default_factory=dict)  # port_id -> count
     festivals_visited: int = 0  # lifetime count of festival port arrivals
 
 

@@ -266,7 +266,7 @@ def resolve_naval_round(
         if enemy_action != "evade":
             new_boarding += 1
 
-    # player_action == "evade" → no offensive effect
+    # player_action == "evade" -> no offensive effect
 
     # --- Enemy damage to player ---
     if enemy_action == "broadside" and enemy_ship.cannons > 0:

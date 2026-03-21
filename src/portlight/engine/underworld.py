@@ -170,7 +170,7 @@ def apply_standing_spillover(
         else:
             continue
 
-        # spillover: positive delta with source → negative effect on enemies
+        # spillover: positive delta with source -> negative effect on enemies
         raw_spillover = int(delta * rel.spillover)
         if raw_spillover == 0 and rel.spillover != 0.0 and abs(delta) >= 3:
             # Ensure meaningful deltas produce at least ±1 spillover

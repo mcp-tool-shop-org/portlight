@@ -36,7 +36,7 @@ class PortNPC:
     greeting_friendly: str           # what they say to a friend (high standing)
     greeting_hostile: str            # what they say to someone they distrust
     rumor: str                       # gossip about them you'd hear at the tavern
-    relationship_notes: dict[str, str] = field(default_factory=dict)  # npc_id → how they feel
+    relationship_notes: dict[str, str] = field(default_factory=dict)  # npc_id -> how they feel
 
 
 @dataclass(frozen=True)

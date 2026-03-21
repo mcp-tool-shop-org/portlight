@@ -325,6 +325,24 @@ class GameSession:
             tick_markets(self.world.ports, days=1, rng=self._rng)
             self.world.day += 1
             self.world.captain.day += 1
+
+            # Consume provisions (1 per day in port)
+            captain = self.world.captain
+            if captain.provisions > 0:
+                captain.provisions -= 1
+
+            # Pay crew wages while docked (same formula as at sea)
+            if captain.ship:
+                from portlight.content.ships import SHIPS as _SHIPS
+                from portlight.engine.ship_stats import compute_daily_wages as _cdw
+                from portlight.engine.fleet import fleet_daily_wages as _fdw
+                _tmpl = _SHIPS.get(captain.ship.template_id)
+                _dw = _tmpl.daily_wage if _tmpl else 1
+                _wage = _cdw(captain.ship.roster, _dw) if captain.ship.roster.total > 0 else _dw * captain.ship.crew
+                _wage += _fdw(captain)
+                if _wage > 0 and captain.silver >= _wage:
+                    captain.silver -= _wage
+
             for port in self.world.ports.values():
                 self._recalc(port)
             self._evaluate_campaign()

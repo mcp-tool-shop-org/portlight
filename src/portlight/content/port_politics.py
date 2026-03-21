@@ -258,7 +258,7 @@ BLOC_RELATIONSHIPS: list[BlocRelationship] = [
         "Distant. Monsoon Reach trades with the Crown occasionally, but no formal ties.",
         spillover=0.0),
 
-    # Shadow Ports ↔ Coral Crown
+    # Shadow Ports <-> Coral Crown
     BlocRelationship("shadow_ports", "coral_crown", "neutral",
         "The Crown doesn't care about your morals, only your tribute. Shadow Ports are welcome if they pay.",
         spillover=0.0),

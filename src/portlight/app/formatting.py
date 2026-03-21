@@ -22,7 +22,7 @@ def silver_delta(amount: int) -> str:
 
 
 def cargo_bar(used: float, capacity: int) -> str:
-    """Visual cargo usage: [████░░░░] 24/80."""
+    """Visual cargo usage: [####----] 24/80."""
     ratio = used / capacity if capacity > 0 else 0
     filled = int(ratio * 10)
     empty = 10 - filled

@@ -405,7 +405,26 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
     """Advance time (sail if at sea, wait if in port)."""
     global _active_encounter, _player_combatant, _opponent_combatant
     s = _session()
+
+    # Block if there's an unresolved encounter (persisted or in-memory)
+    _restore_encounter(s)
+    if _active_encounter is not None:
+        console.print("[bold red]Encounter in progress![/bold red] Resolve it first:")
+        phase = getattr(_active_encounter, "phase", "approach")
+        if phase == "approach":
+            console.print("  [cyan]portlight encounter <negotiate|flee|fight>[/cyan]")
+        elif phase == "naval":
+            console.print("  [cyan]portlight naval <broadside|close|evade|rake|flee>[/cyan]")
+        elif phase == "boarding":
+            console.print("  [cyan]portlight fight <thrust|slash|parry>[/cyan]")
+        elif phase == "duel":
+            console.print("  [cyan]portlight fight <thrust|slash|parry>[/cyan]")
+        elif phase == "resolved":
+            console.print("  [cyan]portlight spare[/cyan] or [cyan]portlight take-all[/cyan]")
+        return
+
     for _ in range(days):
+        was_at_sea = s.at_sea
         events = s.advance()
 
         # Tick NPC captain agency (autonomous actions)
@@ -522,8 +541,8 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
         else:
             console.print(f"[dim]Day {s.world.day}. Markets shift.[/dim]")
 
-        # Check if arrived
-        if s.current_port:
+        # Check if arrived (only show arrival if we transitioned from sea)
+        if s.current_port and was_at_sea:
             port = s.current_port
             console.print(f"\n[bold green]Arrived at {port.name}![/bold green]\n")
             console.print(views.port_view(port, s.captain))

@@ -159,11 +159,16 @@ def execute_buy(
     """Buy goods from port. Returns TradeReceipt on success, error string on failure."""
     slot = next((s for s in port.market if s.good_id == good_id), None)
     if slot is None:
+        # Try matching by display name (case-insensitive) and suggest the correct ID
+        for s in port.market:
+            g = goods_table.get(s.good_id)
+            if g and getattr(g, "name", "").lower().replace(" ", "_") == good_id.lower():
+                return f"{good_id} not available at {port.name} -- did you mean: {s.good_id}"
         return f"{good_id} not available at {port.name}"
     if qty <= 0:
         return "Quantity must be positive"
     if qty > slot.stock_current:
-        return f"Only {slot.stock_current} units available"
+        return f"Only {slot.stock_current} units available -- try: buy {good_id} {slot.stock_current}"
 
     total = slot.buy_price * qty
     if total > captain.silver:

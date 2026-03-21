@@ -279,7 +279,7 @@ _SS_WINTER = SeasonalProfile(
 
 
 # ---------------------------------------------------------------------------
-# Lookup table: (region, season) → SeasonalProfile
+# Lookup table: (region, season) -> SeasonalProfile
 # ---------------------------------------------------------------------------
 
 SEASONAL_PROFILES: dict[tuple[str, Season], SeasonalProfile] = {}

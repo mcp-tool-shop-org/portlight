@@ -49,7 +49,7 @@ class NetworkNode:
 # Who trades with whom across ports, and what that means for the player.
 
 MERCHANT_RELATIONSHIPS: list[CrossPortRelationship] = [
-    # === The Grain-Cotton Axis (Mediterranean ↔ West Africa) ===
+    # === The Grain-Cotton Axis (Mediterranean <-> West Africa) ===
     CrossPortRelationship(
         "pn_marta", "Marta Soares", "porto_novo",
         "sh_ama", "Ama Mensah", "sun_harbor",
@@ -76,7 +76,7 @@ MERCHANT_RELATIONSHIPS: list[CrossPortRelationship] = [
         player_impact="Captains who carry cotton east or silk west get premium prices from both. This route is the future of trade — early adopters earn loyalty.",
     ),
 
-    # === The Iron Triangle (Ironhaven ↔ Iron Point ↔ Jade Port) ===
+    # === The Iron Triangle (Ironhaven <-> Iron Point <-> Jade Port) ===
     CrossPortRelationship(
         "ip_broker_yaa", "Yaa Acheampong", "iron_point",
         "jp_factor_wu", "Factor Wu Jian", "jade_port",

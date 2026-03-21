@@ -9,7 +9,7 @@ Design rules:
   - Capacity is large enough to enable staging, not so large it bypasses timing.
 
 Broker offices (3D-2A):
-  - Region-level, 2 tiers each (local → established).
+  - Region-level, 2 tiers each (local -> established).
   - Each region has a personality: Mediterranean=lawful, West Africa=staples,
     East Indies=long-haul premium.
   - Offices improve board quality, market legibility, and trade terms.
@@ -96,7 +96,7 @@ def get_tier_spec(tier: WarehouseTier) -> WarehouseTierSpec:
 # Broker office specs — region × tier
 # ---------------------------------------------------------------------------
 
-# Key: (region, tier) → BrokerOfficeSpec
+# Key: (region, tier) -> BrokerOfficeSpec
 BROKER_SPECS: dict[tuple[str, BrokerTier], BrokerOfficeSpec] = {
     # --- Mediterranean: lawful procurement, charter work, stable commerce ---
     ("Mediterranean", BrokerTier.LOCAL): BrokerOfficeSpec(
@@ -172,7 +172,7 @@ def get_broker_spec(region: str, tier: BrokerTier) -> BrokerOfficeSpec | None:
 
 
 def available_broker_tiers(region: str) -> list[BrokerOfficeSpec]:
-    """Get all broker tiers available in a region, ordered local → established."""
+    """Get all broker tiers available in a region, ordered local -> established."""
     result = []
     for t in (BrokerTier.LOCAL, BrokerTier.ESTABLISHED):
         spec = BROKER_SPECS.get((region, t))

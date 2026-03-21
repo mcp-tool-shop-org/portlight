@@ -241,7 +241,7 @@ def get_milestone_spec(milestone_id: str) -> MilestoneSpec | None:
 # and milestone families that contribute to it.
 # Tunable here so balance changes don't require engine edits.
 
-# Which milestone families feed each profile tag (tag → list of families).
+# Which milestone families feed each profile tag (tag -> list of families).
 # Milestones in these families add to the tag's lifetime score.
 PROFILE_MILESTONE_FAMILIES: dict[str, list[str]] = {
     "Lawful House": ["lawful_house", "regional_foothold"],
@@ -272,7 +272,7 @@ CONFIDENCE_THRESHOLDS: dict[str, float] = {
     "Defining": 60.0,
     "Strong": 35.0,
     "Moderate": 15.0,
-    # Below Moderate → Forming
+    # Below Moderate -> Forming
 }
 
 # Minimum combined_score to appear as a secondary trait.
@@ -303,7 +303,7 @@ SHADOW_THRESHOLDS = {
     "heat_ceiling": 40,               # not catastrophic — still functioning
     "profit_under_heat": 2000,        # net profit while sustaining heat
     "silver_min": 1500,
-    "trades_under_heat": 8,           # trade volume with heat ≥ 10
+    "trades_under_heat": 8,           # trade volume with heat >= 10
 }
 
 OCEANIC_THRESHOLDS = {
@@ -358,7 +358,7 @@ CANDIDATE_BOOSTS: dict[str, dict[str, float]] = {
     "lawful_house": {
         "trust_rank_bonus_per": 5.0,       # per trust rank above 2
         "standing_breadth_bonus": 8.0,     # 2+ regions with standing 10+
-        "low_heat_bonus": 10.0,            # max heat ≤ 3
+        "low_heat_bonus": 10.0,            # max heat <= 3
         "seizure_penalty": -15.0,          # per seizure
         "high_heat_penalty_per": -3.0,     # per point of max heat above 5
         "default_penalty": -20.0,          # any credit default

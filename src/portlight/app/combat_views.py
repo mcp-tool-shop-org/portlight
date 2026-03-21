@@ -258,7 +258,7 @@ def combat_status_view(
             severity = inj.get("severity", "minor")
             color = _severity_color(severity)
             effect = inj.get("effect", "")
-            lines.append(f"  [{color}]• {name} ({severity})[/{color}] {effect}")
+            lines.append(f"  [{color}]* {name} ({severity})[/{color}] {effect}")
 
     lines.append("")
     actions_str = "  ".join(f"[cyan][{a}][/cyan]" for a in available_actions)
@@ -509,13 +509,13 @@ def fight_result_view(result_data: dict) -> Panel:
 
     # Banner
     if outcome == "victory":
-        banner = "[bold green]═══ VICTORY ═══[/bold green]"
+        banner = "[bold green]=== VICTORY ===[/bold green]"
         border = "green"
     elif outcome == "defeat":
-        banner = "[bold red]═══ DEFEAT ═══[/bold red]"
+        banner = "[bold red]=== DEFEAT ===[/bold red]"
         border = "red"
     else:
-        banner = "[bold yellow]═══ DRAW ═══[/bold yellow]"
+        banner = "[bold yellow]=== DRAW ===[/bold yellow]"
         border = "yellow"
 
     lines: list[str] = []
@@ -537,9 +537,9 @@ def fight_result_view(result_data: dict) -> Panel:
                 name = inj.get("name", "wound")
                 severity = inj.get("severity", "minor")
                 color = _severity_color(severity)
-                lines.append(f"  [{color}]• {name} ({severity})[/{color}]")
+                lines.append(f"  [{color}]* {name} ({severity})[/{color}]")
             else:
-                lines.append(f"  [yellow]• {inj}[/yellow]")
+                lines.append(f"  [yellow]* {inj}[/yellow]")
 
     # Summary stats
     lines.append("")

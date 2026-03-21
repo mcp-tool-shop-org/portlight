@@ -4,7 +4,7 @@ Companions are NPCs who travel with the player, provide role-based bonuses,
 react to decisions via morale, and can leave if pushed too far.
 
 Max 2 active companions. Each has morale (0-100) that shifts with events.
-Departure triggers at morale ≤ 10.
+Departure triggers at morale <= 10.
 
 Pure functions — callers decide what to mutate.
 """
@@ -184,7 +184,7 @@ class DepartureEvent:
 def check_departures(party: PartyState) -> list[DepartureEvent]:
     """Check if any companions should depart due to low morale.
 
-    Departure triggers at morale ≤ 10. Returns list of departure events.
+    Departure triggers at morale <= 10. Returns list of departure events.
     Removes departing companions from party.
     """
     departures: list[DepartureEvent] = []

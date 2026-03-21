@@ -271,7 +271,7 @@ COMPANIONS: dict[str, CompanionDef] = {c.id: c for c in [
 # Morale reaction table
 # ---------------------------------------------------------------------------
 
-# trigger → {role_id: morale_delta}
+# trigger -> {role_id: morale_delta}
 MORALE_REACTIONS: dict[str, dict[str, int]] = {
     "combat_won":       {"marine": 5, "navigator": 1, "surgeon": -1, "smuggler": 0, "quartermaster": 0},
     "combat_lost":      {"marine": -3, "navigator": -2, "surgeon": -2, "smuggler": -1, "quartermaster": -2},
@@ -289,7 +289,7 @@ MORALE_REACTIONS: dict[str, dict[str, int]] = {
 }
 
 
-# Personality modifiers: personality → global morale modifier
+# Personality modifiers: personality -> global morale modifier
 PERSONALITY_MODIFIERS: dict[str, dict[str, int]] = {
     "lawful":    {"contraband_trade": -3, "spared_enemy": 2, "took_all": -2},
     "pragmatic": {},  # no extra modifiers — baseline

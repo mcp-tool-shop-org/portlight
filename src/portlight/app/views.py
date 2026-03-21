@@ -196,7 +196,7 @@ def status_view(world: "WorldState", ledger: "ReceiptLedger", infra: "Infrastruc
             pct = int(world.voyage.progress / max(world.voyage.distance, 1) * 100)
             dest_name = world.ports.get(world.voyage.destination_id)
             dest_label = dest_name.name if dest_name else world.voyage.destination_id
-            lines.append(f"[bold cyan]At sea[/bold cyan] → {dest_label} ({pct}% complete, day {world.voyage.days_elapsed})")
+            lines.append(f"[bold cyan]At sea[/bold cyan] -> {dest_label} ({pct}% complete, day {world.voyage.days_elapsed})")
         else:
             port = world.ports.get(world.voyage.destination_id)
             lines.append(f"Docked at [bold]{port.name if port else '???'}[/bold]")
@@ -433,8 +433,10 @@ def market_view(port: "Port", captain: "Captain") -> Panel:
         elif slot.flood_penalty > 0:
             sell_str = f"[yellow]{slot.sell_price}[/yellow]"
 
+        # Show good ID when it differs from display name (helps with buy/sell commands)
+        good_label = good.name if good.name.lower().replace(" ", "_") == slot.good_id else f"{good.name} ({slot.good_id})"
         table.add_row(
-            good.name,
+            good_label,
             str(slot.buy_price),
             sell_str,
             f"{slot.stock_current}/{slot.stock_target}",
@@ -557,9 +559,9 @@ def voyage_view(world: "WorldState", events: list | None = None) -> Panel:
         origin_name = origin.name if origin else voyage.origin_id
         dest_name = dest.name if dest else voyage.destination_id
 
-        pct = int(voyage.progress / max(voyage.distance, 1) * 100)
+        pct = min(100, int(voyage.progress / max(voyage.distance, 1) * 100))
         # Progress bar
-        filled = pct // 10
+        filled = min(10, pct // 10)
         empty = 10 - filled
         bar = f"[cyan]{'#' * filled}{'-' * empty}[/cyan]"
         lines.append(f"{origin_name} {bar} {dest_name}")
@@ -890,7 +892,7 @@ def _event_icon(event_type: str) -> str:
         "provisions_spoiled": "[red]x[/red]",
         "nothing": "[dim].[/dim]",
     }
-    return icons.get(event_type, "·")
+    return icons.get(event_type, ".")
 
 
 # ---------------------------------------------------------------------------
@@ -1321,7 +1323,7 @@ def insurance_view(infra: "InfrastructureState", heat: int = 0) -> Panel:
             if p.target_id:
                 scope_desc += f" ({p.target_id[:8]})"
             elif p.voyage_destination:
-                scope_desc += f" → {p.voyage_destination}"
+                scope_desc += f" -> {p.voyage_destination}"
             remaining = p.coverage_cap - p.total_paid_out
             active_table.add_row(
                 f"[green]{name}[/green]",
@@ -1556,7 +1558,7 @@ def milestones_view(
         # Primary identity
         p = profile.primary
         bar_len = min(int(p.combined_score / 4), 20)
-        bar = "█" * bar_len
+        bar = "#" * bar_len
         ev = ", ".join(p.evidence[:3]) if p.evidence else ""
         parts.append(Text(f"  [bold cyan]{p.tag}[/bold cyan] {bar} {p.combined_score:.0f}  [{p.confidence.value}]"))
         if ev:
@@ -1565,7 +1567,7 @@ def milestones_view(
         # Secondary traits (up to 2)
         for s in profile.secondaries:
             bar_len = min(int(s.combined_score / 4), 20)
-            bar = "█" * bar_len
+            bar = "#" * bar_len
             ev = ", ".join(s.evidence[:2]) if s.evidence else ""
             parts.append(Text(f"  [dim]{s.tag}[/dim] {bar} {s.combined_score:.0f}  [{s.confidence.value}]"))
             if ev:
@@ -1575,7 +1577,7 @@ def milestones_view(
         if profile.emerging:
             e = profile.emerging
             ev = ", ".join(e.evidence[:2]) if e.evidence else ""
-            parts.append(Text(f"  [italic yellow]{e.tag}[/italic yellow] ↑ {e.recent_score:.0f} recent  [{e.confidence.value}]"))
+            parts.append(Text(f"  [italic yellow]{e.tag}[/italic yellow] ^ {e.recent_score:.0f} recent  [{e.confidence.value}]"))
             if ev:
                 parts.append(Text(f"    Emerging: {ev}"))
 
@@ -1622,13 +1624,13 @@ def milestones_view(
         blocked = path.requirements_blocked
         for req in blocked:
             detail = f" ({req.detail})" if req.detail else ""
-            action = f" → {req.action}" if req.action else ""
+            action = f" -> {req.action}" if req.action else ""
             parts.append(Text(f"    [bold red]Blocked:[/bold red] {req.description}{detail}{action}"))
 
         # Show missing requirements with actions
         missing = path.requirements_missing
         for req in missing[:3]:
-            action = f" → {req.action}" if req.action else ""
+            action = f" -> {req.action}" if req.action else ""
             detail = f" ({req.detail})" if req.detail else ""
             parts.append(Text(f"    [red]Missing:[/red] {req.description}{detail}{action}"))
         if len(missing) > 3:

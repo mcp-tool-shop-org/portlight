@@ -10,11 +10,11 @@ Design law:
   - Physical presence required: deposit/withdraw only when docked at the port.
 
 Warehouse lifecycle:
-  - lease_warehouse(state, port_id, tier) → opens a lease
-  - deposit_cargo(state, port_id, captain, good_id, qty) → ship → warehouse
-  - withdraw_cargo(state, port_id, captain, good_id, qty) → warehouse → ship
-  - tick_infrastructure(state, day) → deducts upkeep, closes defaulted leases
-  - warehouse_inventory(state, port_id) → read-only view of stored lots
+  - lease_warehouse(state, port_id, tier) -> opens a lease
+  - deposit_cargo(state, port_id, captain, good_id, qty) -> ship -> warehouse
+  - withdraw_cargo(state, port_id, captain, good_id, qty) -> warehouse -> ship
+  - tick_infrastructure(state, day) -> deducts upkeep, closes defaulted leases
+  - warehouse_inventory(state, port_id) -> read-only view of stored lots
 """
 
 from __future__ import annotations
@@ -277,7 +277,7 @@ def deposit_cargo(
     if quantity > warehouse.free_capacity:
         return f"Warehouse only has {warehouse.free_capacity} units of space"
 
-    # Execute transfer: ship → warehouse (preserve provenance)
+    # Execute transfer: ship -> warehouse (preserve provenance)
     deposit_qty = quantity
     cargo_item.quantity -= deposit_qty
     if cargo_item.quantity == 0:
@@ -353,7 +353,7 @@ def withdraw_cargo(
             f" from {source_port}" if source_port else ""
         )
 
-    # Execute transfer: warehouse → ship (preserve provenance per lot)
+    # Execute transfer: warehouse -> ship (preserve provenance per lot)
     remaining = quantity
     for lot in matching:
         if remaining <= 0:

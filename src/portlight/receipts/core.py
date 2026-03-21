@@ -1,9 +1,9 @@
 """Receipt hashing and export.
 
 Contract:
-  - hash_receipt(receipt) → deterministic SHA-256 hex digest
-  - export_ledger(ledger) → JSON string (human-readable)
-  - verify_receipt(receipt) → bool (receipt_id matches recomputed hash)
+  - hash_receipt(receipt) -> deterministic SHA-256 hex digest
+  - export_ledger(ledger) -> JSON string (human-readable)
+  - verify_receipt(receipt) -> bool (receipt_id matches recomputed hash)
 """
 
 from __future__ import annotations

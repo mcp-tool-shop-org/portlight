@@ -68,7 +68,7 @@ class ReputationSeed:
     west_africa: int = 0
     east_indies: int = 0
     south_seas: int = 0
-    # Underworld faction standing (faction_id → starting value)
+    # Underworld faction standing (faction_id -> starting value)
     underworld: dict[str, int] | None = None
 
 

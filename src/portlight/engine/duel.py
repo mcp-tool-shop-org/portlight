@@ -15,9 +15,9 @@ Each round produces flavor text tied to the specific captain.
 Duels have real consequences: silver, standing, cargo.
 
 Contract:
-  - resolve_round(player_stance, opponent, rng) → DuelRound
-  - pick_opponent_stance(opponent, player_history, rng) → str
-  - resolve_duel(player_stances, opponent, rng) → DuelResult
+  - resolve_round(player_stance, opponent, rng) -> DuelRound
+  - pick_opponent_stance(opponent, player_history, rng) -> str
+  - resolve_duel(player_stances, opponent, rng) -> DuelResult
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from portlight.engine.models import DuelResult, DuelRound
 
 STANCES = ("thrust", "slash", "parry")
 
-# stance → what it beats
+# stance -> what it beats
 _BEATS = {
     "thrust": "slash",
     "slash": "parry",

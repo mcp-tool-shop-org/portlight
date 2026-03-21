@@ -1,8 +1,8 @@
 """Save/load system — serialize WorldState to/from JSON.
 
 Contract:
-  - save_game(world, path) → writes JSON file
-  - load_game(path) → WorldState | None
+  - save_game(world, path) -> writes JSON file
+  - load_game(path) -> WorldState | None
   - WorldState round-trips without data loss
 """
 
@@ -63,8 +63,18 @@ from portlight.engine.narrative import JournalEntry, NarrativeState
 from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
-SAVE_FILE = "portlight_save.json"
+SAVE_FILE = "portlight_save.json"  # legacy filename, kept for migration
+DEFAULT_SLOT = "default"
 CURRENT_SAVE_VERSION = 11
+
+
+def save_filename(slot: str = DEFAULT_SLOT) -> str:
+    """Return the JSON filename for a named save slot."""
+    # Sanitize: only allow alphanumeric, dash, underscore
+    safe = "".join(c for c in slot if c.isalnum() or c in "-_")
+    if not safe:
+        safe = DEFAULT_SLOT
+    return f"{safe}.json"
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +82,7 @@ CURRENT_SAVE_VERSION = 11
 # ---------------------------------------------------------------------------
 
 def _migrate_v1_to_v2(data: dict) -> dict:
-    """v1 → v2: Add save_version tracking, ensure all subsections have defaults."""
+    """v1 -> v2: Add save_version tracking, ensure all subsections have defaults."""
     # Ensure campaign section exists
     if "campaign" not in data:
         data["campaign"] = {"completed": [], "completed_paths": []}
@@ -99,7 +109,7 @@ def _migrate_v1_to_v2(data: dict) -> dict:
 
 
 def _migrate_v2_to_v3(data: dict) -> dict:
-    """v2 → v3: Add North Atlantic and South Seas regions to reputation state."""
+    """v2 -> v3: Add North Atlantic and South Seas regions to reputation state."""
     captain = data.get("captain", {})
     standing = captain.get("standing", {})
 
@@ -122,7 +132,7 @@ def _migrate_v2_to_v3(data: dict) -> dict:
 
 
 def _migrate_v3_to_v4(data: dict) -> dict:
-    """v3 → v4: Add cultural state tracking."""
+    """v3 -> v4: Add cultural state tracking."""
     if "cultural_state" not in data:
         data["cultural_state"] = {
             "active_festivals": [],
@@ -136,7 +146,7 @@ def _migrate_v3_to_v4(data: dict) -> dict:
 
 # Ordered migration functions: (from_version, to_version, migrator)
 def _migrate_v4_to_v5(data: dict) -> dict:
-    """v4 → v5: Add underworld standing and pirate state."""
+    """v4 -> v5: Add underworld standing and pirate state."""
     captain = data.get("captain", {})
     standing = captain.get("standing", {})
     standing.setdefault("underworld_standing", {})
@@ -149,7 +159,7 @@ def _migrate_v4_to_v5(data: dict) -> dict:
 
 
 def _migrate_v5_to_v6(data: dict) -> dict:
-    """v5 → v6: Add armor, melee weapons, weapon upgrades to combat gear. Add ship upgrades."""
+    """v5 -> v6: Add armor, melee weapons, weapon upgrades to combat gear. Add ship upgrades."""
     captain = data.get("captain", {})
     gear = captain.get("combat_gear", {})
     gear.setdefault("armor", None)
@@ -164,7 +174,7 @@ def _migrate_v5_to_v6(data: dict) -> dict:
 
 
 def _migrate_v6_to_v7(data: dict) -> dict:
-    """v6 → v7: Evolve ship upgrades from list[str] to list[dict] with upgrade_slots."""
+    """v6 -> v7: Evolve ship upgrades from list[str] to list[dict] with upgrade_slots."""
     captain = data.get("captain", {})
     ship = captain.get("ship")
     if ship:
@@ -179,7 +189,7 @@ def _migrate_v6_to_v7(data: dict) -> dict:
 
 
 def _migrate_v7_to_v8(data: dict) -> dict:
-    """v7 → v8: Add fleet to captain."""
+    """v7 -> v8: Add fleet to captain."""
     captain = data.get("captain", {})
     captain.setdefault("fleet", [])
     data["version"] = 8
@@ -187,7 +197,7 @@ def _migrate_v7_to_v8(data: dict) -> dict:
 
 
 def _migrate_v8_to_v9(data: dict) -> dict:
-    """v8 → v9: Add crew roster to ships."""
+    """v8 -> v9: Add crew roster to ships."""
     captain = data.get("captain", {})
     ship = captain.get("ship")
     if ship:
@@ -222,7 +232,7 @@ _MIGRATIONS = [
 
 
 def _migrate_v9_to_v10(data: dict) -> dict:
-    """v9 → v10: Add morale to ships."""
+    """v9 -> v10: Add morale to ships."""
     captain = data.get("captain", {})
     ship = captain.get("ship")
     if ship:
@@ -235,12 +245,12 @@ def _migrate_v9_to_v10(data: dict) -> dict:
     return data
 
 
-# Add v9→v10 and v10→v11 to migration chain
+# Add v9->v10 and v10->v11 to migration chain
 _MIGRATIONS.append((9, 10, _migrate_v9_to_v10))
 
 
 def _migrate_v10_to_v11(data: dict) -> dict:
-    """v10 → v11: Add officers to ships."""
+    """v10 -> v11: Add officers to ships."""
     captain = data.get("captain", {})
     ship = captain.get("ship")
     if ship:
@@ -1332,21 +1342,33 @@ def save_game(
     campaign: CampaignState | None = None,
     narrative: NarrativeState | None = None,
     base_path: Path | None = None,
+    slot: str = DEFAULT_SLOT,
 ) -> Path:
     """Save game state to JSON file. Returns path written."""
     base = base_path or Path(".")
     save_dir = base / SAVE_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
-    save_path = save_dir / SAVE_FILE
+    save_path = save_dir / save_filename(slot)
     data = world_to_dict(world, ledger, board, infra, campaign, narrative)
     save_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return save_path
 
 
-def load_game(base_path: Path | None = None) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState, NarrativeState] | None:
+def load_game(
+    base_path: Path | None = None,
+    slot: str = DEFAULT_SLOT,
+) -> tuple[WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState, NarrativeState] | None:
     """Load game state from JSON file. Returns None if no save exists or data is corrupt."""
     base = base_path or Path(".")
-    save_path = base / SAVE_DIR / SAVE_FILE
+    save_dir = base / SAVE_DIR
+    save_path = save_dir / save_filename(slot)
+
+    # Auto-migrate legacy single-file save to default slot
+    if not save_path.exists() and slot == DEFAULT_SLOT:
+        legacy_path = save_dir / SAVE_FILE
+        if legacy_path.exists():
+            legacy_path.rename(save_path)
+
     if not save_path.exists():
         return None
     try:

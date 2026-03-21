@@ -5,7 +5,7 @@ the dock scene, hear the local custom, get a festival banner if one is
 active, and feel the port's institutional personality.
 
 Contract:
-  generate_arrival(world, port_id) → PortArrivalExperience
+  generate_arrival(world, port_id) -> PortArrivalExperience
     - Uses institutional profiles for NPC greetings
     - Uses culture data for dock scene and customs
     - Uses sea_culture_engine for arrival weather

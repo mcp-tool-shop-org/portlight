@@ -15,8 +15,8 @@ Two categories:
   - Port consequences: encounters when docking
 
 Contract:
-  check_sea_consequences(world, route, ledger, board, rng) → list[Consequence]
-  check_port_consequences(world, port_id, ledger, board, rng) → list[Consequence]
+  check_sea_consequences(world, route, ledger, board, rng) -> list[Consequence]
+  check_port_consequences(world, port_id, ledger, board, rng) -> list[Consequence]
 """
 
 from __future__ import annotations
