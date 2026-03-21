@@ -44,6 +44,50 @@ class TestPortoNovoProfile:
         assert profile.governor_title == "Port Governor"
 
 
+class TestAlManarProfile:
+    """Al-Manar must have a complete institutional profile."""
+
+    def test_al_manar_exists(self):
+        assert "al_manar" in PORT_INSTITUTIONAL_PROFILES
+
+    def test_has_seven_institutions(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["al_manar"]
+        assert len(profile.institutions) == 7
+
+    def test_has_seven_npcs(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["al_manar"]
+        assert len(profile.npcs) == 7
+
+    def test_has_apothecary(self):
+        """Al-Manar uniquely has an apothecary institution."""
+        profile = PORT_INSTITUTIONAL_PROFILES["al_manar"]
+        types = {inst.institution_type for inst in profile.institutions}
+        assert "apothecary" in types
+
+    def test_no_shipyard(self):
+        """Al-Manar has no shipyard — that's Porto Novo's advantage."""
+        profile = PORT_INSTITUTIONAL_PROFILES["al_manar"]
+        types = {inst.institution_type for inst in profile.institutions}
+        assert "shipyard" not in types
+
+    def test_governor_is_merchant_princess(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["al_manar"]
+        assert profile.governor_title == "Merchant Princess"
+
+    def test_hakim_is_yasmins_nephew(self):
+        """Cross-NPC family relationship should be reflected."""
+        hakim = ALL_NPCS["am_hakim"]
+        yasmin = ALL_NPCS["am_yasmin"]
+        assert "am_yasmin" in hakim.relationship_notes
+        assert "am_hakim" in yasmin.relationship_notes
+        assert "nephew" in yasmin.relationship_notes["am_hakim"].lower()
+
+    def test_zara_connected_to_porto_novo(self):
+        """Zara was poached from Porto Novo — her rumor should reference it."""
+        zara = ALL_NPCS["am_inspector_zara"]
+        assert "porto novo" in zara.rumor.lower() or "salva" in zara.rumor.lower()
+
+
 class TestNPCQuality:
     """All NPCs must have complete personality data."""
 

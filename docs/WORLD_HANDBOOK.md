@@ -258,6 +258,76 @@ better harbor. Neither has forgiven the other.
 **Exports:** Spice (primary), medicines
 **Wants:** Grain (badly), porcelain, tea
 
+#### Institutions
+
+**The Harbor of Arrivals** — Curved stone quay lined with date palms, reception
+pavilion where arriving captains receive dates and water before business.
+- **Harbor Master Khalil al-Rashid** (ceremonial) — Treats every arrival as a
+  diplomatic event. Once refused docking to a Porto Novo flagship for skipping
+  the greeting ritual. The diplomatic incident lasted a month.
+  *"Welcome to Al-Manar, Captain. Please — dates, water. We discuss your berth after you have rested."*
+
+**The Spice Bazaar** — Three city blocks of covered market, brass lamps, dried
+herb bundles. A hundred stalls. Auction floor at the center.
+- **The Spice Mother, Yasmin al-Nadir** (imperious) — Fifty years judging spice.
+  Can name an island, harvest year, and grower family from a single taste. She
+  doesn't negotiate — she declares the price. Wants Al-Manar to lead the Alliance.
+  *"Tell me what you carry, and I will tell you what it is worth. In Al-Manar, the price is the truth."*
+
+**The Khoury Palace** — Tiled palace above the harbor. Mosaics of trade ships,
+fountains, six generations of Khoury portraits. Business conducted from a divan.
+- **Merchant Princess Nadia Khoury** (regal) — Hereditary ruler, six generations.
+  Thinks in generations, not quarters. Secretly corresponding with the Silk Circle —
+  could reshape the Alliance or shatter it.
+  *"Al-Manar welcomes all who trade with honor. My house is open, Captain."*
+
+**The Amber Glass** (tea house) — Low tables, silk cushions, amber glass windows
+filtering harbor light into gold. Not a tavern — information flows over tea.
+- **Old Farouk** (philosophical) — Ex-navigator, sailed the Monsoon Shortcut seven
+  times. Retired saying he'd learned everything the sea could teach. Collects stories
+  like Yasmin collects spices. He and Yasmin have argued about spice vs. tea for
+  forty years.
+  *"Sit. Tea first. Business is for those who have already tasted patience."*
+
+**The Scales of Truth** (customs) — Marble building, inscription 'WEIGHT AND TRUTH.'
+Brass scales of extraordinary precision. Confiscated counterfeits in glass cases.
+- **Inspector Zara Osman** (precise) — Poached from Porto Novo by Nadia. Can identify
+  fake saffron by smell. Cares more about fraud than smuggling — counterfeit spice
+  is a worse crime than contraband here. Misses working with Inspector Salva.
+  *"Cargo for inspection. I'm particularly interested in your spice lots."*
+
+**The Apothecary House** — Whitewashed building, rooftop herb garden. Shelves of
+labeled jars: roots, dried flowers, mineral powders. Unique to Al-Manar.
+- **Apothecary Master Hakim al-Nadir** (gentle) — Yasmin's nephew. Inherited her
+  nose for quality but not her ruthlessness. Turned down a fortune from the Iron
+  Pact for exclusive medicine rights. Sells at fair prices, infuriating merchants.
+  *"Do you carry medicines or ingredients? I'm always interested in what the sea brings."*
+
+**The Broker's Alcove** — Arched alcove off the Bazaar, curtained with silk.
+Rosewood desk. Contracts handwritten on parchment, not printed like Porto Novo's.
+- **Senior Broker Tariq Sayed** (ambitious) — Youngest senior broker in Al-Manar's
+  history. Appointed by Nadia, watched by everyone. Courting Silk Circle traders for
+  exclusive luxury contracts that bypass Porto Novo entirely. If he succeeds, it
+  shifts Alliance power. If he fails, Nadia will deny she supported him.
+  *"I have contracts — good ones. Al-Manar doesn't waste time with small work."*
+
+#### Power Dynamics
+
+Hereditary governance — the Khoury family rules, not an elected governor. Real
+power shared between Nadia (policy), Yasmin (market), and Hakim (medicines — the
+quiet advantage). Old Farouk sees everything from his tea house. Zara protects
+market integrity. Tariq pushes for expansion, supported by Nadia but watched by all.
+
+**Core tension:** Tradition vs. ambition. Yasmin wants to preserve Al-Manar's
+ancient way. Tariq wants to modernize with Silk Circle partnerships. Nadia plays
+both sides — funding Tariq's ambitions while publicly deferring to Yasmin. Her
+secret Silk Circle correspondence could reshape the Alliance or destroy it.
+
+**Cross-port dynamics:** Inspector Zara was poached from Porto Novo (Salva's
+former partner). Tariq is competing directly with Porto Novo's Fernanda Reis
+for premium contracts. Nadia and Costa are political counterparts who respect
+each other but represent incompatible visions of the Alliance's future.
+
 ---
 
 ### 3. Silva Bay (Mediterranean)
