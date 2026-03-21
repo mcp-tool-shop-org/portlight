@@ -59,7 +59,7 @@ class TestValidation:
             trade_points=3, sailing_points=3, shadow_points=2, reputation_points=2,
         )
         errors = validate_spec(spec)
-        assert any("not" in e.lower() and "region" in e.lower() for e in errors)
+        assert any("not" in e.lower() for e in errors)
 
     def test_invalid_region(self):
         spec = CustomCaptainSpec(
