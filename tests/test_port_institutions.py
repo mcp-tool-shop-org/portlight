@@ -88,6 +88,46 @@ class TestAlManarProfile:
         assert "porto novo" in zara.rumor.lower() or "salva" in zara.rumor.lower()
 
 
+class TestSilvaBayProfile:
+    """Silva Bay — the shipwrights' republic."""
+
+    def test_silva_bay_exists(self):
+        assert "silva_bay" in PORT_INSTITUTIONAL_PROFILES
+
+    def test_has_seven_institutions(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["silva_bay"]
+        assert len(profile.institutions) == 7
+
+    def test_has_seven_npcs(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["silva_bay"]
+        assert len(profile.npcs) == 7
+
+    def test_has_shipyard(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["silva_bay"]
+        types = {inst.institution_type for inst in profile.institutions}
+        assert "shipyard" in types
+
+    def test_governed_by_council(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["silva_bay"]
+        assert profile.governor_title == "Brotherhood Council"
+
+    def test_no_single_governor_npc(self):
+        """The 'governor' is a collective council, not an individual."""
+        council = ALL_NPCS["sb_council"]
+        assert council.personality == "collective"
+
+    def test_pires_is_outsider(self):
+        """Pires should reference Porto Novo / being an outsider."""
+        pires = ALL_NPCS["sb_customs_pires"]
+        assert "porto novo" in pires.description.lower() or "outsider" in pires.description.lower()
+
+    def test_ana_grew_up_in_tavern(self):
+        ana = ALL_NPCS["sb_broker_ana"]
+        rosa = ALL_NPCS["sb_rosa"]
+        assert "sb_rosa" in ana.relationship_notes
+        assert "sb_broker_ana" in rosa.relationship_notes
+
+
 class TestNPCQuality:
     """All NPCs must have complete personality data."""
 

@@ -801,6 +801,396 @@ AL_MANAR_PROFILE = PortInstitutionalProfile(
 )
 
 
+
+# =========================================================================
+# SILVA BAY — The Shipwrights' Republic
+# =========================================================================
+
+_SILVA_BAY_NPCS = [
+    PortNPC(
+        id="sb_elena",
+        name="Elena Madeira",
+        title="Master Shipwright",
+        port_id="silva_bay",
+        institution="shipyard",
+        personality="exacting",
+        description=(
+            "Broad hands scarred by adze and chisel, hair tied back with a leather "
+            "thong, and sawdust permanently ground into the creases of her knuckles. "
+            "Elena is the Brotherhood's elected Master — the finest shipwright in the "
+            "Mediterranean and possibly the world. She can look at a hull and tell you "
+            "where it was built, when, and whether the builder rushed the keel."
+        ),
+        agenda=(
+            "The craft and the Brotherhood's independence. Elena will build for "
+            "anyone who respects ships — pirate, merchant, navy, she doesn't care. "
+            "But she will NEVER build warships. The Brotherhood builds vessels to "
+            "carry cargo and people, not weapons of war. She turned down the Iron "
+            "Pact's contract personally, and she'd do it again. Her loyalty is to "
+            "wood, not politics."
+        ),
+        greeting_neutral="\"Show me your ship. I'll tell you what she needs and what it'll cost. I don't need your name — I need to see your keel.\"",
+        greeting_friendly="\"Captain! Brought her back in one piece, I see. Good sailor. Come — I've been experimenting with a new hull design. I want your opinion.\"",
+        greeting_hostile="\"I'll repair your ship because the sea doesn't care about grudges. But I'm charging double, and I'm not smiling about it.\"",
+        rumor="Elena once rebuilt a ship that had been cracked in half by a storm. The owner said it was impossible. Elena said it was Tuesday. The ship sailed for another twelve years.",
+        relationship_notes={
+            "sb_nuno": "Her harbor master, her old apprentice. She trained him. He still defers to her on everything that matters.",
+            "sb_tomás": "Her timber buyer. She's the only person who can overrule his assessments. He respects that.",
+            "sb_council": "She IS the council. The Brotherhood elects a Master; the Master governs. She governs lightly.",
+            "sb_rosa": "Drinks at Rosa's tavern every night. The only person who can make Elena laugh.",
+            "sb_customs_pires": "Ignores him. Ships are her jurisdiction; cargo is his. Clean boundaries.",
+            "sb_broker_ana": "Appreciates her. Ana brings captains who need good ships. Good ships are Elena's purpose.",
+        },
+    ),
+    PortNPC(
+        id="sb_nuno",
+        name="Nuno Ferreira",
+        title="Harbor Master",
+        port_id="silva_bay",
+        institution="harbor_master",
+        personality="practical",
+        description=(
+            "A former shipwright who lost three fingers to a bandsaw and moved to "
+            "harbor management — 'same work, fewer blades,' he says. Nuno runs the "
+            "harbor with a shipwright's eye: he cares about how ships dock, not "
+            "about paperwork. Vasco in Porto Novo would have a seizure watching "
+            "Nuno's filing system, which consists of a nail on the wall and a "
+            "good memory."
+        ),
+        agenda=(
+            "Keep the harbor moving. Ships in, ships out, timber in, timber out. "
+            "Nuno has no political ambitions — he wants berths filled, slipways busy, "
+            "and the tide tables accurate. He learned harbor craft from Elena and "
+            "still checks with her before making big decisions."
+        ),
+        greeting_neutral="\"Berth's over there. Tie up properly — I don't want you drifting into the slipways. Timber loading happens at dawn, so don't sleep late.\"",
+        greeting_friendly="\"Captain! Good to see her still floating. Take berth three — it's closest to the yard if you need Elena's people. Rough voyage?\"",
+        greeting_hostile="\"You can dock, but stay out of the yard. Elena's orders. And if your ship leaks on my harbor floor, you're cleaning it up.\"",
+        rumor="Nuno can predict the weather better than any barometer. He says it's the missing fingers — they ache before a storm. Nobody laughs anymore, because he's never been wrong.",
+        relationship_notes={
+            "sb_elena": "His mentor. He defers to her on anything important and isn't embarrassed about it.",
+            "sb_tomás": "Good friends. They coordinate timber deliveries — Tomás grades it, Nuno stores it.",
+            "sb_council": "Sits on the council but rarely speaks. 'I run the harbor, not the town.'",
+            "sb_rosa": "Regular at her tavern. Brings her harbor news; she gives him the first pour of the evening.",
+            "sb_customs_pires": "Works alongside him. Clean relationship — they share the dock without competing.",
+            "sb_broker_ana": "Helpful. Tips her off when interesting captains arrive.",
+        },
+    ),
+    PortNPC(
+        id="sb_tomás",
+        name="Tomás Verdelho",
+        title="Timber Factor",
+        port_id="silva_bay",
+        institution="exchange",
+        personality="patient",
+        description=(
+            "Quiet, deliberate, with the slow-moving confidence of a man who has "
+            "handled every kind of wood that grows. Tomás runs the Timber Exchange — "
+            "not an auction house like Porto Novo's grain operation, but a grading "
+            "yard where every log is assessed by hand. He can tell oak from elm by "
+            "the sound it makes when he taps it with his knuckle."
+        ),
+        agenda=(
+            "Quality timber at honest prices. Tomás has no interest in cornering "
+            "markets or playing politics. He grades wood, sets fair prices, and "
+            "goes home. His one passion outside timber is protecting the forests — "
+            "he's pushed the Brotherhood to limit harvests, arguing that a forest "
+            "cut too fast won't grow back. This makes him unpopular with merchants "
+            "who want volume."
+        ),
+        greeting_neutral="\"Looking for timber? Let me show you what's in the yard. I'll grade it while you watch — no surprises.\"",
+        greeting_friendly="\"Captain — I've been setting aside a batch of coastal oak. Perfect for hull planking. Thought of you when it came in.\"",
+        greeting_hostile="\"Timber's timber. I'll sell it to you at posted prices. But don't expect me to hold stock for someone who doesn't respect the wood.\"",
+        rumor="Tomás once refused to sell a batch of mahogany because he said the trees were too young. The buyer offered triple. Tomás said the trees would be worth ten times that in twenty years. He was right.",
+        relationship_notes={
+            "sb_elena": "She's the only person who can overrule his grades. He respects that — she knows wood as well as he does.",
+            "sb_nuno": "Good friends. They coordinate timber logistics — a clean partnership.",
+            "sb_council": "Active council member. He's the environmental voice — limit harvests, replant, think long-term.",
+            "sb_rosa": "Quiet regular. He drinks slowly and says little. Rosa respects the silence.",
+            "sb_customs_pires": "No strong feelings. Timber doesn't need inspecting — it is what it is.",
+            "sb_broker_ana": "She brings buyers; he grades the wood. Simple relationship.",
+        },
+    ),
+    PortNPC(
+        id="sb_council",
+        name="The Brotherhood Council",
+        title="Governing Council",
+        port_id="silva_bay",
+        institution="governor",
+        personality="collective",
+        description=(
+            "Not a single ruler — a council of seven shipwrights who govern Silva "
+            "Bay by consensus. The Master Shipwright (currently Elena) chairs it, "
+            "but every member has equal voice. They meet in the Brotherhood Hall, "
+            "a timber longhouse where the walls are carved with the names of every "
+            "ship built in Silva Bay for the last two centuries."
+        ),
+        agenda=(
+            "Independence. The Council's primary concern is keeping Silva Bay free "
+            "from outside control. They're in the Exchange Alliance because it's "
+            "convenient, not because they're loyal. If the Alliance ever demands "
+            "something that conflicts with the Brotherhood's principles — like "
+            "building warships — they'll leave. Everyone knows this. It's why "
+            "nobody pushes."
+        ),
+        greeting_neutral="\"The Brotherhood welcomes all captains who come in peace. If you need ships built or repaired, we are at your service.\"",
+        greeting_friendly="\"Captain — the Council recognizes your contribution to Silva Bay's prosperity. Your voice is welcome in our hall.\"",
+        greeting_hostile="\"The Council has discussed your recent conduct. You may dock and repair, but you are not welcome in the Brotherhood Hall until trust is rebuilt.\"",
+        rumor="The Council once voted on whether to leave the Exchange Alliance entirely. The vote was 4-3 to stay. Nobody knows which way Elena voted. She says it doesn't matter — the Brotherhood decided.",
+        relationship_notes={
+            "sb_elena": "She chairs the council. Her word carries weight, but she lets others speak first.",
+            "sb_nuno": "Sits on the council, rarely speaks. His harbor expertise is valued when it's needed.",
+            "sb_tomás": "The environmental conscience. His harvest limits are controversial but respected.",
+            "sb_rosa": "Not on the council, but Rosa's tavern is where council members discuss things they won't say in the Hall.",
+            "sb_customs_pires": "Not on the council. Customs is an Alliance function, not a Brotherhood one. The distinction matters.",
+            "sb_broker_ana": "Not on the council, but her contract income funds Brotherhood operations.",
+        },
+    ),
+    PortNPC(
+        id="sb_rosa",
+        name="Rosa Carvalho",
+        title="Tavern Keeper",
+        port_id="silva_bay",
+        institution="tavern",
+        personality="warm",
+        description=(
+            "Strong arms from hauling kegs, a voice that carries over any crowd, "
+            "and a laugh that makes everyone within earshot feel like the world is "
+            "simpler than they thought. Rosa runs the Dry Dock — the only tavern "
+            "in Silva Bay, built from the timbers of a decommissioned brigantine. "
+            "The bar is the ship's original helm. She steers conversations the way "
+            "the old captain steered the ship."
+        ),
+        agenda=(
+            "Community. Rosa's tavern is where Silva Bay actually works — where "
+            "apprentices celebrate finishing their first hull, where the Council "
+            "argues after meetings, where captains hear which shipwright to request. "
+            "She has no political agenda, but her tavern IS the town square, which "
+            "gives her more influence than she'd ever admit."
+        ),
+        greeting_neutral="\"Welcome to the Dry Dock! Sit anywhere — if you can find a seat. The special tonight is fish stew, and yes, there's sawdust in it. There's sawdust in everything here.\"",
+        greeting_friendly="\"Captain! Your stool's been empty too long. Sit, sit — Elena was just telling a story about your ship. Something about the rudder? You should hear this.\"",
+        greeting_hostile="\"...You can drink. But I'd keep my voice down if I were you. The Brotherhood has long memories and short tempers when the ale flows.\"",
+        rumor="Rosa was married to a captain who sailed the Smuggler's Run and never came back. She built the Dry Dock with the insurance payout. She never remarried, and she never talks about it, and nobody asks.",
+        relationship_notes={
+            "sb_elena": "Best friends. Elena drinks here every night. Rosa is the only person who can make her laugh — or slow down.",
+            "sb_nuno": "Fond. He brings her harbor news; she pours first. A good trade.",
+            "sb_tomás": "Respects his quiet. She gives him the corner table and doesn't interrupt.",
+            "sb_council": "Her tavern is the unofficial second meeting hall. She pretends not to listen. She always listens.",
+            "sb_customs_pires": "Cautious. Pires is the only outsider in Silva Bay — Alliance-appointed. Rosa is polite but hasn't fully accepted him.",
+            "sb_broker_ana": "Like a daughter. Ana grew up in the Dry Dock while her mother worked the yard.",
+        },
+    ),
+    PortNPC(
+        id="sb_customs_pires",
+        name="Customs Officer Pires",
+        title="Customs Officer",
+        port_id="silva_bay",
+        institution="customs",
+        personality="awkward",
+        description=(
+            "A young man from Porto Novo who drew the short straw — assigned to "
+            "Silva Bay by the Alliance, where nobody asked for a customs officer "
+            "and nobody particularly wants one. Pires is competent but uncomfortable. "
+            "He knows he's an outsider in a town that governs itself, and he tries "
+            "too hard to fit in. The Brotherhood tolerates him because the Alliance "
+            "requires it."
+        ),
+        agenda=(
+            "Doing his job without making enemies. Pires inspects cargo because "
+            "the Alliance says he must, but he keeps it light — quick checks, no "
+            "drama. He dreams of a transfer back to Porto Novo where Inspector "
+            "Salva's methods are appreciated. In Silva Bay, thoroughness is seen "
+            "as interference."
+        ),
+        greeting_neutral="\"Quick inspection — routine, I promise. I know you're here for the yard, not for paperwork. I'll be fast.\"",
+        greeting_friendly="\"Captain — everything looks good. I've already signed off on your manifest. Go see Elena before the queue gets long.\"",
+        greeting_hostile="\"I... need to do a full inspection. Alliance regulations. I'm sorry — I know it's inconvenient. Please don't tell Elena.\"",
+        rumor="Pires applied for a transfer back to Porto Novo three times. Each time, Salva sent back the same response: 'Learn to inspect without a manual first.' Pires isn't sure if it's an insult or a lesson.",
+        relationship_notes={
+            "sb_elena": "Terrified of her. She treats him like furniture. He inspects what he can and stays out of her yard.",
+            "sb_nuno": "Workable. Nuno doesn't mind him — they share dock space without trouble.",
+            "sb_tomás": "Irrelevant to each other. Timber doesn't need customs clearance.",
+            "sb_council": "Not invited. Not Brotherhood. The distinction stings, but he understands it.",
+            "sb_rosa": "Trying. He drinks at the Dry Dock and tips well. Rosa is polite. He can't tell if she likes him or tolerates him.",
+            "sb_broker_ana": "She's kind to him. The only person in Silva Bay who treats him as a colleague, not a visitor.",
+        },
+    ),
+    PortNPC(
+        id="sb_broker_ana",
+        name="Ana Sousa",
+        title="Broker",
+        port_id="silva_bay",
+        institution="broker",
+        personality="earnest",
+        description=(
+            "Grew up in the Dry Dock tavern while her mother worked the yard. Ana "
+            "became a broker instead of a shipwright — the first in her family to "
+            "choose paper over wood. She runs contracts from a bench outside the "
+            "Brotherhood Hall, rain or shine, because Silva Bay doesn't believe in "
+            "offices. She knows every ship that's been built here and which captains "
+            "treat them well."
+        ),
+        agenda=(
+            "Proving herself. Ana is young and working in a town that values decades "
+            "of experience. She brings contract work that funds the Brotherhood, "
+            "which earns her a seat at the edge of respect. She wants to prove that "
+            "commerce and craft can coexist — that a good broker helps good shipwrights "
+            "stay independent."
+        ),
+        greeting_neutral="\"Captain? I have contracts — mostly timber runs and ship delivery commissions. Nothing fancy, but the work is honest and it pays.\"",
+        greeting_friendly="\"Captain! Elena mentioned your ship needs attention — while she's working on it, I have a timber contract that would pay for the repairs. Interested?\"",
+        greeting_hostile="\"I... don't have anything for you right now. Try Porto Novo — Fernanda has more to work with than I do. No hard feelings.\"",
+        rumor="Ana turned down an offer from Fernanda Reis to join Porto Novo's broker desk. She said Silva Bay needed her more. Rosa cried when she heard. Elena pretended not to notice, which is Elena's way of being proud.",
+        relationship_notes={
+            "sb_elena": "Admires her fiercely. Elena is everything Ana wants to be — independent, skilled, uncompromising.",
+            "sb_nuno": "Helpful. He tips her off when captains arrive who might need contracts.",
+            "sb_tomás": "She finds buyers for his timber. A clean business relationship that both appreciate.",
+            "sb_council": "Wants to be invited someday. Knows she has to earn it. Isn't sure how.",
+            "sb_rosa": "Like a mother. Ana grew up in the Dry Dock. Rosa still saves her a plate of fish stew.",
+            "sb_customs_pires": "Kind to him. She knows what it's like to be the outsider trying to earn respect.",
+        },
+    ),
+]
+
+_SILVA_BAY_INSTITUTIONS = [
+    PortInstitution(
+        id="sb_shipyard",
+        name="The Master Shipyard",
+        port_id="silva_bay",
+        institution_type="shipyard",
+        description=(
+            "The largest shipyard in the Mediterranean — three slipways, two dry "
+            "docks, a steam box for bending timber, and a mast pond where logs "
+            "season for years before they're touched. The sign over the gate reads "
+            "'BUILT TO SAIL, NOT TO SINK.' It's not a motto. It's a threat."
+        ),
+        function="Ship repairs, upgrades, and purchases. The best work in the game — cheapest repairs (1 silver/hull point). Elena's standards are the price of admission.",
+        political_leaning="Apolitical. The yard builds for anyone. ANYONE. Except warmongers.",
+        npc_id="sb_elena",
+    ),
+    PortInstitution(
+        id="sb_harbor",
+        name="The Working Harbor",
+        port_id="silva_bay",
+        institution_type="harbor_master",
+        description=(
+            "No ceremony, no pavilion — just a clipboard, a tide table nailed to "
+            "a post, and Nuno squinting at your approach. Timber barges have priority; "
+            "everyone else fits where they fit. The harbor smells of fresh-cut wood "
+            "and pitch."
+        ),
+        function="Berth assignment, timber logistics. No ceremony — function over form. Nuno runs it like a shipwright runs a project.",
+        political_leaning="Brotherhood-aligned. The harbor serves the yard first, everything else second.",
+        npc_id="sb_nuno",
+    ),
+    PortInstitution(
+        id="sb_timber_exchange",
+        name="The Timber Yard",
+        port_id="silva_bay",
+        institution_type="exchange",
+        description=(
+            "An open-air grading yard where logs are stacked by species, quality, "
+            "and seasoning time. No building — just canopies for rain and Tomás "
+            "with his grading chalk. Every log gets a mark: A for hull-grade, B "
+            "for general, C for firewood. There is no D. If it's worse than C, "
+            "it goes back."
+        ),
+        function="Timber grading, pricing, and sales. Not an auction — prices are set by quality grade. Fair, transparent, no haggling.",
+        political_leaning="Conservation-minded. Tomás limits harvests to protect forests. Unpopular with volume buyers.",
+        npc_id="sb_tomás",
+    ),
+    PortInstitution(
+        id="sb_brotherhood_hall",
+        name="The Brotherhood Hall",
+        port_id="silva_bay",
+        institution_type="governor",
+        description=(
+            "A timber longhouse with walls carved with the names of every ship "
+            "built in Silva Bay for two hundred years. Seven chairs around a round "
+            "table — no head seat, because the Brotherhood governs as equals. A "
+            "ship's bell hangs from the ceiling, rung to open and close each session."
+        ),
+        function="Self-governance by council of seven shipwrights. No external authority. Alliance membership is by choice, not obligation.",
+        political_leaning="Fiercely independent. Alliance membership is conditional — cross the Brotherhood's principles and they leave.",
+        npc_id="sb_council",
+    ),
+    PortInstitution(
+        id="sb_tavern",
+        name="The Dry Dock",
+        port_id="silva_bay",
+        institution_type="tavern",
+        description=(
+            "Built from the timbers of a decommissioned brigantine — the bar is "
+            "the original helm, and the booths are made from hull sections. Sawdust "
+            "on the floor, ship models on every shelf, and the sound of the yard "
+            "leaking in through walls that were never meant to be walls. The fish "
+            "stew is legendary. The sawdust content is debatable."
+        ),
+        function="Social hub, crew recruitment, unofficial council annex. Where Silva Bay actually makes decisions.",
+        political_leaning="Community heart. Rosa doesn't take sides — but her tavern is where sides are chosen.",
+        npc_id="sb_rosa",
+    ),
+    PortInstitution(
+        id="sb_customs",
+        name="The Customs Shed",
+        port_id="silva_bay",
+        institution_type="customs",
+        description=(
+            "A wooden shed at the edge of the dock — the most modest customs office "
+            "in the Mediterranean. A desk, a chair, a stamp, and a young man who "
+            "wishes he were somewhere else. The shed leaks when it rains. Nobody "
+            "has offered to fix it."
+        ),
+        function="Minimal cargo inspection. Alliance requirement, not Brotherhood priority. Quick and apologetic.",
+        political_leaning="Alliance outsider. Pires represents Porto Novo's rules in a town that makes its own.",
+        npc_id="sb_customs_pires",
+    ),
+    PortInstitution(
+        id="sb_broker",
+        name="The Broker's Bench",
+        port_id="silva_bay",
+        institution_type="broker",
+        description=(
+            "A wooden bench outside the Brotherhood Hall with a canvas awning for "
+            "rain. No office — Ana works in the open because Silva Bay doesn't "
+            "believe in walls for work that can be done under sky. A corkboard "
+            "behind her displays active contracts. A tin cup holds her pencils."
+        ),
+        function="Contract matching, timber commissions, ship delivery work. Informal, honest, no prestige games. The income funds the Brotherhood.",
+        political_leaning="Brotherhood supporter. Ana's contract income keeps the yard independent from Alliance subsidies.",
+        npc_id="sb_broker_ana",
+    ),
+]
+
+SILVA_BAY_PROFILE = PortInstitutionalProfile(
+    port_id="silva_bay",
+    governor_title="Brotherhood Council",
+    power_structure=(
+        "Silva Bay is a shipwrights' republic — no single ruler, no hereditary "
+        "title. The Brotherhood Council of seven governs by consensus, chaired by "
+        "the elected Master Shipwright (Elena). The yard IS the town: Elena builds "
+        "the ships, Tomás grades the timber, Nuno runs the harbor, and everything "
+        "else exists to support that work. Rosa's tavern is the unofficial second "
+        "chamber where real opinions emerge. Ana's broker bench funds it all. "
+        "Pires, the Alliance customs officer, is tolerated but never included."
+    ),
+    internal_tension=(
+        "The core tension is independence vs. relevance. The Brotherhood governs "
+        "itself and answers to no one — but the Alliance provides trade protection "
+        "and market access that Silva Bay needs. Elena wants to stay free; the "
+        "Alliance wants Silva Bay's ships. The leverage is mutual, which creates a "
+        "fragile equilibrium. Tomás adds a second tension: his harvest limits "
+        "protect the forests but frustrate merchants who want more timber faster. "
+        "The quiet tension is Pires — an outsider who represents everything the "
+        "Brotherhood distrusts (external authority), yet who genuinely tries to "
+        "belong. Ana is his only ally, and she's still earning her own place."
+    ),
+    institutions=_SILVA_BAY_INSTITUTIONS,
+    npcs=_SILVA_BAY_NPCS,
+)
+
+
 # ---------------------------------------------------------------------------
 # Master registry — will grow as we build each port
 # ---------------------------------------------------------------------------
@@ -808,6 +1198,7 @@ AL_MANAR_PROFILE = PortInstitutionalProfile(
 PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
     "porto_novo": PORTO_NOVO_PROFILE,
     "al_manar": AL_MANAR_PROFILE,
+    "silva_bay": SILVA_BAY_PROFILE,
 }
 
 ALL_NPCS: dict[str, PortNPC] = {npc.id: npc for profile in PORT_INSTITUTIONAL_PROFILES.values() for npc in profile.npcs}

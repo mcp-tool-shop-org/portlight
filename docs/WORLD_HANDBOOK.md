@@ -359,6 +359,67 @@ Iron Pact. Stormwall hasn't forgotten.
 **Exports:** Timber (primary), iron
 **Wants:** Cotton, weapons (shipyard needs)
 
+#### Institutions
+
+**The Master Shipyard** — Three slipways, two dry docks, mast pond where logs
+season for years. Sign reads 'BUILT TO SAIL, NOT TO SINK.' Best repairs in the game.
+- **Master Shipwright Elena Madeira** (exacting) — Finest shipwright in the
+  Mediterranean. Can tell where a hull was built by looking at it. Turned down
+  the Iron Pact personally. Once rebuilt a ship cracked in half — said it was Tuesday.
+  *"Show me your ship. I don't need your name — I need to see your keel."*
+
+**The Working Harbor** — Clipboard, tide table on a post, no ceremony.
+- **Harbor Master Nuno Ferreira** (practical) — Former shipwright, lost three
+  fingers to a bandsaw. Runs the harbor with a shipwright's eye. His filing system:
+  a nail on the wall and a good memory. Predicts weather through his missing fingers.
+  *"Berth's over there. Tie up properly — I don't want you drifting into the slipways."*
+
+**The Timber Yard** (exchange) — Open-air grading yard. Logs graded A/B/C by chalk.
+No building. No haggling. Prices set by quality.
+- **Timber Factor Tomas Verdelho** (patient) — Tells oak from elm by the sound of
+  his knuckle tap. Pushes harvest limits to protect forests. Refused to sell young
+  mahogany at triple price — said they'd be worth ten times that in twenty years.
+  *"Let me show you what's in the yard. I'll grade it while you watch — no surprises."*
+
+**The Brotherhood Hall** (governor) — Timber longhouse, walls carved with 200 years
+of ship names. Seven chairs, round table, no head seat. Ship's bell for sessions.
+- **The Brotherhood Council** (collective) — Seven shipwrights governing by consensus.
+  No single ruler. Alliance membership is conditional — cross their principles and
+  they leave. Once voted 4-3 to stay in the Alliance. Nobody knows Elena's vote.
+  *"The Brotherhood welcomes all captains who come in peace."*
+
+**The Dry Dock** (tavern) — Built from a decommissioned brigantine. Bar is the
+original helm. Sawdust on the floor, in the stew, in everything.
+- **Rosa Carvalho** (warm) — Strong arms, carries-across-the-room voice. Husband
+  sailed the Smuggler's Run and never came back. Built the tavern with the insurance.
+  Never remarried. Nobody asks. Fish stew is legendary.
+  *"Welcome to the Dry Dock! Sit anywhere — if you can find a seat."*
+
+**The Customs Shed** — Wooden shed, leaks when it rains. Most modest customs office
+in the Mediterranean.
+- **Customs Officer Pires** (awkward) — Young, from Porto Novo, drew the short straw.
+  Alliance-assigned to a town that governs itself. Applied for transfer three times.
+  Salva's response: "Learn to inspect without a manual first."
+  *"Quick inspection — routine, I promise. I'll be fast."*
+
+**The Broker's Bench** — Outdoor wooden bench, canvas awning, corkboard of contracts.
+No office — Silva Bay doesn't believe in walls for work done under sky.
+- **Broker Ana Sousa** (earnest) — Grew up in the Dry Dock while her mother worked
+  the yard. Turned down Fernanda Reis's offer to join Porto Novo's desk. Rosa cried.
+  Elena pretended not to notice, which is Elena's way of being proud.
+  *"Contracts — mostly timber runs and ship delivery commissions. Nothing fancy, but honest."*
+
+#### Power Dynamics
+
+A shipwrights' republic. No governor — the Brotherhood Council of seven governs by
+consensus. Elena chairs but doesn't command. The yard IS the town. Rosa's tavern is
+the unofficial second chamber. Pires is tolerated but never included.
+
+**Core tension:** Independence vs. relevance. The Brotherhood answers to no one but
+needs Alliance trade access. Tomas's harvest limits protect forests but frustrate
+merchants. The quiet tension is Pires — an outsider who genuinely tries to belong,
+with only Ana as an ally.
+
 ---
 
 ### 4. Corsair's Rest (Mediterranean)
