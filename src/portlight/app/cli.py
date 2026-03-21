@@ -1478,6 +1478,7 @@ def _sync_encounter_phase(s) -> None:
         if _opponent_combatant:
             estate["opponent_hp"] = _opponent_combatant.hp
             estate["opponent_stamina"] = _opponent_combatant.stamina
+        estate["pending_victory"] = _pending_victory
         s.world.pirates.encounter_state = estate
     elif s and s.world:
         s.world.pirates.encounter_phase = ""
@@ -1530,6 +1531,11 @@ def _restore_encounter(s) -> None:
             enc.duel_turns = estate.get("duel_turns", 0)
             enc.enemy_ship_hull = estate.get("enemy_ship_hull", enc.enemy_ship_hull)
             enc.enemy_ship_crew = estate.get("enemy_ship_crew", enc.enemy_ship_crew)
+        # Restore pending victory flag
+        global _pending_victory
+        if estate and estate.get("pending_victory"):
+            _pending_victory = True
+            enc.phase = "resolved"  # victory means encounter is resolved, awaiting spare/take-all
         _active_encounter = enc
 
 
@@ -2441,6 +2447,7 @@ def spare() -> None:
     """Show mercy to a defeated pirate captain. Gains respect, reduces grudge."""
     global _pending_victory
     s = _session()
+    _restore_encounter(s)
     if not _pending_victory or _active_encounter is None:
         console.print("[yellow]No defeated opponent to spare. Win a duel first.[/yellow]")
         return
@@ -2457,6 +2464,7 @@ def take_all() -> None:
     """Take everything from the defeated captain. More silver, more grudge."""
     global _pending_victory
     s = _session()
+    _restore_encounter(s)
     if not _pending_victory or _active_encounter is None:
         console.print("[yellow]No defeated opponent. Win a duel first.[/yellow]")
         return
