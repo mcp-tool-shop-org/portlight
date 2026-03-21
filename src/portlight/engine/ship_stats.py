@@ -9,7 +9,11 @@ Pure functions — no state mutation.
 
 from __future__ import annotations
 
+import random
+
 from portlight.engine.models import (
+    CrewRole,
+    CrewRoster,
     Ship,
     ShipTemplate,
     UpgradeTemplate,
@@ -164,3 +168,99 @@ def resolve_all(
         "storm_resist": resolve_storm_resist(ship, template, upgrades_catalog),
         "crew_max": resolve_crew_max(ship, upgrades_catalog),
     }
+
+
+# ---------------------------------------------------------------------------
+# Crew role effects
+# ---------------------------------------------------------------------------
+
+def gunner_damage_mult(roster: CrewRoster) -> float:
+    """Broadside damage multiplier from gunners. +10% per gunner, max 3."""
+    return 1.0 + 0.10 * min(roster.gunners, 3)
+
+
+def navigator_speed_bonus(roster: CrewRoster) -> float:
+    """Speed bonus from having a navigator."""
+    return 0.5 if roster.navigators >= 1 else 0.0
+
+
+def navigator_storm_resist_bonus(roster: CrewRoster) -> float:
+    """Storm resistance bonus from navigator."""
+    return 0.05 if roster.navigators >= 1 else 0.0
+
+
+def surgeon_death_reduction(roster: CrewRoster) -> float:
+    """Fraction of crew death events prevented by surgeon."""
+    return 0.30 if roster.surgeons >= 1 else 0.0
+
+
+def marine_boarding_bonus(roster: CrewRoster) -> float:
+    """Boarding effectiveness bonus from marines. +20% per marine, max 4."""
+    return 0.20 * min(roster.marines, 4)
+
+
+def quartermaster_wage_discount(roster: CrewRoster) -> float:
+    """Fraction discount on daily wages from quartermaster."""
+    return 0.10 if roster.quartermasters >= 1 else 0.0
+
+
+def quartermaster_sell_bonus(roster: CrewRoster) -> float:
+    """Sell price bonus fraction from quartermaster."""
+    return 0.05 if roster.quartermasters >= 1 else 0.0
+
+
+def compute_daily_wages(roster: CrewRoster) -> int:
+    """Total daily wage bill from roster composition.
+
+    Each role has different wages. Quartermaster applies a 10% discount.
+    """
+    from portlight.content.crew_roles import ROLE_SPECS
+    base = (
+        roster.sailors * ROLE_SPECS[CrewRole.SAILOR].wage
+        + roster.gunners * ROLE_SPECS[CrewRole.GUNNER].wage
+        + roster.navigators * ROLE_SPECS[CrewRole.NAVIGATOR].wage
+        + roster.surgeons * ROLE_SPECS[CrewRole.SURGEON].wage
+        + roster.marines * ROLE_SPECS[CrewRole.MARINE].wage
+        + roster.quartermasters * ROLE_SPECS[CrewRole.QUARTERMASTER].wage
+    )
+    if roster.quartermasters >= 1:
+        base = int(base * 0.90)
+    return base
+
+
+def select_casualty(
+    roster: CrewRoster,
+    context: str,
+    rng: random.Random,
+) -> CrewRole | None:
+    """Pick which role loses a crew member. Returns None if roster is empty.
+
+    Context affects weights: marines/sailors die first in boarding,
+    sailors die first in storms.
+    """
+    weights: dict[CrewRole, float] = {}
+    if roster.sailors > 0:
+        weights[CrewRole.SAILOR] = 3.0
+    if roster.gunners > 0:
+        weights[CrewRole.GUNNER] = 1.5
+    if roster.navigators > 0:
+        weights[CrewRole.NAVIGATOR] = 0.5
+    if roster.surgeons > 0:
+        weights[CrewRole.SURGEON] = 0.5
+    if roster.marines > 0:
+        weights[CrewRole.MARINE] = 2.0
+    if roster.quartermasters > 0:
+        weights[CrewRole.QUARTERMASTER] = 0.5
+
+    if not weights:
+        return None
+
+    # Context adjustments
+    if context == "boarding" and CrewRole.MARINE in weights:
+        weights[CrewRole.MARINE] *= 2.0
+    if context == "storm" and CrewRole.SAILOR in weights:
+        weights[CrewRole.SAILOR] *= 2.0
+
+    roles = list(weights.keys())
+    w = [weights[r] for r in roles]
+    return rng.choices(roles, weights=w, k=1)[0]

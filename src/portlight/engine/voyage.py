@@ -596,11 +596,16 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
         events.append(VoyageEvent(EventType.NOTHING,
             "No provisions! The crew suffers.", crew_delta=-1))
 
-    # Crew wages (paid daily at sea — flagship + docked fleet)
+    # Crew wages (paid daily at sea — flagship roster + docked fleet)
     from portlight.content.ships import SHIPS
+    from portlight.engine.ship_stats import compute_daily_wages
     template = SHIPS.get(captain.ship.template_id)
-    daily_wage = template.daily_wage if template else 1
-    wage_cost = daily_wage * captain.ship.crew
+    # Use roster-based wages if roster has crew, else fallback to flat rate
+    if captain.ship.roster.total > 0:
+        wage_cost = compute_daily_wages(captain.ship.roster)
+    else:
+        daily_wage = template.daily_wage if template else 1
+        wage_cost = daily_wage * captain.ship.crew
     # Add docked fleet crew wages
     from portlight.engine.fleet import fleet_daily_wages
     wage_cost += fleet_daily_wages(captain)
@@ -654,11 +659,12 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
                         captain.cargo.remove(item)
                     break
 
-    # Progress (undermanned penalty + captain speed bonus + seasonal modifier)
+    # Progress (undermanned penalty + captain speed bonus + crew navigator + seasonal modifier)
     from portlight.content.upgrades import UPGRADES
-    from portlight.engine.ship_stats import resolve_speed
+    from portlight.engine.ship_stats import resolve_speed, navigator_speed_bonus
     resolved_speed = resolve_speed(captain.ship, UPGRADES)
-    base_speed = resolved_speed + speed_bonus
+    nav_bonus = navigator_speed_bonus(captain.ship.roster)
+    base_speed = resolved_speed + speed_bonus + nav_bonus
     crew_min = template.crew_min if template else 1
     if captain.ship.crew < crew_min:
         base_speed *= 0.5  # half speed when undermanned
