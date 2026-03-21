@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import pytest
 
-from portlight.app.session import GameSession
-from portlight.app.tui.app import PortlightApp
+textual = pytest.importorskip("textual", reason="textual not installed")
+
+from portlight.app.session import GameSession  # noqa: E402
+from portlight.app.tui.app import PortlightApp  # noqa: E402
 
 
 def _make_session() -> GameSession:

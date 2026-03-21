@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import pytest
 
-from portlight.app.session import GameSession
-from portlight.app.tui.app import PortlightApp
+textual = pytest.importorskip("textual", reason="textual not installed")
+
+from portlight.app.session import GameSession  # noqa: E402
+from portlight.app.tui.app import PortlightApp  # noqa: E402
 
 
 def _make_session() -> GameSession:
@@ -268,10 +270,12 @@ async def test_provision_consumption():
         dest_id = route.port_b if route.port_a == port.id else route.port_a
         session.sail(dest_id)
 
-        # Advance a day at sea
-        session.advance()
+        # Advance several days at sea — provision consumption should outweigh any single favorable event
+        for _ in range(5):
+            if session.at_sea:
+                session.advance()
 
-        # Provisions should decrease
+        # Over 5 days, net provisions should decrease (daily burn outweighs rare bonuses)
         assert session.world.captain.provisions < prov_start
 
 
