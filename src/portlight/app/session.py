@@ -390,6 +390,23 @@ class GameSession:
                         message=arrival_text,
                         flavor="[arrival]",
                     ))
+                # Check for port consequences (history-based encounters)
+                from portlight.engine.consequences import apply_consequence, check_port_consequences
+                port_consequences = check_port_consequences(
+                    self.world, port.id, self.ledger, self.board, self._rng,
+                )
+                for consequence in port_consequences:
+                    apply_consequence(self.world, consequence)
+                    effect_note = ""
+                    if consequence.silver_delta > 0:
+                        effect_note = f" (+{consequence.silver_delta} silver)"
+                    elif consequence.silver_delta < 0:
+                        effect_note = f" ({consequence.silver_delta} silver)"
+                    events.append(VoyageEvent(
+                        event_type=EventType.NOTHING,
+                        message=f"{consequence.text}{effect_note}",
+                        flavor=f"[consequence:{consequence.effect_type}]",
+                    ))
                 self._recalc(port)
                 self._refresh_board(port)
 

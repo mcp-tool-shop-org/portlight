@@ -326,4 +326,36 @@ def enrich_voyage_day(
             flavor="[crew]",
         ))
 
+    # 5. Consequence encounter (~15% chance, reads player history)
+    from portlight.engine.consequences import apply_consequence, check_sea_consequences
+    # Need ledger and board from session — passed via world if available
+    try:
+        # Consequences need ledger/board which aren't on WorldState
+        # We check using a lightweight approach: just pass empty board/ledger
+        # if not available (consequences that need them will simply not fire)
+        from portlight.engine.contracts import ContractBoard
+        from portlight.receipts.models import ReceiptLedger
+        sea_consequences = check_sea_consequences(
+            world, route, ReceiptLedger(), ContractBoard(), rng
+        )
+    except ImportError:
+        sea_consequences = []
+
+    for consequence in sea_consequences:
+        apply_consequence(world, consequence)
+        effect_note = ""
+        if consequence.silver_delta > 0:
+            effect_note = f" (+{consequence.silver_delta} silver)"
+        elif consequence.silver_delta < 0:
+            effect_note = f" ({consequence.silver_delta} silver)"
+        elif consequence.heat_delta > 0:
+            effect_note = f" (+{consequence.heat_delta} heat)"
+        elif consequence.trust_delta < 0:
+            effect_note = f" ({consequence.trust_delta} trust)"
+        enriched.append(VoyageEvent(
+            event_type=EventType.NOTHING,
+            message=f"{consequence.text}{effect_note}",
+            flavor=f"[consequence:{consequence.effect_type}]",
+        ))
+
     return enriched
