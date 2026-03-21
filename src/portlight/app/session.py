@@ -592,8 +592,8 @@ class GameSession:
 
     # --- Hire crew ---
 
-    def hire_crew(self, count: int) -> str | None:
-        """Hire crew at port-specific cost. Returns error or None."""
+    def hire_crew(self, count: int, role: str = "sailor") -> str | None:
+        """Hire crew at port. Specify role (default: sailor). Returns error or None."""
         if not self.world:
             return "No active game"
         port = self.current_port
@@ -602,16 +602,66 @@ class GameSession:
         ship = self.world.captain.ship
         if not ship:
             return "No ship"
-        space = ship.crew_max - ship.crew
-        if space == 0:
+        from portlight.content.upgrades import UPGRADES as _UPG
+        from portlight.engine.ship_stats import resolve_crew_max
+        eff_crew_max = resolve_crew_max(ship, _UPG)
+        space = eff_crew_max - ship.crew
+        if space <= 0:
             return "Crew is already full"
+
+        from portlight.engine.models import CrewRole
+        try:
+            crew_role = CrewRole(role.lower())
+        except ValueError:
+            return f"Unknown role: {role}. Valid: {', '.join(r.value for r in CrewRole)}"
+
+        from portlight.content.crew_roles import ROLE_SPECS, get_role_count, set_role_count
+        spec = ROLE_SPECS[crew_role]
+
+        # Check role limit
+        if spec.max_per_ship is not None:
+            current = get_role_count(ship.roster, crew_role)
+            avail = spec.max_per_ship - current
+            if avail <= 0:
+                return f"Already at maximum {spec.name}s ({spec.max_per_ship})"
+            count = min(count, avail)
+
         count = min(count, space)
-        cost_per = port.crew_cost
-        cost = count * cost_per
+        cost = count * spec.wage * 10  # hiring cost = 10x daily wage
         if cost > self.world.captain.silver:
-            return f"Need {cost} silver for {count} crew ({cost_per}/each here), have {self.world.captain.silver}"
+            return f"Need {cost} silver for {count} {spec.name}(s) ({spec.wage * 10}/each), have {self.world.captain.silver}"
+
         self.world.captain.silver -= cost
-        ship.crew += count
+        current = get_role_count(ship.roster, crew_role)
+        set_role_count(ship.roster, crew_role, current + count)
+        ship.sync_crew()
+        self._save()
+        return None
+
+    def fire_crew(self, role: str, count: int = 1) -> str | None:
+        """Fire crew of a specific role. Returns error or None."""
+        if not self.world:
+            return "No active game"
+        port = self.current_port
+        if not port:
+            return "Must be docked to fire crew"
+        ship = self.world.captain.ship
+        if not ship:
+            return "No ship"
+
+        from portlight.engine.models import CrewRole
+        try:
+            crew_role = CrewRole(role.lower())
+        except ValueError:
+            return f"Unknown role: {role}"
+
+        from portlight.content.crew_roles import get_role_count, set_role_count
+        current = get_role_count(ship.roster, crew_role)
+        if current <= 0:
+            return f"No {role}s to fire"
+        fired = min(count, current)
+        set_role_count(ship.roster, crew_role, current - fired)
+        ship.sync_crew()
         self._save()
         return None
 

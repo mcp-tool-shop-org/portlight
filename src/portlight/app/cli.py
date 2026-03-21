@@ -273,6 +273,47 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
     for _ in range(days):
         events = s.advance()
 
+        # Tick NPC captain agency (autonomous actions)
+        if s.world and s.at_sea:
+            from portlight.engine.captain_memory import tick_captain_agency
+            region = s._voyage_region() if hasattr(s, '_voyage_region') else "Mediterranean"
+            captain_actions = tick_captain_agency(
+                s.world.pirates.captain_memories, region,
+                s.captain.silver, s.world.day, s._rng,
+            )
+            for ca in captain_actions:
+                if ca.effect_type == "encounter" and _active_encounter is None:
+                    # Ambush or challenge — create encounter immediately
+                    from portlight.engine.encounter import create_encounter
+                    enc = create_encounter(s.world.ports, s.world.voyage.destination_id if s.world.voyage else "porto_novo", s._rng)
+                    if enc:
+                        enc.enemy_captain_id = ca.captain_id
+                        enc.enemy_captain_name = ca.captain_name
+                        _active_encounter = enc
+                        _player_combatant = None
+                        _opponent_combatant = None
+                        from portlight.app import combat_views
+                        console.print(f"\n[bold red]{ca.message}[/bold red]")
+                        console.print(combat_views.encounter_view(
+                            enc.enemy_captain_name, "", enc.enemy_personality, enc.enemy_strength,
+                            f"{enc.enemy_captain_name}'s Ship", ca.message,
+                        ))
+                        if ca.verb == "ambush":
+                            enc.phase = "naval"  # no negotiate for ambushes
+                            console.print("\n[bold red]No time to negotiate! Use [cyan]portlight naval <action>[/cyan][/bold red]")
+                        else:
+                            console.print("\n[bold]Use [cyan]portlight encounter <negotiate|flee|fight>[/cyan][/bold]")
+                        s._save()
+                        break
+                elif ca.effect_type == "silver":
+                    s.captain.silver += ca.effect_value
+                    console.print(f"\n[dim]{ca.message}[/dim]")
+                elif ca.effect_type == "message":
+                    console.print(f"\n[dim]{ca.message}[/dim]")
+
+            if _active_encounter is not None:
+                break  # stop advancing — handle encounter first
+
         # Check for pirate encounter — intercept and create interactive encounter
         pirate_event = None
         for evt in events:
@@ -1472,6 +1513,13 @@ def fight(
     if _player_combatant is None or _opponent_combatant is None:
         gear = s.captain.combat_gear
         total_throwing = sum(gear.throwing_weapons.values()) if gear.throwing_weapons else 0
+        # Build throwing weapon ID list from gear dict
+        tw_ids = []
+        for wid, count in gear.throwing_weapons.items():
+            tw_ids.extend([wid] * count)
+        # Get weapon quality
+        melee_q = gear.weapon_quality.get(gear.melee_weapon, "standard") if gear.melee_weapon else "standard"
+        ranged_q = gear.weapon_quality.get(gear.firearm, "standard") if gear.firearm else "standard"
         _player_combatant, _opponent_combatant = create_duel_combatants(
             enc,
             player_crew=s.captain.ship.crew if s.captain.ship else 5,
@@ -1483,6 +1531,17 @@ def fight(
             player_mechanical=gear.mechanical_weapon,
             player_mechanical_ammo=gear.mechanical_ammo,
         )
+        # Set fields that create_duel_combatants doesn't handle
+        _player_combatant.throwing_weapon_ids = tw_ids
+        _player_combatant.melee_weapon_id = gear.melee_weapon
+        _player_combatant.melee_quality = melee_q
+        _player_combatant.ranged_quality = ranged_q
+        if gear.armor:
+            from portlight.content.armor import ARMOR
+            armor_def = ARMOR.get(gear.armor)
+            if armor_def:
+                _player_combatant.armor_dr = armor_def.damage_reduction
+                _player_combatant.dodge_stamina_penalty = armor_def.dodge_penalty
 
     p, o = _player_combatant, _opponent_combatant
     valid = get_encounter_combat_actions(p)
