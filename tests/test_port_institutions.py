@@ -128,6 +128,44 @@ class TestSilvaBayProfile:
         assert "sb_broker_ana" in rosa.relationship_notes
 
 
+class TestCorsairsRestProfile:
+    """Corsair's Rest — the lawless cove."""
+
+    def test_corsairs_rest_exists(self):
+        assert "corsairs_rest" in PORT_INSTITUTIONAL_PROFILES
+
+    def test_has_seven_institutions(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["corsairs_rest"]
+        assert len(profile.institutions) == 7
+
+    def test_has_seven_npcs(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["corsairs_rest"]
+        assert len(profile.npcs) == 7
+
+    def test_governed_by_tide(self):
+        profile = PORT_INSTITUTIONAL_PROFILES["corsairs_rest"]
+        assert profile.governor_title == "The Tide's Voice"
+
+    def test_has_apothecary_not_shipyard(self):
+        """Corsair's Rest has a surgery but no shipyard."""
+        profile = PORT_INSTITUTIONAL_PROFILES["corsairs_rest"]
+        types = {inst.institution_type for inst in profile.institutions}
+        assert "apothecary" in types
+        assert "shipyard" not in types
+
+    def test_little_fish_is_youngest(self):
+        fish = ALL_NPCS["cr_little_fish"]
+        assert "fourteen" in fish.description.lower() or "girl" in fish.description.lower()
+
+    def test_mama_lucia_fled_porto_novo(self):
+        mama = ALL_NPCS["cr_mama_lucia"]
+        assert "porto novo" in mama.agenda.lower()
+
+    def test_no_one_is_tide_representative(self):
+        no_one = ALL_NPCS["cr_no_one"]
+        assert "crimson tide" in no_one.description.lower()
+
+
 class TestNPCQuality:
     """All NPCs must have complete personality data."""
 

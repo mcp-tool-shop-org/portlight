@@ -457,6 +457,71 @@ without the cargo.
 **Exports:** Weapons, rum, tobacco
 **Wants:** Silk, medicines
 
+#### Institutions
+
+**The Cove Mouth** (harbor) — Rock ledge at the cove entrance. No dock, no
+paperwork. One man with a spyglass deciding if you get in.
+- **One-Eye Basso** (watchful) — Lost his left eye to a boarding hook, replaced it
+  with a polished black stone. Former navy lookout. Doesn't check manifests — checks
+  whether you were followed. If he doesn't wave you in, you don't enter.
+  *"...Clear behind you. Come in. Kill your running lights before the bend."*
+
+**The Whisper Market** (exchange) — Canvas stalls in cliff shadow. Prices in chalk
+on slate boards — wipeable in seconds. No receipts, no records, no evidence.
+- **Whisper** (secretive) — Nobody knows their real name, age, or face. Three people
+  describe three different people. Appears like smoke, murmurs a price, vanishes.
+  The black market obeys because Whisper has never been wrong.
+  *A folded note appears in your hand: "Buying or selling?" with prices in precise handwriting.*
+
+**The Crimson Chair** (governor) — Carved stone chair in the deepest cave. Crimson
+Tide's seat. Nobody sits in it except No One. Empty the rest of the time — its own threat.
+- **No One** (cold) — The Tide's enforcer. Tall, gaunt, faded crimson coat. Former
+  garrison officer who deserted. Speaks rarely. When No One speaks, the cove goes quiet.
+  Tribute is ten percent.
+  *"The Tide permits your stay. Trade as you wish. The tribute is ten percent."*
+
+**Mama Lucia's Kitchen** (tavern) — Cave in the cliff face, smoke hole above,
+benches below. The only place where violence is absolutely forbidden.
+- **Mama Lucia** (fierce) — Fled a bad marriage in Porto Novo twenty years ago.
+  Forearms like ham hocks, ladle wielded as a weapon. Feeds everyone — pirates,
+  smugglers, fugitives. Her fish stew cured a plague. Violence in her kitchen means
+  you never eat again.
+  *"Sit. Eat. Whatever you are, you're hungry — I can see it."*
+
+**The Surgery** (apothecary) — Cave with mirrored sunlight. Stained table, salvaged
+supplies, rum as antiseptic.
+- **The Physician** (weary) — Former navy surgeon, brilliant, washed up here after
+  something nobody talks about. Drinks too much at night, hands steady at dawn.
+  Treats everyone regardless of faction. Charges what you can pay.
+  *"Hurt? Sick? Sit on the table. If you're neither, buy medicine or leave."*
+
+**The Cliff Caves** (broker) — Sea caves accessible by rope or low tide. Cargo
+storage, smuggling logistics. Somewhere in the network: the second harbor.
+- **Ghost** (efficient) — The Tide's logistics coordinator. Thin, pale, moves
+  through shadow. Can unload a full ship in two hours by moonlight. Never missed
+  a deadline. Moved opium through a navy blockade using fishing boats and underwater caves.
+  *"What are you moving? Where? When? ...I can do that. Here's the price."*
+
+**The Cliff Watch** (customs) — Cliff paths above the cove. Counter-customs:
+designed to ensure customs never arrives.
+- **Little Fish** (sharp) — A girl of maybe fourteen. Arrived in a barrel two years
+  ago. Mama Lucia took her in. Knows every crack and tunnel in the cove. Whisper
+  sends her notes. Ghost uses her as a runner. The Physician teaches her wound care.
+  Someday the cove will realize she's the most dangerous person in it.
+  *She appears beside you without a sound. "Message for you. Or from you. Which?"*
+
+#### Power Dynamics
+
+No government — an arrangement. The Tide protects the cove through No One. Basso
+controls access. Whisper sets prices. Ghost moves cargo. Mama feeds everyone and
+enforces the only law. The Physician keeps people alive. Little Fish watches from
+the cliffs.
+
+**Core tension:** The Tide's authority (No One) vs. the cove's organic independence.
+The deeper tension is generational: Basso, Mama, and the Physician are aging. Ghost
+is Tide-loyal. Little Fish is loyal to Mama and the cove itself. When the old guard
+is gone, does the cove serve the Tide or does the Tide serve the cove?
+
 ---
 
 ### 5. Ironhaven (North Atlantic)

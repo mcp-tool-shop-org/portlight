@@ -1191,6 +1191,399 @@ SILVA_BAY_PROFILE = PortInstitutionalProfile(
 )
 
 
+
+# =========================================================================
+# CORSAIR'S REST — The Silence
+# =========================================================================
+
+_CORSAIRS_REST_NPCS = [
+    PortNPC(
+        id="cr_one_eye",
+        name="One-Eye Basso",
+        title="Dockmaster",
+        port_id="corsairs_rest",
+        institution="harbor_master",
+        personality="watchful",
+        description=(
+            "A man who lost his left eye to a boarding hook and replaced it with a "
+            "polished black stone. One-Eye doesn't check manifests — he checks the "
+            "horizon behind you. His job isn't paperwork; it's making sure you weren't "
+            "followed. He stands at the cove's narrow entrance with a spyglass that "
+            "never leaves his hand, and if he doesn't wave you in, you don't enter."
+        ),
+        agenda=(
+            "Security. Basso's only concern is the cove's secrecy. He doesn't care "
+            "what you carry, who you are, or what you've done — he cares whether a "
+            "navy patrol is behind you. Betray the cove's location and Basso will "
+            "find you. He always finds them."
+        ),
+        greeting_neutral="\"...Clear behind you. Come in. Kill your running lights before the bend.\"",
+        greeting_friendly="\"Clean approach. Good. Take the inner berth — I'll watch your stern tonight. No charge.\"",
+        greeting_hostile="\"You brought heat. I can smell it. Outer anchorage, away from everyone else. And if a patrol appears, you never saw this cove.\"",
+        rumor="One-Eye was a navy lookout before he lost the eye — ironic, and nobody laughs about it. Some say he can see further with one eye than most men can with two. Others say the black stone eye sees something else entirely.",
+        relationship_notes={
+            "cr_whisper": "Trusts completely. Whisper runs the inside; Basso runs the perimeter. They've never had a disagreement that mattered.",
+            "cr_mama_lucia": "Protective. He makes sure her kitchen is never raided by navy patrols. She makes sure he eats.",
+            "cr_no_one": "Respectful distance. No One runs the Tide's business. Basso runs the cove's safety. Different jurisdictions.",
+            "cr_the_physician": "Grateful. The Physician patched his eye socket for free. Basso repays it by ensuring medicine shipments arrive undisturbed.",
+            "cr_ghost": "Professional trust. Ghost moves cargo; Basso makes sure nobody sees it arrive.",
+            "cr_little_fish": "Watches over her. She's young. The cove isn't kind to the young.",
+        },
+    ),
+    PortNPC(
+        id="cr_whisper",
+        name="Whisper",
+        title="Price Keeper",
+        port_id="corsairs_rest",
+        institution="exchange",
+        personality="secretive",
+        description=(
+            "Nobody knows Whisper's real name, age, or where they came from. They "
+            "appear between the market stalls like smoke, murmur a price, and vanish. "
+            "Whisper is the black market's price-setter — the person who knows what "
+            "everything is worth when it can't be sold in daylight. They communicate "
+            "in hand signals, written notes, and single whispered words."
+        ),
+        agenda=(
+            "The market's survival. Whisper keeps Corsair's Rest functioning by "
+            "maintaining fair black market prices. If prices get too high, buyers "
+            "go elsewhere. Too low, and sellers stop coming. Whisper finds the line "
+            "every day, wordlessly, and the market obeys because Whisper has never "
+            "been wrong. Nobody understands how. Nobody asks."
+        ),
+        greeting_neutral="A folded note appears in your hand. It reads: \"Buying or selling?\" with two prices written below in small, precise handwriting.",
+        greeting_friendly="A note: \"Good to see you. Special prices today — for friends.\" A third column of numbers appears, lower than the posted rate.",
+        greeting_hostile="No note. No prices. Whisper passes you without stopping. The market stalls seem to close as you approach. Nobody is selling today.",
+        rumor="Three different people claim to have seen Whisper's face. They describe three completely different people. Either Whisper changes faces, or there's more than one of them. Both explanations are unsettling.",
+        relationship_notes={
+            "cr_one_eye": "The only person Whisper communicates with directly. They've worked together longer than anyone at the Rest.",
+            "cr_mama_lucia": "Leaves payment for meals under the plate. Always exact. Mama Lucia has never seen Whisper eat.",
+            "cr_no_one": "Whisper sets the prices; No One enforces the deals. Neither interferes with the other's work.",
+            "cr_the_physician": "Ensures medicine prices stay accessible. Whether this is compassion or economics, nobody knows.",
+            "cr_ghost": "Ghost moves the cargo that Whisper prices. A chain with no weak links.",
+            "cr_little_fish": "Sends her notes with market intelligence. Teaching her, maybe. Or recruiting.",
+        },
+    ),
+    PortNPC(
+        id="cr_no_one",
+        name="No One",
+        title="The Tide's Voice",
+        port_id="corsairs_rest",
+        institution="governor",
+        personality="cold",
+        description=(
+            "The Crimson Tide's representative at Corsair's Rest. No One is not a "
+            "governor — the Rest has no government. No One is the person who makes "
+            "sure the Crimson Tide's interests are respected, tribute is collected, "
+            "and disputes are settled before they become violence. Tall, gaunt, "
+            "dressed in a faded crimson coat that was once military issue. Speaks "
+            "rarely. When No One speaks, the cove goes quiet."
+        ),
+        agenda=(
+            "The Crimson Tide's authority. Corsair's Rest exists because the Tide "
+            "protects it. In return, the Tide takes a cut of every transaction, "
+            "gets first pick of contraband shipments, and uses the cove as a staging "
+            "area. No One ensures this arrangement continues. Captains who forget "
+            "that the Rest belongs to the Tide are reminded — once."
+        ),
+        greeting_neutral="A long look. Then: \"The Tide permits your stay. Trade as you wish. The tribute is ten percent.\"",
+        greeting_friendly="\"The Tide remembers its friends. Your tribute is waived this visit. Scarlet Ana sends regards.\"",
+        greeting_hostile="\"You owe the Tide. Pay what you owe, or leave the cove. You will not be asked a second time.\"",
+        rumor="No One was a garrison officer who deserted — like the Iron Wolves, but earlier. The Wolves hate No One for not joining them. No One hates the Wolves for the same reason they hate everyone: on principle.",
+        relationship_notes={
+            "cr_one_eye": "Mutual respect. Basso protects the cove; No One protects the Tide's interests. They never conflict because their territories don't overlap.",
+            "cr_whisper": "Depends on Whisper for market stability. Doesn't understand them. Doesn't need to.",
+            "cr_mama_lucia": "Even No One eats at Mama Lucia's. Even No One pays. Some things are sacred even in a lawless port.",
+            "cr_the_physician": "Complicated. The Physician heals everyone — even the Tide's enemies. No One tolerates this because even pirates get sick.",
+            "cr_ghost": "Direct reports. Ghost handles the Tide's smuggling logistics. No One handles the politics.",
+            "cr_little_fish": "Ignores her. She's beneath the Tide's notice. That's probably the safest place to be.",
+        },
+    ),
+    PortNPC(
+        id="cr_mama_lucia",
+        name="Mama Lucia",
+        title="Cook and Keeper",
+        port_id="corsairs_rest",
+        institution="tavern",
+        personality="fierce",
+        description=(
+            "A stout woman with iron-grey hair, forearms like ham hocks, and a "
+            "ladle she wields like a weapon — because it is one. Mama Lucia runs "
+            "the only kitchen at Corsair's Rest: a cave carved into the cliff face "
+            "with a smoke hole above and benches below. She feeds everyone. Pirates, "
+            "smugglers, fugitives, the lost, the desperate. She feeds them all, and "
+            "violence in her kitchen means you never eat again."
+        ),
+        agenda=(
+            "Feeding people and keeping the peace — inside her kitchen, which she "
+            "considers the only civilized square meter in Corsair's Rest. Mama Lucia "
+            "fled a bad marriage in Porto Novo twenty years ago. The Rest took her in. "
+            "She repays it by making sure nobody starves and nobody kills each other "
+            "over stew. Her kitchen is neutral ground. Everyone respects this — even "
+            "No One, even the Butcher, even captains with blood feuds."
+        ),
+        greeting_neutral="\"Sit. Eat. Whatever you are, you're hungry — I can see it. We'll talk about what you need after your belly's full.\"",
+        greeting_friendly="\"My favorite captain! I saved you the good fish — not the stuff I serve the pirates. Sit, sit. Tell Mama what happened.\"",
+        greeting_hostile="\"You can eat. EVERYONE can eat. But you keep your trouble outside my kitchen, understand? My ladle has settled bigger disputes than yours.\"",
+        rumor="Mama Lucia's fish stew cured a plague that swept through the cove six years ago. Nobody knows the recipe. She says the secret ingredient is 'minding your own business.' The Physician suspects it's actually turmeric.",
+        relationship_notes={
+            "cr_one_eye": "He protects the cove; she feeds it. They're the two pillars the Rest stands on. They don't say this. They don't need to.",
+            "cr_whisper": "Has never seen Whisper eat, but the payment is always under the plate. She saves a bowl anyway. Someone has to worry.",
+            "cr_no_one": "Even the Tide's enforcer respects her kitchen. No One pays. No One sits quietly. No One eats everything on the plate.",
+            "cr_the_physician": "Friends. The two people at the Rest who care about keeping others alive. They share ingredients and worries.",
+            "cr_ghost": "Feeds his crew when they come in cold and wet from midnight runs. Doesn't ask where they've been.",
+            "cr_little_fish": "Took her in when she arrived with nothing. Gave her the dish-washing job. Watches over her like a hawk. Will hurt anyone who hurts her.",
+        },
+    ),
+    PortNPC(
+        id="cr_the_physician",
+        name="The Physician",
+        title="Doctor",
+        port_id="corsairs_rest",
+        institution="apothecary",
+        personality="weary",
+        description=(
+            "A former navy surgeon who saw too much and drank too much and washed "
+            "up at Corsair's Rest with nothing but a medical bag and steady hands. "
+            "The Physician (no one uses a name, and the title is as close to respect "
+            "as the Rest gets) treats everyone — pirate wounds, smuggler fevers, "
+            "the injuries nobody talks about. Charges what you can pay. Sometimes "
+            "charges nothing."
+        ),
+        agenda=(
+            "Doing what he was trained for, in the only place that would have him. "
+            "The Physician doesn't care about sides, factions, or morality. He stitches "
+            "wounds. He sets bones. He brews medicine from whatever Mama Lucia's "
+            "kitchen doesn't need. He drinks too much at night and wakes with steady "
+            "hands at dawn, which is the only miracle anyone at the Rest believes in."
+        ),
+        greeting_neutral="\"Hurt? Sick? Sit on the table. If you're neither, buy medicine or leave — I'm busy. I'm always busy.\"",
+        greeting_friendly="\"Captain. Intact, I see. Good. I worry about the ones I've patched — professional investment. What can I do for you?\"",
+        greeting_hostile="\"I treat everyone. That's the oath. Sit down or don't, but if you bleed in here, I'm stitching you whether you want it or not.\"",
+        rumor="The Physician was a brilliant navy surgeon — could have run any hospital in the Mediterranean. Then something happened on a ship. He won't say what. The navy won't say either. He drinks to forget it, and every morning his hands are steady anyway.",
+        relationship_notes={
+            "cr_one_eye": "Patched his eye socket for free. Basso has been silently grateful ever since — the quietest debt in the cove.",
+            "cr_whisper": "Whisper ensures medicine stays affordable on the black market. The Physician suspects compassion. He hopes he's right.",
+            "cr_no_one": "Treats the Tide's wounded. No One tolerates his neutrality because the alternative is no doctor.",
+            "cr_mama_lucia": "His closest friend. They share ingredients, share worries, and share the belief that keeping people alive matters more than taking sides.",
+            "cr_ghost": "Patches Ghost's crew after rough runs. Doesn't ask questions. Receives extra medical supplies in return.",
+            "cr_little_fish": "Taught her basic wound care. She's a quick study. He hopes she'll leave before the cove takes away the light in her eyes.",
+        },
+    ),
+    PortNPC(
+        id="cr_ghost",
+        name="Ghost",
+        title="Cargo Master",
+        port_id="corsairs_rest",
+        institution="broker",
+        personality="efficient",
+        description=(
+            "You hear Ghost before you see him — the creak of rope, the thud of "
+            "crates being moved in the dark. Ghost runs the Tide's smuggling logistics "
+            "at the Rest: what comes in, what goes out, what gets hidden in the cliff "
+            "caves when a patrol passes. He's thin, pale, and moves through the cove "
+            "like he was born in shadow. His crew can unload a full ship in two hours "
+            "by moonlight."
+        ),
+        agenda=(
+            "Moving cargo. Ghost doesn't care about politics or factions — he cares "
+            "about logistics. What needs to go where, by when, without being seen. "
+            "He's the best smuggling coordinator in the Mediterranean, and he knows it. "
+            "Captains who need contraband moved come to Ghost. He quotes a price, a "
+            "time, and a route. He has never missed a deadline."
+        ),
+        greeting_neutral="\"What are you moving? Where does it need to go? When? ...I can do that. Here's the price.\"",
+        greeting_friendly="\"Captain. I have a run for you — clean route, good margin, and I've already scouted the patrol schedule. Interested?\"",
+        greeting_hostile="\"I don't move cargo for people I can't trust. Find another broker. Or better yet — leave the cove before morning.\"",
+        rumor="Ghost once moved a full cargo of opium through a navy blockade using fishing boats, decoy ships, and a route through underwater caves that only he knew existed. The navy still doesn't know how it happened.",
+        relationship_notes={
+            "cr_one_eye": "Basso watches the entrance; Ghost watches the cargo. Two halves of the same operation.",
+            "cr_whisper": "Whisper prices it; Ghost moves it. The most efficient supply chain in the underworld.",
+            "cr_no_one": "Direct superior in the Tide hierarchy. Ghost reports to No One on logistics. Professional, clean, no friction.",
+            "cr_mama_lucia": "His crews eat at Mama's after midnight runs. She doesn't ask. He doesn't tell. The stew is always hot.",
+            "cr_the_physician": "Sends medical supplies as payment for patching his crew. The Physician never asks where the supplies come from.",
+            "cr_little_fish": "Using her as a runner. She's fast, small, and invisible — perfect for messages. Whether this is exploitation or mentorship depends on who you ask.",
+        },
+    ),
+    PortNPC(
+        id="cr_little_fish",
+        name="Little Fish",
+        title="Runner",
+        port_id="corsairs_rest",
+        institution="customs",
+        personality="sharp",
+        description=(
+            "A girl of maybe fourteen — nobody knows exactly, including her. "
+            "She arrived at the Rest on a cargo ship two years ago, hidden in a "
+            "barrel. Mama Lucia took her in. Now she runs messages, watches the "
+            "cliff paths for approaching ships, and knows every crack and tunnel "
+            "in the cove. The Rest's unofficial lookout and messenger — the 'customs "
+            "officer' in a port that has no customs."
+        ),
+        agenda=(
+            "Survival and belonging. Little Fish has no family, no past she'll "
+            "discuss, and no plan beyond tomorrow. She's sharp, fast, and learning "
+            "the cove's ways with the intensity of someone who knows that usefulness "
+            "is the only protection she has. Ghost uses her as a runner. Whisper "
+            "sends her notes. The Physician teaches her wound care. She's absorbing "
+            "everything, and someday the cove will realize she's the most dangerous "
+            "person in it."
+        ),
+        greeting_neutral="She appears beside you without a sound. \"Message for you. Or from you. Which?\" She holds out her hand — for a coin or a note, either works.",
+        greeting_friendly="She drops from a rock ledge and lands silently. \"Captain! I saw you coming around the point. Mama says your table is ready. Also, Whisper left you something.\"",
+        greeting_hostile="You don't see her. But you have the distinct feeling you're being watched from the cliff above. A pebble clatters down near your feet. A warning, maybe.",
+        rumor="Little Fish can navigate the cliff tunnels in complete darkness. She claims to have found a tunnel that leads to a second harbor — the one the old pirates talk about. She won't say whether she's telling the truth. She's learning from the best.",
+        relationship_notes={
+            "cr_one_eye": "He watches over her. She doesn't know he's the reason the rough sailors leave her alone. She thinks she handles it herself.",
+            "cr_whisper": "Receives notes from Whisper with market intelligence. Whether Whisper is teaching her or recruiting her is the cove's favorite debate.",
+            "cr_no_one": "Invisible to the Tide's notice. That's the safest place to be, and Little Fish is smart enough to stay there.",
+            "cr_mama_lucia": "The closest thing to a mother she has. Mama gave her a job, a bed, and a reason to stay. Little Fish would fight anyone who threatened Mama's kitchen.",
+            "cr_the_physician": "Teaching her wound care. She's a quick study. He hopes she'll use the skills somewhere better than the cove.",
+            "cr_ghost": "Her employer for running jobs. Ghost pays fairly and doesn't put her in danger — usually. She's learning logistics from the best, which is either a gift or a curse.",
+        },
+    ),
+]
+
+_CORSAIRS_REST_INSTITUTIONS = [
+    PortInstitution(
+        id="cr_entrance",
+        name="The Cove Mouth",
+        port_id="corsairs_rest",
+        institution_type="harbor_master",
+        description=(
+            "Not an office — a rock ledge at the narrow entrance to the cove "
+            "where One-Eye Basso stands with his spyglass. A signal lantern hangs "
+            "from a hook: green for enter, dark for stay away. No dock, no paperwork, "
+            "no ceremony. Just one man deciding whether you get in."
+        ),
+        function="Access control. Not manifest review — threat assessment. Basso decides who enters. His spyglass is the only checkpoint.",
+        political_leaning="Brotherhood of the Cove. The cove's security is its own politics.",
+        npc_id="cr_one_eye",
+    ),
+    PortInstitution(
+        id="cr_market",
+        name="The Whisper Market",
+        port_id="corsairs_rest",
+        institution_type="exchange",
+        description=(
+            "Not a building — a series of canvas-covered stalls in the cliff shadow "
+            "where goods change hands without receipts. Prices are written in chalk "
+            "on slate boards that can be wiped clean in seconds if a patrol appears. "
+            "The market has no opening hours. It's always open and never officially there."
+        ),
+        function="Black market pricing and contraband trade. No receipts, no records, no evidence. Prices set by Whisper.",
+        political_leaning="Outside all systems. The Whisper Market acknowledges no authority except supply and demand.",
+        npc_id="cr_whisper",
+    ),
+    PortInstitution(
+        id="cr_tide_seat",
+        name="The Crimson Chair",
+        port_id="corsairs_rest",
+        institution_type="governor",
+        description=(
+            "A carved stone chair at the back of the deepest cave — the Crimson Tide's "
+            "seat of authority at the Rest. Nobody sits in it except when No One holds "
+            "court. The rest of the time it's empty, which is its own kind of threat. "
+            "A faded crimson banner hangs behind it, salt-stained and torn."
+        ),
+        function="Crimson Tide authority. Tribute collection, dispute resolution, faction governance. Not a government — a protection arrangement.",
+        political_leaning="Crimson Tide. The Rest exists because the Tide permits it. The Chair is the proof.",
+        npc_id="cr_no_one",
+    ),
+    PortInstitution(
+        id="cr_kitchen",
+        name="Mama Lucia's Kitchen",
+        port_id="corsairs_rest",
+        institution_type="tavern",
+        description=(
+            "A cave carved into the cliff face with a smoke hole above and timber "
+            "benches below. A fire pit, three iron pots, and the smell of fish stew "
+            "that seeps into the rock itself. It's always too hot, always crowded, "
+            "and the only place in Corsair's Rest where violence is absolutely "
+            "forbidden. Mama's ladle enforces the peace."
+        ),
+        function="Neutral ground. Food, crew recruitment, information exchange. The only safe space in the cove. Violence here means you never eat again.",
+        political_leaning="Aggressively neutral. Mama feeds everyone. EVERYONE. Politics stops at her threshold.",
+        npc_id="cr_mama_lucia",
+    ),
+    PortInstitution(
+        id="cr_surgery",
+        name="The Surgery",
+        port_id="corsairs_rest",
+        institution_type="apothecary",
+        description=(
+            "A cave with better lighting than most — the Physician rigged a system "
+            "of mirrors to reflect sunlight inside during the day. A wooden table "
+            "stained with things nobody asks about, shelves of salvaged medical "
+            "supplies, and a bottle of rum that serves double duty as antiseptic "
+            "and anesthetic."
+        ),
+        function="Medical care, medicine trading. Treats everyone regardless of faction or crime. Charges what you can pay.",
+        political_leaning="Neutral by oath. The Physician's loyalty is to the practice of medicine, not to any flag.",
+        npc_id="cr_the_physician",
+    ),
+    PortInstitution(
+        id="cr_caves",
+        name="The Cliff Caves",
+        port_id="corsairs_rest",
+        institution_type="broker",
+        description=(
+            "A network of sea caves accessible only by rope or at low tide. Ghost's "
+            "crews use them to store, move, and hide cargo. Some caves are mapped; "
+            "others aren't. Somewhere in the network is the 'second harbor' that the "
+            "old pirates whisper about — or don't."
+        ),
+        function="Smuggling logistics, contraband storage, contract coordination. Ghost matches cargo to routes and captains to runs.",
+        political_leaning="Crimson Tide operations. Ghost works for the Tide. The caves are the Tide's infrastructure.",
+        npc_id="cr_ghost",
+    ),
+    PortInstitution(
+        id="cr_cliffs",
+        name="The Cliff Watch",
+        port_id="corsairs_rest",
+        institution_type="customs",
+        description=(
+            "The cliff paths above the cove where Little Fish watches for approaching "
+            "ships, carries messages, and knows every tunnel and crack. Not a customs "
+            "house — the inverse: a lookout system designed to ensure customs never "
+            "arrives. The paths are invisible from the sea."
+        ),
+        function="Counter-customs. Patrol detection, message running, early warning. The cove's immune system against official interference.",
+        political_leaning="Survival. The Cliff Watch exists to keep the Rest hidden. That's everyone's politics here.",
+        npc_id="cr_little_fish",
+    ),
+]
+
+CORSAIRS_REST_PROFILE = PortInstitutionalProfile(
+    port_id="corsairs_rest",
+    governor_title="The Tide's Voice",
+    power_structure=(
+        "Corsair's Rest has no government — it has an arrangement. The Crimson Tide "
+        "protects the cove through No One's authority, collecting tribute and settling "
+        "disputes. One-Eye Basso controls physical access — if he doesn't wave you in, "
+        "you don't enter. Whisper sets prices in the shadow market. Ghost moves the "
+        "cargo. Mama Lucia feeds everyone and enforces the only law that holds: no "
+        "violence in her kitchen. The Physician keeps people alive. Little Fish watches "
+        "everything from the cliffs, learning, and growing into something the cove "
+        "hasn't figured out yet."
+    ),
+    internal_tension=(
+        "The surface tension is between the Crimson Tide's authority (No One) and "
+        "the cove's organic independence (everyone else). The Tide protects the Rest "
+        "but takes a cut. If the cut gets too big, the cove dies. If the protection "
+        "falters, the navy finds them. It's a balance maintained by mutual need. "
+        "The deeper tension is generational: One-Eye, Mama Lucia, and the Physician "
+        "are aging. Ghost and Little Fish are the future. Ghost is Tide-loyal — "
+        "whatever the Tide becomes, Ghost follows. Little Fish is loyal to Mama and "
+        "the cove itself. When the old guard is gone, the question is whether the "
+        "cove serves the Tide or the Tide serves the cove. No One watches this "
+        "tension carefully and says nothing, which is the most unsettling thing of all."
+    ),
+    institutions=_CORSAIRS_REST_INSTITUTIONS,
+    npcs=_CORSAIRS_REST_NPCS,
+)
+
+
 # ---------------------------------------------------------------------------
 # Master registry — will grow as we build each port
 # ---------------------------------------------------------------------------
@@ -1199,6 +1592,7 @@ PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
     "porto_novo": PORTO_NOVO_PROFILE,
     "al_manar": AL_MANAR_PROFILE,
     "silva_bay": SILVA_BAY_PROFILE,
+    "corsairs_rest": CORSAIRS_REST_PROFILE,
 }
 
 ALL_NPCS: dict[str, PortNPC] = {npc.id: npc for profile in PORT_INSTITUTIONAL_PROFILES.values() for npc in profile.npcs}
