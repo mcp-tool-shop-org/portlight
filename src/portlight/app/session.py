@@ -297,6 +297,26 @@ class GameSession:
                     0, self.world.captain.standing.commercial_trust - 15,
                 )
 
+        # Heal injuries daily (in port always, at sea only with surgeon's bay)
+        if self.world.captain.injuries:
+            from portlight.engine.injuries import heal_injury_tick
+            in_port = not self.at_sea
+            has_surgeons_bay = False
+            if self.world.captain.ship and hasattr(self.world.captain.ship, 'upgrades'):
+                has_surgeons_bay = any(
+                    getattr(u, 'template_id', '') == 'surgeons_bay'
+                    for u in self.world.captain.ship.upgrades
+                )
+            # Heal at sea only if surgeon's bay installed
+            if in_port or has_surgeons_bay:
+                has_medicines = any(c.good_id == "medicines" for c in self.world.captain.cargo)
+                self.world.captain.injuries = heal_injury_tick(
+                    self.world.captain.injuries,
+                    days=1,
+                    in_port=True,  # surgeon's bay counts as "in port" for healing
+                    has_medicines=has_medicines,
+                )
+
         if not self.at_sea:
             # In port: tick markets forward
             tick_markets(self.world.ports, days=1, rng=self._rng)

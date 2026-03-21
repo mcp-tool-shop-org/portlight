@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from portlight.engine.models import CrewRole
+from portlight.engine.models import CrewRole, CrewRoster
 
 
 @dataclass
@@ -68,7 +68,7 @@ ROLE_SPECS: dict[CrewRole, RoleSpec] = {
 }
 
 
-def get_role_count(roster: "CrewRoster", role: CrewRole) -> int:
+def get_role_count(roster: CrewRoster, role: CrewRole) -> int:
     """Get the count of a specific role from the roster."""
     field_map = {
         CrewRole.SAILOR: "sailors",
@@ -81,7 +81,7 @@ def get_role_count(roster: "CrewRoster", role: CrewRole) -> int:
     return getattr(roster, field_map[role], 0)
 
 
-def set_role_count(roster: "CrewRoster", role: CrewRole, count: int) -> None:
+def set_role_count(roster: CrewRoster, role: CrewRole, count: int) -> None:
     """Set the count of a specific role on the roster."""
     field_map = {
         CrewRole.SAILOR: "sailors",

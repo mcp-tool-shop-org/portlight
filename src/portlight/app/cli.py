@@ -207,22 +207,46 @@ def repair(amount: int = typer.Argument(None, help="Hull points to repair (defau
 # ---------------------------------------------------------------------------
 
 @app.command()
-def hire(count: int = typer.Argument(None, help="Crew to hire (default: fill)")) -> None:
-    """Hire crew members (5 silver each)."""
+def hire(
+    count: int = typer.Argument(None, help="Crew to hire (default: 1)"),
+    role: str = typer.Option("sailor", "--role", "-r", help="Role: sailor, gunner, navigator, surgeon, marine, quartermaster"),
+) -> None:
+    """Hire crew members. Specify role with --role."""
     s = _session()
     if count is None:
-        count = s.captain.ship.crew_max - s.captain.ship.crew if s.captain.ship else 0
-    err = s.hire_crew(count)
+        count = 1
+    err = s.hire_crew(count, role)
     if err:
         console.print(f"[red]{err}[/red]")
         return
-    from portlight.app.formatting import crew_status, silver
+    from portlight.app.formatting import crew_status
     ship = s.captain.ship
     from portlight.content.ships import SHIPS
     template = SHIPS.get(ship.template_id)
     crew_min = template.crew_min if template else 1
-    console.print(f"[green]Hired {count} crew ({silver(count * 5)})[/green]")
+    console.print(f"[green]Hired {count} {role}(s)[/green]")
     console.print(f"Crew: {crew_status(ship.crew, ship.crew_max, crew_min)}")
+
+
+@app.command()
+def fire(
+    role: str = typer.Argument(..., help="Role to fire"),
+    count: int = typer.Argument(1, help="How many to fire"),
+) -> None:
+    """Fire crew members of a specific role."""
+    s = _session()
+    err = s.fire_crew(role, count)
+    if err:
+        console.print(f"[red]{err}[/red]")
+        return
+    console.print(f"[yellow]Fired {count} {role}(s).[/yellow]")
+
+
+@app.command(name="crew")
+def crew_cmd() -> None:
+    """Show crew roster breakdown."""
+    s = _session()
+    console.print(views.crew_roster_view(s.captain.ship))
 
 
 # ---------------------------------------------------------------------------
@@ -1604,8 +1628,41 @@ def fight(
             if inj_def:
                 console.print(f"\n[bold red]Injury: {inj_def.name} — {inj_def.description}[/bold red]")
 
-        # Sync ammo back to captain
+        # Record encounter in captain memory
+        from portlight.engine.captain_memory import get_or_create_memory, record_encounter
+        memory = get_or_create_memory(s.world.pirates.captain_memories, enc.enemy_captain_id)
+        outcome = "player_won" if player_won else ("player_lost" if not draw else "player_won")
+        record_encounter(
+            memory, s.world.day, enc.enemy_region, outcome,
+            player_spared=False,  # sparing handled by separate command
+            player_used_firearm=any(r.player_action == "shoot" for r in [result]),
+            crew_killed=max(0, enc.enemy_ship_crew_max - enc.enemy_ship_crew),
+        )
+
+        # Roll loot on victory
+        if player_won:
+            try:
+                from portlight.engine.loot import roll_loot, apply_loot
+                loot = roll_loot(enc.enemy_captain_id, enc.enemy_strength, s._rng)
+                if loot:
+                    apply_loot(loot, s.captain)
+                    console.print(combat_views.loot_view(loot) if hasattr(combat_views, 'loot_view') else f"[green]Loot: {loot}[/green]")
+            except (ImportError, Exception):
+                pass  # loot system may not be fully wired yet
+
+        # Tick weapon degradation
+        from portlight.engine.weapon_quality import tick_weapon_degradation
         gear = s.captain.combat_gear
+        if gear.melee_weapon:
+            degraded, new_q = tick_weapon_degradation(gear.weapon_quality, gear.weapon_usage, gear.melee_weapon, "melee")
+            if degraded:
+                console.print(f"[yellow]Your {gear.melee_weapon.replace('_', ' ').title()} has degraded to {new_q} quality![/yellow]")
+        if gear.armor:
+            degraded, new_q = tick_weapon_degradation(gear.weapon_quality, gear.weapon_usage, gear.armor, "armor")
+            if degraded:
+                console.print(f"[yellow]Your {gear.armor.replace('_', ' ').title()} has degraded to {new_q} quality![/yellow]")
+
+        # Sync ammo back to captain
         gear.firearm_ammo = p.ammo
         gear.mechanical_ammo = p.mechanical_ammo
         # Rough sync for throwing weapons

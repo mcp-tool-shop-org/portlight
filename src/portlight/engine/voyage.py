@@ -101,7 +101,7 @@ def ship_class_rank(template_id: str) -> int:
 # ---------------------------------------------------------------------------
 
 _EVENT_WEIGHTS: list[tuple[EventType, float]] = [
-    (EventType.NOTHING, 0.28),
+    (EventType.NOTHING, 0.23),
     (EventType.CALM_SEAS, 0.10),
     (EventType.FAVORABLE_WIND, 0.11),
     (EventType.STORM, 0.10),

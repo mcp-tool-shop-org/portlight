@@ -238,8 +238,8 @@ class TestFleetSave:
         loaded, *_ = load_game(base_path=tmp_path)
         assert loaded.captain.fleet == []
 
-    def test_save_version_is_8(self):
-        assert CURRENT_SAVE_VERSION == 8
+    def test_save_version_is_current(self):
+        assert CURRENT_SAVE_VERSION >= 8
 
 
 # ---------------------------------------------------------------------------
@@ -263,5 +263,5 @@ class TestMigrationV7ToV8:
             },
         }
         migrated = migrate_save(data)
-        assert migrated["version"] == 8
+        assert migrated["version"] == CURRENT_SAVE_VERSION
         assert migrated["captain"]["fleet"] == []

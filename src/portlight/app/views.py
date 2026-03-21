@@ -685,6 +685,41 @@ def fleet_view(captain: "Captain") -> Panel:
     return Panel(table, subtitle=footer, border_style="blue")
 
 
+def crew_roster_view(ship: "Ship | None") -> Panel:
+    """Show crew breakdown by role with wages and effects."""
+    if not ship:
+        return Panel("[dim]No ship[/dim]", title="Crew Roster")
+
+    from portlight.content.crew_roles import ROLE_SPECS, get_role_count
+    from portlight.engine.models import CrewRole
+
+    table = Table(title="Crew Roster", show_header=True, header_style="bold")
+    table.add_column("Role", style="bold")
+    table.add_column("Count", justify="right")
+    table.add_column("Wage/day", justify="right")
+    table.add_column("Limit", justify="right")
+    table.add_column("Effect")
+
+    for role in CrewRole:
+        spec = ROLE_SPECS[role]
+        count = get_role_count(ship.roster, role)
+        limit_str = str(spec.max_per_ship) if spec.max_per_ship else "[dim]none[/dim]"
+        count_style = "bold green" if count > 0 else "dim"
+        table.add_row(
+            spec.name,
+            f"[{count_style}]{count}[/{count_style}]",
+            fmt.silver(spec.wage),
+            limit_str,
+            spec.description,
+        )
+
+    from portlight.engine.ship_stats import compute_daily_wages
+    total_wage = compute_daily_wages(ship.roster)
+    footer = f"Total crew: {ship.crew}/{ship.crew_max}  |  Daily wages: {total_wage} silver"
+
+    return Panel(table, subtitle=footer, border_style="cyan")
+
+
 def shipyard_view(captain: "Captain") -> Panel:
     """Ship comparison panel for upgrade decisions."""
     current = captain.ship
