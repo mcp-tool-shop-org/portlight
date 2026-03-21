@@ -750,6 +750,21 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
 
 
 @app.command()
+def rename(
+    new_name: str = typer.Argument(..., help="New name for the ship"),
+    ship: str = typer.Option(None, "--ship", "-s", help="Name of fleet ship to rename (default: flagship)"),
+) -> None:
+    """Rename your flagship or a fleet ship."""
+    s = _session()
+    err = s.rename_ship(new_name, ship)
+    if err:
+        console.print(f"[red]{err}[/red]")
+    else:
+        target = ship or "flagship"
+        console.print(f"[green]Renamed {target} to '{new_name}'[/green]")
+
+
+@app.command()
 def fleet() -> None:
     """Show all ships in your fleet."""
     s = _session()
@@ -1690,14 +1705,16 @@ def fight(
                 pass  # loot system may not be fully wired yet
 
         # Tick weapon degradation
+        from portlight.engine.skill_engine import get_degrade_threshold_bonus, get_skill_level
         from portlight.engine.weapon_quality import tick_weapon_degradation
         gear = s.captain.combat_gear
+        bs_bonus = get_degrade_threshold_bonus(get_skill_level(s.captain.skills, "blacksmith"))
         if gear.melee_weapon:
-            degraded, new_q = tick_weapon_degradation(gear.weapon_quality, gear.weapon_usage, gear.melee_weapon, "melee")
+            degraded, new_q = tick_weapon_degradation(gear.weapon_quality, gear.weapon_usage, gear.melee_weapon, "melee", threshold_bonus=bs_bonus)
             if degraded:
                 console.print(f"[yellow]Your {gear.melee_weapon.replace('_', ' ').title()} has degraded to {new_q} quality![/yellow]")
         if gear.armor:
-            degraded, new_q = tick_weapon_degradation(gear.weapon_quality, gear.weapon_usage, gear.armor, "armor")
+            degraded, new_q = tick_weapon_degradation(gear.weapon_quality, gear.weapon_usage, gear.armor, "armor", threshold_bonus=bs_bonus)
             if degraded:
                 console.print(f"[yellow]Your {gear.armor.replace('_', ' ').title()} has degraded to {new_q} quality![/yellow]")
 
@@ -1975,13 +1992,20 @@ def maintain(
         console.print(table)
         return
 
-    # Maintain specific weapon
-    remaining, error = maintain_weapon(weapon, gear.weapon_quality, gear.weapon_usage, s.captain.silver)
-    if error:
-        console.print(f"[red]{error}[/red]")
+    # Apply blacksmith discount
+    from portlight.engine.skill_engine import apply_maintenance_discount, get_skill_level
+    bs_level = get_skill_level(s.captain.skills, "blacksmith")
+    base_cost = get_maintenance_cost(weapon, gear.weapon_quality)
+    discounted_cost = apply_maintenance_discount(base_cost, bs_level)
+
+    if s.captain.silver < discounted_cost:
+        console.print(f"[red]Maintenance costs {discounted_cost} silver. You have {s.captain.silver}.[/red]")
         return
-    s.captain.silver = remaining
-    console.print(f"[green]{weapon.replace('_', ' ').title()} maintained — usage reset, quality preserved.[/green]")
+
+    gear.weapon_usage[weapon] = 0
+    s.captain.silver -= discounted_cost
+    discount_note = f" (blacksmith discount!)" if discounted_cost < base_cost else ""
+    console.print(f"[green]{weapon.replace('_', ' ').title()} maintained — usage reset, quality preserved.{discount_note}[/green]")
     s._save()
 
 
@@ -2019,6 +2043,79 @@ def smith(
         f"[{effects.color}]{effects.label}[/{effects.color}] quality. "
         f"({days} days, {s.captain.silver} silver remaining)"
     )
+    s._save()
+
+
+@app.command(name="learn-skill")
+def learn_skill_cmd(
+    skill_id: str = typer.Argument(None, help="Skill to learn (e.g. blacksmith)"),
+) -> None:
+    """Learn or advance a skill from a trainer at this port."""
+    from portlight.content.skills import SKILLS, get_trainers_at_port
+    from portlight.engine.skill_engine import can_learn_skill, get_skill_display, learn_skill
+
+    s = _session()
+    port = s.current_port
+    if not port:
+        console.print("[yellow]Must be docked to learn skills.[/yellow]")
+        return
+
+    trainers = get_trainers_at_port(port.id)
+    if not trainers and skill_id is None:
+        console.print("[dim]No skill trainers at this port.[/dim]")
+        return
+
+    if skill_id is None:
+        # Show available trainers
+        from rich.table import Table
+        table = Table(title=f"Skill Trainers — {port.name}")
+        table.add_column("Trainer")
+        table.add_column("Skill")
+        table.add_column("Teaches Up To")
+        table.add_column("Your Level")
+        for t in trainers:
+            skill = SKILLS.get(t.skill_id)
+            current = get_skill_display(s.captain.skills, t.skill_id)
+            max_name = skill.levels[t.max_teach_level - 1].name if skill else "?"
+            table.add_row(t.name, skill.name if skill else t.skill_id, max_name, current)
+        console.print(table)
+        for t in trainers:
+            console.print(f"\n  {t.dialog} — [dim]{t.name}[/dim]")
+        return
+
+    error = can_learn_skill(s.captain.skills, s.captain.silver, port.id, skill_id)
+    if error:
+        console.print(f"[red]{error}[/red]")
+        return
+
+    s.captain.skills, s.captain.silver, days = learn_skill(s.captain.skills, s.captain.silver, skill_id)
+    for _ in range(days):
+        s.advance()
+
+    skill = SKILLS[skill_id]
+    new_level = s.captain.skills[skill_id]
+    level_name = skill.levels[new_level - 1].name
+    console.print(f"\n[bold green]Learned {skill.name} — {level_name}![/bold green] ({days} days)")
+    console.print(f"[dim]{skill.levels[new_level - 1].description}[/dim]")
+    s._save()
+
+
+@app.command(name="field-repair")
+def field_repair_cmd(
+    weapon: str = typer.Argument(..., help="Weapon ID to repair at sea"),
+) -> None:
+    """Repair a weapon at sea (requires Journeyman blacksmith skill)."""
+    from portlight.engine.skill_engine import field_repair_weapon, get_skill_level
+
+    s = _session()
+    bs_level = get_skill_level(s.captain.skills, "blacksmith")
+    gear = s.captain.combat_gear
+
+    success, error = field_repair_weapon(weapon, gear.weapon_quality, gear.weapon_usage, bs_level)
+    if error:
+        console.print(f"[red]{error}[/red]")
+        return
+    console.print(f"[green]{weapon.replace('_', ' ').title()} repaired at sea — usage reset.[/green]")
     s._save()
 
 

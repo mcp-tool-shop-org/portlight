@@ -548,6 +548,32 @@ class GameSession:
                 return None
         return f"Upgrade not installed: {upgrade_id}"
 
+    def rename_ship(self, new_name: str, ship_name: str | None = None) -> str | None:
+        """Rename a ship. Renames flagship by default, or a fleet ship by name."""
+        if not self.world:
+            return "No active game"
+        if not new_name.strip():
+            return "Name cannot be empty"
+        new_name = new_name.strip()[:30]  # cap at 30 chars
+
+        if ship_name is None:
+            # Rename flagship
+            if not self.world.captain.ship:
+                return "No ship"
+            self.world.captain.ship.name = new_name
+        else:
+            # Rename a fleet ship
+            for owned in self.world.captain.fleet:
+                if (owned.ship.name.lower() == ship_name.lower()
+                        or owned.ship.template_id.lower() == ship_name.lower()):
+                    owned.ship.name = new_name
+                    self._save()
+                    return None
+            return f"No ship named '{ship_name}' in fleet"
+
+        self._save()
+        return None
+
     # --- Fleet ---
 
     def dock_current_ship(self) -> str | None:
