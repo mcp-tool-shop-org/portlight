@@ -527,6 +527,46 @@ def check_route_suitability(route: Route, ship: "Ship") -> str | None:
     return None
 
 
+def _bounty_hunter_event(captain: "Captain", rng: random.Random) -> VoyageEvent:
+    """Generate a bounty hunter encounter for wanted captains."""
+    from portlight.engine.models import PendingDuel
+
+    # Named bounty hunters
+    hunters = [
+        ("marshal_kael", "Marshal Kael", "northern_pact", "balanced", 8),
+        ("iron_hound", "The Iron Hound", "northern_pact", "aggressive", 9),
+        ("silent_mora", "Silent Mora", "northern_pact", "defensive", 7),
+    ]
+    hunter = rng.choice(hunters)
+    hid, hname, hfaction, hpersonality, hstrength = hunter
+
+    # Calculate debt owed
+    total_debt = sum(f["amount"] for f in captain.deferred_fees if f.get("type") == "emergency_loan")
+    breach_penalty = len(captain.breach_records) * 50
+    demand = total_debt + breach_penalty
+
+    pending = PendingDuel(
+        captain_id=hid,
+        captain_name=hname,
+        faction_id=hfaction,
+        personality=hpersonality,
+        strength=hstrength,
+        region="",
+    )
+    msg = (
+        f"A fast ship flying Pact colors cuts across your bow. {hname} stands at the rail, "
+        f"commission papers in hand. \"You owe debts, Captain. {demand} silver, or we settle this "
+        f"with steel.\"\n\n"
+        f"Use [bold]portlight encounter <negotiate|flee|fight>[/bold] to respond."
+    )
+    return VoyageEvent(
+        EventType.PIRATES,
+        msg,
+        flavor=f"Bounty hunter — strength {hstrength}, {hpersonality} fighter. Demands {demand} silver.",
+        _pending_duel=pending,
+    )
+
+
 def depart(world: "WorldState", destination_id: str, defer_fee: bool = False) -> VoyageState | str:
     """Begin a voyage from current port to destination."""
     captain = world.captain
@@ -693,6 +733,14 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     # Handle pending duel from pirate encounter
     if event._pending_duel is not None:
         world.pirates.pending_duel = event._pending_duel
+
+    # Bounty hunter encounter for wanted captains (level 3 = hunted)
+    if captain.wanted_level >= 3 and event._pending_duel is None:
+        if rng.random() < 0.15:  # 15% chance per day at sea
+            bh_event = _bounty_hunter_event(captain, rng)
+            events.append(bh_event)
+            if bh_event._pending_duel is not None:
+                world.pirates.pending_duel = bh_event._pending_duel
 
     # Apply event effects
     captain.ship.hull = max(0, captain.ship.hull + event.hull_delta)

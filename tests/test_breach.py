@@ -89,6 +89,35 @@ class TestWantedLevel:
         assert world.captain.wanted_level == 3  # hunted
 
 
+class TestBountyHunterEncounter:
+    def test_bounty_hunter_event_generated(self):
+        """Bounty hunter events should be generated for wanted level 3 captains."""
+        from portlight.engine.voyage import _bounty_hunter_event
+        world = new_game()
+        world.captain.wanted_level = 3
+        _record_breach(world.captain, "c1", 5, "porto_novo", "procurement")
+        event = _bounty_hunter_event(world.captain, random.Random(42))
+        assert "Pact colors" in event.message or "commission" in event.message
+        assert event._pending_duel is not None
+
+    def test_bounty_hunter_not_at_low_wanted(self):
+        """Bounty hunters should not appear at wanted level < 3."""
+        from portlight.engine.voyage import advance_day, depart
+        world = new_game()
+        world.captain.wanted_level = 1  # watched, not hunted
+        depart(world, "al_manar")
+        # Run many days and check no bounty hunter appears
+        bounty_events = 0
+        for seed in range(50):
+            events = advance_day(world, random.Random(seed))
+            for e in events:
+                if "commission" in e.message and "Pact" in e.message:
+                    bounty_events += 1
+            if world.voyage and world.voyage.status.value == "arrived":
+                break
+        assert bounty_events == 0
+
+
 class TestBreachFamilyCounting:
     def test_count_breaches_by_family(self):
         world = new_game()
