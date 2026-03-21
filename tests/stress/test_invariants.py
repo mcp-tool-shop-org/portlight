@@ -46,7 +46,7 @@ class TestCleanState:
         assert failures == [], f"Fresh session has invariant failures: {failures}"
 
     def test_all_checks_registered(self):
-        assert len(_ALL_CHECKS) == 14
+        assert len(_ALL_CHECKS) == 19  # 14 original + 5 ship expansion
 
     def test_each_check_returns_invariant_result(self, tmp_path):
         s = _fresh_session(tmp_path)

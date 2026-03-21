@@ -297,6 +297,95 @@ def _check_first_path_stays_first(s: "GameSession") -> InvariantResult:
 
 
 # ---------------------------------------------------------------------------
+# Ship expansion truth
+# ---------------------------------------------------------------------------
+
+def _check_crew_matches_roster(s: "GameSession") -> InvariantResult:
+    """ship.crew must equal roster.total for every ship."""
+    ship = s.captain.ship
+    if ship and hasattr(ship, "roster") and ship.roster.total > 0:
+        if ship.crew != ship.roster.total:
+            return InvariantResult(
+                name="crew_matches_roster",
+                subsystem=Subsystem.ECONOMY,
+                passed=False,
+                message=f"Flagship crew={ship.crew} != roster.total={ship.roster.total}",
+            )
+    for owned in s.captain.fleet:
+        r = getattr(owned.ship, "roster", None)
+        if r and r.total > 0 and owned.ship.crew != r.total:
+            return InvariantResult(
+                name="crew_matches_roster",
+                subsystem=Subsystem.ECONOMY,
+                passed=False,
+                message=f"Fleet ship {owned.ship.name} crew={owned.ship.crew} != roster.total={r.total}",
+            )
+    return InvariantResult(name="crew_matches_roster", subsystem=Subsystem.ECONOMY, passed=True)
+
+
+def _check_fleet_within_trust_limit(s: "GameSession") -> InvariantResult:
+    """Fleet size must not exceed trust-based limit."""
+    from portlight.engine.models import max_fleet_size
+    trust = s.captain.standing.commercial_trust
+    limit = max_fleet_size(trust)
+    total = 1 + len(s.captain.fleet)
+    return InvariantResult(
+        name="fleet_within_trust_limit",
+        subsystem=Subsystem.ECONOMY,
+        passed=total <= limit,
+        message=f"Fleet {total} > limit {limit}" if total > limit else "",
+    )
+
+
+def _check_upgrades_within_slots(s: "GameSession") -> InvariantResult:
+    """No ship has more upgrades than its slot count."""
+    ship = s.captain.ship
+    if ship and len(ship.upgrades) > ship.upgrade_slots:
+        return InvariantResult(
+            name="upgrades_within_slots",
+            subsystem=Subsystem.ECONOMY,
+            passed=False,
+            message=f"Flagship has {len(ship.upgrades)} upgrades in {ship.upgrade_slots} slots",
+        )
+    for owned in s.captain.fleet:
+        if len(owned.ship.upgrades) > owned.ship.upgrade_slots:
+            return InvariantResult(
+                name="upgrades_within_slots",
+                subsystem=Subsystem.ECONOMY,
+                passed=False,
+                message=f"Fleet ship {owned.ship.name} exceeds upgrade slots",
+            )
+    return InvariantResult(name="upgrades_within_slots", subsystem=Subsystem.ECONOMY, passed=True)
+
+
+def _check_no_negative_crew_roles(s: "GameSession") -> InvariantResult:
+    """No role count in any roster is negative."""
+    for ship in [s.captain.ship] + [o.ship for o in s.captain.fleet]:
+        if ship and hasattr(ship, "roster"):
+            r = ship.roster
+            for field in ["sailors", "gunners", "navigators", "surgeons", "marines", "quartermasters"]:
+                val = getattr(r, field, 0)
+                if val < 0:
+                    return InvariantResult(
+                        name="no_negative_crew_roles",
+                        subsystem=Subsystem.ECONOMY,
+                        passed=False,
+                        message=f"{ship.name} has {field}={val}",
+                    )
+    return InvariantResult(name="no_negative_crew_roles", subsystem=Subsystem.ECONOMY, passed=True)
+
+
+def _check_flagship_exists(s: "GameSession") -> InvariantResult:
+    """Captain must always have a flagship."""
+    return InvariantResult(
+        name="flagship_exists",
+        subsystem=Subsystem.ECONOMY,
+        passed=s.captain.ship is not None,
+        message="No flagship" if s.captain.ship is None else "",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -321,4 +410,10 @@ _ALL_CHECKS = [
     _check_completed_milestones_persistent,
     _check_completed_paths_persistent,
     _check_first_path_stays_first,
+    # Ship expansion
+    _check_crew_matches_roster,
+    _check_fleet_within_trust_limit,
+    _check_upgrades_within_slots,
+    _check_no_negative_crew_roles,
+    _check_flagship_exists,
 ]
