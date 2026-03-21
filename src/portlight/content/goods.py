@@ -39,4 +39,7 @@ GOODS: dict[str, Good] = {g.id: g for g in [
     Good("opium",        "Opium",         GoodCategory.CONTRABAND, base_price=85, weight_per_unit=0.5),
     Good("black_powder", "Black Powder",  GoodCategory.CONTRABAND, base_price=65, weight_per_unit=1.5),
     Good("stolen_cargo", "Stolen Cargo",  GoodCategory.CONTRABAND, base_price=40, weight_per_unit=1.0),
+
+    # === Hunted goods ===
+    Good("pelts",  "Pelts",  GoodCategory.COMMODITY, base_price=8, weight_per_unit=0.5),
 ]}

@@ -66,7 +66,7 @@ class TestContrabandGoods:
         assert GOODS["black_powder"].weight_per_unit == 1.5
 
     def test_total_goods_count(self):
-        assert len(GOODS) == 17
+        assert len(GOODS) == 18  # 17 original + pelts
 
 
 class TestBlackMarketPorts:

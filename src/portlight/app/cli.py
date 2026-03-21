@@ -314,6 +314,55 @@ def repair(amount: int = typer.Argument(None, help="Hull points to repair (defau
 
 
 # ---------------------------------------------------------------------------
+# Hunting (anti-soft-lock)
+# ---------------------------------------------------------------------------
+
+@app.command()
+def hunt() -> None:
+    """Hunt or forage for provisions and pelts. Works at port or at sea."""
+    from portlight.engine.hunting import hunt as do_hunt
+    from portlight.engine.models import CargoItem
+    s = _session()
+    location = "sea" if s.world.voyage and s.world.voyage.status.value == "at_sea" else "port"
+
+    if location == "sea" and s.captain.ship and s.captain.ship.morale < 20:
+        console.print("[yellow]Crew morale too low for hunting at sea (need 20+).[/yellow]")
+        return
+
+    crew_count = s.captain.ship.crew if s.captain.ship else 1
+    result = do_hunt(s.captain, location, crew_count, s._rng)
+
+    console.print(f"\n[bold]Hunting {'at port' if location == 'port' else 'at sea'}...[/bold]")
+    console.print(f"  {result.flavor}")
+
+    if result.success:
+        if result.provisions_gained > 0:
+            s.captain.provisions += result.provisions_gained
+            console.print(f"  [green]+{result.provisions_gained} provisions[/green]")
+        if result.pelts_gained > 0:
+            # Add pelts to cargo
+            existing = next((c for c in s.captain.cargo if c.good_id == "pelts"), None)
+            if existing:
+                existing.quantity += result.pelts_gained
+            else:
+                s.captain.cargo.append(CargoItem(
+                    good_id="pelts", quantity=result.pelts_gained,
+                    cost_basis=0, acquired_port=s.current_port.id if s.current_port else "",
+                    acquired_region="", acquired_day=s.captain.day,
+                ))
+            console.print(f"  [green]+{result.pelts_gained} pelts[/green]")
+    else:
+        console.print("  [dim]Nothing useful found.[/dim]")
+
+    if result.morale_cost > 0 and s.captain.ship:
+        s.captain.ship.morale = max(0, s.captain.ship.morale - result.morale_cost)
+        console.print(f"  [yellow]Morale -{result.morale_cost}[/yellow]")
+
+    console.print(f"  Day {s.captain.day}.")
+    s._save()
+
+
+# ---------------------------------------------------------------------------
 # Work the docks (anti-soft-lock)
 # ---------------------------------------------------------------------------
 
