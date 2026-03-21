@@ -97,6 +97,51 @@ class ShipClass(str, Enum):
     MAN_OF_WAR = "man_of_war"
 
 
+class UpgradeCategory(str, Enum):
+    """Ship upgrade slot categories."""
+    SAILS = "sails"
+    HULL_PLATING = "hull_plating"
+    ARMAMENT = "armament"
+    CARGO = "cargo"
+    NAVIGATION = "navigation"
+    CREW_QUARTERS = "crew_quarters"
+
+
+@dataclass
+class UpgradeTemplate:
+    """Static blueprint for a ship upgrade component."""
+    id: str
+    name: str
+    category: UpgradeCategory
+    price: int                           # silver cost to install
+    speed_bonus: float = 0.0
+    hull_max_bonus: int = 0
+    cargo_bonus: int = 0
+    cannon_bonus: int = 0
+    maneuver_bonus: float = 0.0
+    storm_resist_bonus: float = 0.0
+    crew_max_bonus: int = 0
+    speed_penalty: float = 0.0          # subtracted from speed
+    special: str = ""                    # e.g. "contraband_immune", "chain_shot"
+
+
+@dataclass
+class InstalledUpgrade:
+    """An upgrade installed on a specific ship."""
+    upgrade_id: str
+    installed_day: int = 0
+
+
+# Upgrade slots per ship class
+UPGRADE_SLOTS: dict[ShipClass, int] = {
+    ShipClass.SLOOP: 2,
+    ShipClass.CUTTER: 3,
+    ShipClass.BRIGANTINE: 4,
+    ShipClass.GALLEON: 5,
+    ShipClass.MAN_OF_WAR: 6,
+}
+
+
 @dataclass
 class ShipTemplate:
     """Static ship blueprint. Players buy from shipyards."""
@@ -111,6 +156,8 @@ class ShipTemplate:
     price: int                       # purchase cost in silver
     daily_wage: int = 1              # silver per crew per day at sea
     storm_resist: float = 0.0        # fraction of storm damage absorbed (0-1)
+    cannons: int = 0                 # cannon positions (0 for sloop — board only)
+    maneuver: float = 0.5            # turning ability (0-1, higher = nimbler)
 
 
 @dataclass
@@ -124,6 +171,10 @@ class Ship:
     speed: float
     crew: int
     crew_max: int
+    cannons: int = 0                 # from template
+    maneuver: float = 0.5            # from template
+    upgrades: list[InstalledUpgrade] = field(default_factory=list)
+    upgrade_slots: int = 2           # set from UPGRADE_SLOTS at creation
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +237,28 @@ class CargoItem:
 
 
 @dataclass
+class ActiveInjury:
+    """A persistent injury sustained in combat."""
+    injury_id: str
+    acquired_day: int = 0
+    heal_remaining: int | None = None  # None = permanent, else days to heal
+    treated: bool = False              # visited a doctor at port
+
+
+@dataclass
+class CombatGear:
+    """Weapons, armor, and ammunition carried by the captain."""
+    firearm: str | None = None         # weapon id (matchlock_pistol, etc.)
+    firearm_ammo: int = 0
+    throwing_weapons: dict[str, int] = field(default_factory=dict)  # weapon_id → count
+    mechanical_weapon: str | None = None  # hand_crossbow, etc.
+    mechanical_ammo: int = 0
+    armor: str | None = None           # armor id (leather_vest, chain_shirt, etc.)
+    melee_weapon: str | None = None    # melee weapon id (cutlass, rapier, etc.)
+    weapon_upgrades: dict[str, list[str]] = field(default_factory=dict)  # weapon_id → upgrade_ids
+
+
+@dataclass
 class Captain:
     """The player character."""
     name: str = "Captain"
@@ -197,6 +270,11 @@ class Captain:
     provisions: int = 30             # days of food/water
     day: int = 1                     # current game day
     standing: ReputationState = field(default_factory=ReputationState)
+    # Combat system (Phase 5+)
+    learned_styles: list[str] = field(default_factory=list)
+    active_style: str | None = None
+    combat_gear: CombatGear = field(default_factory=CombatGear)
+    injuries: list[ActiveInjury] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -277,12 +355,101 @@ class DuelResult:
 
 
 @dataclass
+class PendingDuel:
+    """A pirate captain has challenged the player to a duel."""
+    captain_id: str
+    captain_name: str
+    faction_id: str
+    personality: str
+    strength: int
+    region: str = ""
+
+
+@dataclass
 class PirateState:
     """Tracks pirate encounters, nemesis, and duel history."""
     encounters: list[PirateEncounterRecord] = field(default_factory=list)
     nemesis_id: str | None = None
     duels_won: int = 0
     duels_lost: int = 0
+    pending_duel: PendingDuel | None = None
+    naval_victories: int = 0
+    naval_defeats: int = 0
+    captain_memories: dict = field(default_factory=dict)  # captain_id → CaptainMemory (engine layer)
+
+
+@dataclass
+class EncounterState:
+    """Active pirate encounter — multi-phase state machine.
+
+    Phases: approach → naval → boarding → duel → resolved
+    """
+    enemy_captain_id: str = ""
+    enemy_captain_name: str = ""
+    enemy_faction_id: str = ""
+    enemy_personality: str = "balanced"
+    enemy_strength: int = 5
+    enemy_region: str = ""
+    # Ship state
+    enemy_ship_hull: int = 0
+    enemy_ship_hull_max: int = 0
+    enemy_ship_cannons: int = 0
+    enemy_ship_maneuver: float = 0.5
+    enemy_ship_speed: float = 6.0
+    enemy_ship_crew: int = 10
+    enemy_ship_crew_max: int = 15
+    # Phase tracking
+    phase: str = "approach"     # approach | naval | boarding | duel | resolved
+    boarding_progress: int = 0
+    boarding_threshold: int = 3
+    naval_turns: int = 0
+    duel_turns: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Naval combat
+# ---------------------------------------------------------------------------
+
+@dataclass
+class EnemyShip:
+    """A pirate captain's ship — generated from faction + strength."""
+    name: str
+    hull: int
+    hull_max: int
+    cannons: int
+    maneuver: float
+    speed: float
+    crew: int
+    crew_max: int
+
+
+@dataclass
+class NavalRound:
+    """One turn of ship-to-ship combat."""
+    turn: int
+    player_action: str               # broadside/close/evade/rake
+    enemy_action: str
+    player_hull_delta: int = 0
+    enemy_hull_delta: int = 0
+    player_crew_delta: int = 0
+    enemy_crew_delta: int = 0
+    boarding_progress: int = 0       # cumulative boarding counter
+    flavor: str = ""
+
+
+@dataclass
+class NavalResult:
+    """Outcome of a completed ship-to-ship engagement."""
+    rounds: list[NavalRound] = field(default_factory=list)
+    player_ship_sunk: bool = False
+    enemy_ship_sunk: bool = False
+    boarding_triggered: bool = False
+    player_fled: bool = False
+    enemy_fled: bool = False
+    player_crew_remaining: int = 0
+    enemy_crew_remaining: int = 0
+    player_hull_remaining: int = 0
+    enemy_hull_remaining: int = 0
 
 
 class VoyageStatus(str, Enum):
@@ -386,6 +553,7 @@ class CulturalState:
     regions_entered: list[str] = field(default_factory=list)
     cultural_encounters: int = 0
     port_visits: dict[str, int] = field(default_factory=dict)  # port_id → count
+    festivals_visited: int = 0  # lifetime count of festival port arrivals
 
 
 # ---------------------------------------------------------------------------

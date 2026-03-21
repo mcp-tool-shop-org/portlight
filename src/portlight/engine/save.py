@@ -13,10 +13,15 @@ from pathlib import Path
 
 from portlight.engine.models import (
     ActiveFestival,
+    ActiveInjury,
     Captain,
     CargoItem,
+    CombatGear,
     CulturalState,
+    EncounterState,
+    InstalledUpgrade,
     MarketSlot,
+    PendingDuel,
     PirateEncounterRecord,
     PirateState,
     Port,
@@ -58,7 +63,7 @@ from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"
-CURRENT_SAVE_VERSION = 5
+CURRENT_SAVE_VERSION = 7
 
 
 # ---------------------------------------------------------------------------
@@ -142,11 +147,43 @@ def _migrate_v4_to_v5(data: dict) -> dict:
     return data
 
 
+def _migrate_v5_to_v6(data: dict) -> dict:
+    """v5 → v6: Add armor, melee weapons, weapon upgrades to combat gear. Add ship upgrades."""
+    captain = data.get("captain", {})
+    gear = captain.get("combat_gear", {})
+    gear.setdefault("armor", None)
+    gear.setdefault("melee_weapon", None)
+    gear.setdefault("weapon_upgrades", {})
+    captain["combat_gear"] = gear
+    ship = captain.get("ship")
+    if ship:
+        ship.setdefault("upgrades", [])
+    data["version"] = 6
+    return data
+
+
+def _migrate_v6_to_v7(data: dict) -> dict:
+    """v6 → v7: Evolve ship upgrades from list[str] to list[dict] with upgrade_slots."""
+    captain = data.get("captain", {})
+    ship = captain.get("ship")
+    if ship:
+        old_upgrades = ship.get("upgrades", [])
+        if old_upgrades and isinstance(old_upgrades[0], str):
+            ship["upgrades"] = [
+                {"upgrade_id": uid, "installed_day": 0} for uid in old_upgrades
+            ]
+        ship.setdefault("upgrade_slots", 2)
+    data["version"] = 7
+    return data
+
+
 _MIGRATIONS = [
     (1, 2, _migrate_v1_to_v2),
     (2, 3, _migrate_v2_to_v3),
     (3, 4, _migrate_v3_to_v4),
     (4, 5, _migrate_v4_to_v5),
+    (5, 6, _migrate_v5_to_v6),
+    (6, 7, _migrate_v6_to_v7),
 ]
 
 
@@ -187,10 +224,33 @@ def _ship_to_dict(ship: Ship) -> dict:
         "speed": ship.speed,
         "crew": ship.crew,
         "crew_max": ship.crew_max,
+        "cannons": getattr(ship, "cannons", 0),
+        "maneuver": getattr(ship, "maneuver", 0.5),
+        "upgrades": [
+            {"upgrade_id": u.upgrade_id, "installed_day": u.installed_day}
+            for u in (ship.upgrades or [])
+        ],
+        "upgrade_slots": getattr(ship, "upgrade_slots", 2),
     }
 
 
 def _ship_from_dict(d: dict) -> Ship:
+    # Derive cannons/maneuver from template if not in save data (migration)
+    if "cannons" not in d or "maneuver" not in d:
+        from portlight.content.ships import SHIPS
+        template = SHIPS.get(d.get("template_id", ""))
+        d.setdefault("cannons", template.cannons if template else 0)
+        d.setdefault("maneuver", template.maneuver if template else 0.5)
+    # Deserialize upgrades from dicts to InstalledUpgrade objects
+    raw_upgrades = d.pop("upgrades", [])
+    upgrades = []
+    for item in raw_upgrades:
+        if isinstance(item, dict):
+            upgrades.append(InstalledUpgrade(**item))
+        elif isinstance(item, str):
+            upgrades.append(InstalledUpgrade(upgrade_id=item, installed_day=0))
+    d["upgrades"] = upgrades
+    d.setdefault("upgrade_slots", 2)
     return Ship(**d)
 
 
@@ -241,6 +301,45 @@ def _reputation_from_dict(d: dict) -> ReputationState:
     )
 
 
+def _combat_gear_to_dict(gear: CombatGear) -> dict:
+    return {
+        "firearm": gear.firearm,
+        "firearm_ammo": gear.firearm_ammo,
+        "throwing_weapons": gear.throwing_weapons,
+        "mechanical_weapon": gear.mechanical_weapon,
+        "mechanical_ammo": gear.mechanical_ammo,
+        "armor": gear.armor,
+        "melee_weapon": gear.melee_weapon,
+        "weapon_upgrades": gear.weapon_upgrades,
+    }
+
+
+def _combat_gear_from_dict(d: dict) -> CombatGear:
+    return CombatGear(
+        firearm=d.get("firearm"),
+        firearm_ammo=d.get("firearm_ammo", 0),
+        throwing_weapons=d.get("throwing_weapons", {}),
+        mechanical_weapon=d.get("mechanical_weapon"),
+        mechanical_ammo=d.get("mechanical_ammo", 0),
+        armor=d.get("armor"),
+        melee_weapon=d.get("melee_weapon"),
+        weapon_upgrades=d.get("weapon_upgrades", {}),
+    )
+
+
+def _injury_to_dict(inj: ActiveInjury) -> dict:
+    return {
+        "injury_id": inj.injury_id,
+        "acquired_day": inj.acquired_day,
+        "heal_remaining": inj.heal_remaining,
+        "treated": inj.treated,
+    }
+
+
+def _injury_from_dict(d: dict) -> ActiveInjury:
+    return ActiveInjury(**d)
+
+
 def _captain_to_dict(captain: Captain) -> dict:
     return {
         "name": captain.name,
@@ -256,6 +355,10 @@ def _captain_to_dict(captain: Captain) -> dict:
         "provisions": captain.provisions,
         "day": captain.day,
         "standing": _reputation_to_dict(captain.standing),
+        "learned_styles": captain.learned_styles,
+        "active_style": captain.active_style,
+        "combat_gear": _combat_gear_to_dict(captain.combat_gear),
+        "injuries": [_injury_to_dict(i) for i in captain.injuries],
     }
 
 
@@ -271,6 +374,8 @@ def _cargo_from_dict(c: dict) -> CargoItem:
 
 def _captain_from_dict(d: dict) -> Captain:
     standing = _reputation_from_dict(d["standing"]) if "standing" in d else ReputationState()
+    gear = _combat_gear_from_dict(d["combat_gear"]) if "combat_gear" in d else CombatGear()
+    injuries = [_injury_from_dict(i) for i in d.get("injuries", [])]
     return Captain(
         name=d["name"],
         captain_type=d.get("captain_type", "merchant"),
@@ -281,6 +386,10 @@ def _captain_from_dict(d: dict) -> Captain:
         provisions=d["provisions"],
         day=d["day"],
         standing=standing,
+        learned_styles=d.get("learned_styles", []),
+        active_style=d.get("active_style"),
+        combat_gear=gear,
+        injuries=injuries,
     )
 
 
@@ -489,7 +598,7 @@ def _active_contract_from_dict(d: dict) -> ActiveContract:
 
 
 def _outcome_to_dict(o: ContractOutcome) -> dict:
-    return {
+    result = {
         "contract_id": o.contract_id,
         "outcome_type": o.outcome_type,
         "silver_delta": o.silver_delta,
@@ -499,10 +608,16 @@ def _outcome_to_dict(o: ContractOutcome) -> dict:
         "completion_day": o.completion_day,
         "summary": o.summary,
     }
+    if o.family is not None:
+        result["family"] = o.family.value
+    return result
 
 
 def _outcome_from_dict(d: dict) -> ContractOutcome:
-    return ContractOutcome(**d)
+    d = dict(d)  # don't mutate caller's dict
+    raw_family = d.pop("family", None)
+    family = ContractFamily(raw_family) if raw_family else None
+    return ContractOutcome(**d, family=family)
 
 
 def _board_to_dict(board: ContractBoard) -> dict:
@@ -790,7 +905,7 @@ def _narrative_from_dict(d: dict) -> NarrativeState:
 
 
 def _pirate_state_to_dict(state: PirateState) -> dict:
-    return {
+    result = {
         "encounters": [
             {"captain_id": e.captain_id, "faction_id": e.faction_id,
              "day": e.day, "outcome": e.outcome, "region": e.region}
@@ -799,10 +914,73 @@ def _pirate_state_to_dict(state: PirateState) -> dict:
         "nemesis_id": state.nemesis_id,
         "duels_won": state.duels_won,
         "duels_lost": state.duels_lost,
+        "naval_victories": state.naval_victories,
+        "naval_defeats": state.naval_defeats,
     }
+    if state.pending_duel is not None:
+        pd = state.pending_duel
+        result["pending_duel"] = {
+            "captain_id": pd.captain_id, "captain_name": pd.captain_name,
+            "faction_id": pd.faction_id, "personality": pd.personality,
+            "strength": pd.strength, "region": pd.region,
+        }
+    # Captain memories — serialize the CaptainMemory objects
+    if state.captain_memories:
+        from portlight.engine.captain_memory import CaptainMemory, CaptainRelationship, EncounterMemory
+        memories_dict = {}
+        for cid, mem in state.captain_memories.items():
+            if isinstance(mem, CaptainMemory):
+                memories_dict[cid] = {
+                    "captain_id": mem.captain_id,
+                    "relationship": {
+                        "respect": mem.relationship.respect,
+                        "fear": mem.relationship.fear,
+                        "grudge": mem.relationship.grudge,
+                        "familiarity": mem.relationship.familiarity,
+                    },
+                    "encounters": [{
+                        "day": e.day, "region": e.region, "outcome": e.outcome,
+                        "player_spared": e.player_spared, "player_used_firearm": e.player_used_firearm,
+                        "crew_killed": e.crew_killed, "respect_delta": e.respect_delta,
+                        "fear_delta": e.fear_delta, "grudge_delta": e.grudge_delta,
+                        "familiarity_delta": e.familiarity_delta,
+                    } for e in mem.encounters],
+                    "last_seen_day": mem.last_seen_day,
+                    "last_seen_region": mem.last_seen_region,
+                    "times_spared": mem.times_spared,
+                    "times_defeated_by_player": mem.times_defeated_by_player,
+                    "times_defeated_player": mem.times_defeated_player,
+                    "player_sank_their_ship": mem.player_sank_their_ship,
+                }
+            else:
+                memories_dict[cid] = mem  # already dict (raw load)
+        result["captain_memories"] = memories_dict
+    return result
 
 
 def _pirate_state_from_dict(d: dict) -> PirateState:
+    pd_data = d.get("pending_duel")
+    pending = PendingDuel(**pd_data) if pd_data else None
+    # Deserialize captain memories
+    from portlight.engine.captain_memory import CaptainMemory, CaptainRelationship, EncounterMemory
+    raw_memories = d.get("captain_memories", {})
+    captain_memories = {}
+    for cid, md in raw_memories.items():
+        rel_d = md.get("relationship", {})
+        captain_memories[cid] = CaptainMemory(
+            captain_id=md.get("captain_id", cid),
+            relationship=CaptainRelationship(
+                respect=rel_d.get("respect", 0), fear=rel_d.get("fear", 0),
+                grudge=rel_d.get("grudge", 0), familiarity=rel_d.get("familiarity", 0),
+            ),
+            encounters=[EncounterMemory(**e) for e in md.get("encounters", [])],
+            last_seen_day=md.get("last_seen_day", 0),
+            last_seen_region=md.get("last_seen_region", ""),
+            times_spared=md.get("times_spared", 0),
+            times_defeated_by_player=md.get("times_defeated_by_player", 0),
+            times_defeated_player=md.get("times_defeated_player", 0),
+            player_sank_their_ship=md.get("player_sank_their_ship", False),
+        )
     return PirateState(
         encounters=[
             PirateEncounterRecord(
@@ -814,6 +992,10 @@ def _pirate_state_from_dict(d: dict) -> PirateState:
         nemesis_id=d.get("nemesis_id"),
         duels_won=d.get("duels_won", 0),
         duels_lost=d.get("duels_lost", 0),
+        naval_victories=d.get("naval_victories", 0),
+        naval_defeats=d.get("naval_defeats", 0),
+        pending_duel=pending,
+        captain_memories=captain_memories,
     )
 
 
@@ -827,6 +1009,7 @@ def _cultural_state_to_dict(state: CulturalState) -> dict:
         "regions_entered": list(state.regions_entered),
         "cultural_encounters": state.cultural_encounters,
         "port_visits": dict(state.port_visits),
+        "festivals_visited": state.festivals_visited,
     }
 
 
@@ -842,6 +1025,7 @@ def _cultural_state_from_dict(d: dict) -> CulturalState:
         regions_entered=d.get("regions_entered", []),
         cultural_encounters=d.get("cultural_encounters", 0),
         port_visits=d.get("port_visits", {}),
+        festivals_visited=d.get("festivals_visited", 0),
     )
 
 

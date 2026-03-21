@@ -13,7 +13,7 @@ Man-of-War: endgame capital ship. Massive hold, maximum storm resistance.
   For the captain who has truly built an empire.
 """
 
-from portlight.engine.models import ShipClass, ShipTemplate
+from portlight.engine.models import ShipClass, ShipTemplate, UPGRADE_SLOTS
 
 SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
     ShipTemplate(
@@ -28,6 +28,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         price=0,  # starting ship
         daily_wage=1,
         storm_resist=0.0,
+        cannons=0,          # no guns — must board to fight
+        maneuver=0.9,       # extremely nimble
     ),
     ShipTemplate(
         id="swift_cutter",
@@ -41,6 +43,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         price=450,
         daily_wage=1,
         storm_resist=0.15,  # modest storm protection
+        cannons=2,          # light armament
+        maneuver=0.8,       # fast and agile
     ),
     ShipTemplate(
         id="trade_brigantine",
@@ -54,6 +58,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         price=800,
         daily_wage=2,
         storm_resist=0.3,  # absorbs 30% storm damage
+        cannons=6,          # broadside capable
+        maneuver=0.5,       # balanced
     ),
     ShipTemplate(
         id="merchant_galleon",
@@ -67,6 +73,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         price=2200,
         daily_wage=3,
         storm_resist=0.6,  # absorbs 60% storm damage
+        cannons=12,         # heavy broadside
+        maneuver=0.3,       # sluggish
     ),
     ShipTemplate(
         id="royal_man_of_war",
@@ -80,6 +88,8 @@ SHIPS: dict[str, ShipTemplate] = {s.id: s for s in [
         price=5000,
         daily_wage=4,
         storm_resist=0.8,  # near-invulnerable to storms
+        cannons=20,         # devastating firepower
+        maneuver=0.2,       # nearly immobile
     ),
 ]}
 
@@ -96,4 +106,7 @@ def create_ship_from_template(template: ShipTemplate, name: str | None = None) -
         speed=template.speed,
         crew=template.crew_min,
         crew_max=template.crew_max,
+        cannons=template.cannons,
+        maneuver=template.maneuver,
+        upgrade_slots=UPGRADE_SLOTS.get(template.ship_class, 2),
     )
