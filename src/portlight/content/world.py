@@ -37,10 +37,10 @@ def new_game(
     standing = ReputationState(
         regional_standing={
             "Mediterranean": seed.mediterranean,
-            "North Atlantic": 0,
+            "North Atlantic": seed.north_atlantic,
             "West Africa": seed.west_africa,
             "East Indies": seed.east_indies,
-            "South Seas": 0,
+            "South Seas": seed.south_seas,
         },
         port_standing={},
         customs_heat={
@@ -51,6 +51,7 @@ def new_game(
             "South Seas": seed.customs_heat,
         },
         commercial_trust=seed.commercial_trust,
+        underworld_standing=dict(seed.underworld) if seed.underworld else {},
     )
 
     port_id = starting_port or template.home_port_id

@@ -1,13 +1,15 @@
-"""Captain identity system — three archetypes that reshape commercial behavior.
+"""Captain identity system — eight archetypes + custom that reshape the game.
 
 Each captain type changes:
   - pricing (buy/sell modifiers, luxury handling)
   - voyage (provision burn, speed, storm resilience, inspection profile)
   - reputation (trust growth, heat growth, starting standing)
   - contracts (bias toward certain contract families)
+  - world relationships (bloc alignment, faction standing, NPC connections)
 
 These are not passive +5% perks. They change route choice, capital timing,
-risk profile, and viable trade styles from the opening hours.
+risk profile, and viable trade styles from the opening hours. Each character
+has a backstory connecting them to the 134 NPCs in the Known World.
 """
 
 from __future__ import annotations
@@ -17,10 +19,16 @@ from enum import Enum
 
 
 class CaptainType(str, Enum):
-    """The three merchant archetypes."""
+    """Playable captain archetypes."""
     MERCHANT = "merchant"
     SMUGGLER = "smuggler"
     NAVIGATOR = "navigator"
+    PRIVATEER = "privateer"
+    CORSAIR = "corsair"
+    SCHOLAR = "scholar"
+    MERCHANT_PRINCE = "merchant_prince"
+    DOCKHAND = "dockhand"
+    CUSTOM = "custom"
 
 
 @dataclass(frozen=True)
@@ -56,8 +64,12 @@ class ReputationSeed:
     customs_heat: int = 0
     # Per-region starting standing
     mediterranean: int = 0
+    north_atlantic: int = 0
     west_africa: int = 0
     east_indies: int = 0
+    south_seas: int = 0
+    # Underworld faction standing (faction_id → starting value)
+    underworld: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -78,6 +90,10 @@ class CaptainTemplate:
     reputation_seed: ReputationSeed = field(default_factory=ReputationSeed)
     strengths: list[str] = field(default_factory=list)
     weaknesses: list[str] = field(default_factory=list)
+    backstory: str = ""                  # narrative backstory text
+    mentor_npc_id: str = ""              # NPC who mentored this captain
+    bloc_alignment: str = ""             # trade bloc affiliation
+    faction_alignment: dict[str, int] = field(default_factory=dict)  # pirate faction starting standing
 
 
 # ---------------------------------------------------------------------------
@@ -117,11 +133,9 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
             fine_mult=0.6,               # lower fines (good standing)
         ),
         reputation_seed=ReputationSeed(
-            commercial_trust=15,         # starts with trust
+            commercial_trust=15,
             customs_heat=0,
-            mediterranean=10,            # known in home region
-            west_africa=0,
-            east_indies=0,
+            mediterranean=10,
         ),
         strengths=[
             "Better buy/sell prices at all ports",
@@ -134,6 +148,14 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
             "No luxury trade edge",
             "Must build reputation the hard way in distant regions",
         ],
+        backstory=(
+            "Born into Porto Novo's trading families. The Exchange Guild trained you. "
+            "Your ledger is clean, your contracts are honored, and Senhora Costa "
+            "herself signed your trading license. Marta Soares vouches for you at the "
+            "Exchange. Fernanda Reis prioritizes your contracts."
+        ),
+        mentor_npc_id="pn_marta",
+        bloc_alignment="exchange_alliance",
     ),
 
     CaptainType.SMUGGLER: CaptainTemplate(
@@ -168,11 +190,9 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
             fine_mult=1.2,               # slightly higher fines
         ),
         reputation_seed=ReputationSeed(
-            commercial_trust=0,          # no trust
-            customs_heat=8,              # starts with some heat
-            mediterranean=0,
-            west_africa=5,               # knows the coast
-            east_indies=0,
+            commercial_trust=0,
+            customs_heat=8,
+            west_africa=5,
         ),
         strengths=[
             "30% bonus selling luxury goods (silk, spice, porcelain)",
@@ -186,6 +206,14 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
             "Slightly worse sell prices on staple goods",
             "Starts with customs heat, no commercial trust",
         ],
+        backstory=(
+            "You grew up in Palm Cove where Mama Joy's rum house was your school "
+            "and the Seven Houses taught you that rules are suggestions. Captain Abel "
+            "showed you how to read a harbor without manifests. The legitimate world "
+            "has doors you'll never open. You found the windows."
+        ),
+        mentor_npc_id="pc_mama_joy",
+        bloc_alignment="gold_coast",
     ),
 
     CaptainType.NAVIGATOR: CaptainTemplate(
@@ -223,8 +251,7 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
             commercial_trust=5,
             customs_heat=0,
             mediterranean=5,
-            west_africa=0,
-            east_indies=5,              # has sailed there before
+            east_indies=5,
         ),
         strengths=[
             "30% less provision consumption at sea",
@@ -237,6 +264,323 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
             "No special sell price advantages",
             "Slower commercial reputation growth in settled markets",
         ],
+        backstory=(
+            "The Shipwrights' Brotherhood raised you. Elena Madeira taught you to "
+            "read a hull. Rosa Carvalho fed you at the Dry Dock. You don't trade "
+            "well — you SAIL well. The long routes are yours. Every horizon is an "
+            "invitation."
+        ),
+        mentor_npc_id="sb_elena",
+        bloc_alignment="exchange_alliance",
+    ),
+
+    # =========================================================================
+    # NEW ARCHETYPES
+    # =========================================================================
+
+    CaptainType.PRIVATEER: CaptainTemplate(
+        id=CaptainType.PRIVATEER,
+        name="The Privateer",
+        title="Licensed Hunter",
+        description=(
+            "Commander Vogt gave you a letter of marque and a cutter. Your job: "
+            "patrol the North Atlantic, intercept smugglers, and deliver seized "
+            "goods to Stormwall. What you confiscate is yours to sell. The line "
+            "between law enforcement and piracy is wherever Vogt draws it."
+        ),
+        home_region="North Atlantic",
+        home_port_id="stormwall",
+        starting_silver=475,
+        starting_ship_id="swift_cutter",
+        starting_provisions=30,
+        pricing=PricingModifiers(
+            buy_price_mult=0.95,
+            sell_price_mult=1.02,
+            luxury_sell_bonus=0.10,
+            port_fee_mult=0.6,
+        ),
+        voyage=VoyageModifiers(
+            provision_burn=0.9,
+            speed_bonus=0.5,
+            storm_resist_bonus=0.05,
+            cargo_damage_mult=0.9,
+        ),
+        inspection=InspectionProfile(
+            inspection_chance_mult=0.3,
+            seizure_risk=0.0,
+            fine_mult=0.5,
+        ),
+        reputation_seed=ReputationSeed(
+            commercial_trust=8,
+            customs_heat=0,
+            north_atlantic=8,
+            mediterranean=3,
+            underworld={"iron_wolves": -5},
+        ),
+        strengths=[
+            "Nearly inspection-proof (Pact commission)",
+            "Starts with a Cutter (faster than sloop)",
+            "Low port fees at Pact ports",
+            "Strong North Atlantic standing",
+        ],
+        weaknesses=[
+            "Iron Wolves are hostile from day 1",
+            "Limited underworld access initially",
+            "Lower starting silver",
+            "Vogt expects results — the commission can be revoked",
+        ],
+        backstory=(
+            "Commander Vogt gave you a letter of marque and a cutter. Your job: "
+            "patrol the North Atlantic, intercept smugglers, and deliver seized "
+            "goods to Stormwall. Inspector Berg trusts your manifests. Astrid "
+            "Vekhren watches your progress. The Iron Wolves know your face — "
+            "and they haven't forgiven the ships you've taken."
+        ),
+        mentor_npc_id="sw_commander_vogt",
+        bloc_alignment="iron_pact",
+        faction_alignment={"iron_wolves": -5},
+    ),
+
+    CaptainType.CORSAIR: CaptainTemplate(
+        id=CaptainType.CORSAIR,
+        name="The Corsair",
+        title="Crimson Tide Captain",
+        description=(
+            "A pirate captain who answers to the Crimson Tide. The cove is home. "
+            "The legitimate world doesn't want you. You don't want it back. "
+            "Your crimson pennant opens shadow ports and closes everything else."
+        ),
+        home_region="Mediterranean",
+        home_port_id="corsairs_rest",
+        starting_silver=400,
+        starting_ship_id="coastal_sloop",
+        starting_provisions=30,
+        pricing=PricingModifiers(
+            buy_price_mult=1.05,
+            sell_price_mult=0.95,
+            luxury_sell_bonus=0.15,
+            port_fee_mult=0.5,
+        ),
+        voyage=VoyageModifiers(
+            provision_burn=0.9,
+            speed_bonus=0.3,
+            storm_resist_bonus=0.0,
+            cargo_damage_mult=0.85,
+        ),
+        inspection=InspectionProfile(
+            inspection_chance_mult=1.5,
+            seizure_risk=0.08,
+            fine_mult=1.5,
+        ),
+        reputation_seed=ReputationSeed(
+            commercial_trust=0,
+            customs_heat=12,
+            mediterranean=-5,
+            underworld={"crimson_tide": 25},
+        ),
+        strengths=[
+            "Starts with Crimson Tide standing (trade partner)",
+            "Shadow port discounts",
+            "Luxury sell bonus from pirate connections",
+            "Contraband access from day 1",
+        ],
+        weaknesses=[
+            "Highest customs heat at start",
+            "Worst legitimate standing",
+            "Most inspected, highest seizure risk",
+            "Deep Reef Brotherhood is hostile",
+        ],
+        backstory=(
+            "One-Eye Basso waved you through the cove mouth when you were sixteen. "
+            "Mama Lucia fed you. Ghost taught you to move cargo in the dark. "
+            "No One gave you the Tide's crimson pennant and a territory to patrol. "
+            "The legitimate world doesn't want you. You don't want it back."
+        ),
+        mentor_npc_id="cr_no_one",
+        bloc_alignment="shadow_ports",
+        faction_alignment={"crimson_tide": 25, "deep_reef": -5},
+    ),
+
+    CaptainType.SCHOLAR: CaptainTemplate(
+        id=CaptainType.SCHOLAR,
+        name="The Scholar",
+        title="Wind Temple Student",
+        description=(
+            "A Wind Temple student who left to learn what books can't teach. "
+            "Brother Anand taught you to read the wind. You carry a monsoon chart, "
+            "a medicine kit, and a notebook full of observations the monks say "
+            "will be important someday."
+        ),
+        home_region="East Indies",
+        home_port_id="monsoon_reach",
+        starting_silver=400,
+        starting_ship_id="coastal_sloop",
+        starting_provisions=35,
+        pricing=PricingModifiers(
+            buy_price_mult=1.0,
+            sell_price_mult=1.0,
+            luxury_sell_bonus=0.0,
+            port_fee_mult=0.85,
+        ),
+        voyage=VoyageModifiers(
+            provision_burn=0.75,
+            speed_bonus=1.0,
+            storm_resist_bonus=0.10,
+            cargo_damage_mult=0.8,
+        ),
+        inspection=InspectionProfile(
+            inspection_chance_mult=0.7,
+            seizure_risk=0.0,
+            fine_mult=0.8,
+        ),
+        reputation_seed=ReputationSeed(
+            commercial_trust=5,
+            customs_heat=0,
+            mediterranean=2,
+            north_atlantic=2,
+            west_africa=2,
+            east_indies=8,
+            south_seas=2,
+        ),
+        strengths=[
+            "Excellent weather reading (+1.0 speed, storm resist)",
+            "Best provision efficiency (temple training)",
+            "Trusted everywhere (scholar's respect)",
+            "Strong East Indies connections",
+        ],
+        weaknesses=[
+            "No trade advantages at all",
+            "Low starting silver",
+            "No combat or underworld edge",
+            "Jack of all regions, master of none commercially",
+        ],
+        backstory=(
+            "Brother Anand taught you to read the wind. Shipwright Devi taught you "
+            "hull science. You left the Temple not because you stopped believing, "
+            "but because the wind told you to go. Tea Master Huang pours you the "
+            "good leaves whenever you return. The monks say your notebook will be "
+            "important someday."
+        ),
+        mentor_npc_id="mr_brother_anand",
+        bloc_alignment="free_ports",
+    ),
+
+    CaptainType.MERCHANT_PRINCE: CaptainTemplate(
+        id=CaptainType.MERCHANT_PRINCE,
+        name="The Merchant Prince",
+        title="Khoury Dynasty Scion",
+        description=(
+            "Born into the Khoury dynasty's orbit. Old money, old connections, "
+            "old expectations. You have every advantage — silver, trust, connections "
+            "— and every expectation. The dynasty invested in you. They expect returns."
+        ),
+        home_region="Mediterranean",
+        home_port_id="al_manar",
+        starting_silver=700,
+        starting_ship_id="coastal_sloop",
+        starting_provisions=30,
+        pricing=PricingModifiers(
+            buy_price_mult=0.90,
+            sell_price_mult=1.08,
+            luxury_sell_bonus=0.12,
+            port_fee_mult=0.65,
+        ),
+        voyage=VoyageModifiers(
+            provision_burn=1.0,
+            speed_bonus=0.0,
+            storm_resist_bonus=0.0,
+            cargo_damage_mult=1.0,
+        ),
+        inspection=InspectionProfile(
+            inspection_chance_mult=0.4,
+            seizure_risk=0.0,
+            fine_mult=0.4,
+        ),
+        reputation_seed=ReputationSeed(
+            commercial_trust=18,
+            customs_heat=0,
+            mediterranean=12,
+            east_indies=5,
+        ),
+        strengths=[
+            "Best buy/sell prices (dynasty connections)",
+            "Most starting silver (700)",
+            "Highest trust (18), lowest inspections",
+            "Prestige in Mediterranean and East Indies",
+        ],
+        weaknesses=[
+            "Zero exploration advantage",
+            "Zero combat or underworld edge",
+            "The dynasty expects results — failure is political",
+            "Pampered: normal provision burn, no storm resistance",
+        ],
+        backstory=(
+            "You grew up in the Khoury Palace, learning trade from Nadia herself. "
+            "Yasmin the Spice Mother taught you to judge quality. Tariq Sayed "
+            "brokers your contracts. You have every advantage — silver, trust, "
+            "connections — and every expectation. The dynasty invested in you. "
+            "They expect returns."
+        ),
+        mentor_npc_id="am_senhora_nadia",
+        bloc_alignment="exchange_alliance",
+    ),
+
+    CaptainType.DOCKHAND: CaptainTemplate(
+        id=CaptainType.DOCKHAND,
+        name="The Dockhand",
+        title="Self-Made Captain",
+        description=(
+            "Nobody. You started with nothing at the Free Port and worked your way "
+            "onto a ship. Nobody knows your name. Nobody owes you anything. Nobody "
+            "is hunting you. You are perfectly, terrifyingly free."
+        ),
+        home_region="East Indies",
+        home_port_id="crosswind_isle",
+        starting_silver=300,
+        starting_ship_id="coastal_sloop",
+        starting_provisions=30,
+        pricing=PricingModifiers(
+            buy_price_mult=1.0,
+            sell_price_mult=1.0,
+            luxury_sell_bonus=0.0,
+            port_fee_mult=1.0,
+        ),
+        voyage=VoyageModifiers(
+            provision_burn=0.85,
+            speed_bonus=0.0,
+            storm_resist_bonus=0.0,
+            cargo_damage_mult=0.9,
+        ),
+        inspection=InspectionProfile(
+            inspection_chance_mult=1.0,
+            seizure_risk=0.0,
+            fine_mult=1.0,
+        ),
+        reputation_seed=ReputationSeed(
+            commercial_trust=0,
+            customs_heat=0,
+        ),
+        strengths=[
+            "No enemies — complete neutrality",
+            "No heat, no baggage, total freedom",
+            "Provision efficiency from real hardship",
+            "The truest underdog story in the game",
+        ],
+        weaknesses=[
+            "Least starting silver (300) — hard mode",
+            "No trust, no standing, no connections",
+            "No trade, combat, or exploration advantages",
+            "Everything must be earned from zero",
+        ],
+        backstory=(
+            "You arrived at Crosswind Isle on a cargo ship — as cargo. Dock Master "
+            "Tao gave you work. Mother Ko gave you meals. Hassan taught you to count "
+            "currency. You earned enough to buy the worst sloop in the harbor. "
+            "Nobody knows your name. Nobody owes you anything. Nobody is hunting you. "
+            "You are perfectly, terrifyingly free."
+        ),
+        mentor_npc_id="ci_dock_master_tao",
+        bloc_alignment="free_ports",
     ),
 }
 
@@ -254,34 +598,13 @@ def get_captain_template(captain_type: CaptainType) -> CaptainTemplate:
 # This index exists so there's ONE place to audit what each type does.
 
 CAPTAIN_EFFECTS_REFERENCE: dict[str, dict[str, str]] = {
-    "merchant": {
-        "buy_price_mult": "0.92 (8% cheaper buys)",
-        "sell_price_mult": "1.05 (5% better sells)",
-        "port_fee_mult": "0.7 (30% cheaper port fees)",
-        "inspection_chance_mult": "0.5 (50% fewer inspections)",
-        "fine_mult": "0.6 (lower fines)",
-        "trust_bonus": "+1 extra trust on clean profitable trades (reputation.py:191)",
-        "starting_trust": "15",
-        "starting_med_standing": "10",
-    },
-    "smuggler": {
-        "luxury_sell_bonus": "0.25 (25% bonus on luxury goods)",
-        "sell_price_mult": "0.97 (3% worse on staples)",
-        "provision_burn": "0.9 (10% less provisions)",
-        "cargo_damage_mult": "0.8 (20% less cargo damage)",
-        "inspection_chance_mult": "1.5 (50% more inspections)",
-        "seizure_risk": "0.07 (7% cargo seizure chance per inspection)",
-        "fine_mult": "1.3 (higher fines)",
-        "contraband_detect_bonus": "-0.15 detection chance (voyage.py:208)",
-        "suspicion_bonus": "+1 suspicion on sells (reputation.py:127)",
-        "starting_heat": "10",
-    },
-    "navigator": {
-        "buy_price_mult": "1.05 (5% more expensive buys)",
-        "provision_burn": "0.7 (30% less provision use)",
-        "speed_bonus": "+1.5 flat speed",
-        "storm_resist_bonus": "+0.15 storm resistance",
-        "cargo_damage_mult": "0.7 (30% less cargo damage)",
-        "starting_ei_standing": "5 (East Indies familiarity)",
-    },
+    ct.value: {
+        "home": CAPTAIN_TEMPLATES[ct].home_port_id,
+        "silver": str(CAPTAIN_TEMPLATES[ct].starting_silver),
+        "ship": CAPTAIN_TEMPLATES[ct].starting_ship_id,
+        "bloc": CAPTAIN_TEMPLATES[ct].bloc_alignment or "none",
+        "mentor": CAPTAIN_TEMPLATES[ct].mentor_npc_id or "none",
+    }
+    for ct in CaptainType
+    if ct in CAPTAIN_TEMPLATES
 }

@@ -27,33 +27,37 @@ from portlight.engine.voyage import advance_day
 class TestCaptainTemplates:
     """All three captain types exist and are distinct."""
 
-    def test_three_types_exist(self):
-        assert len(CAPTAIN_TEMPLATES) == 3
+    def test_eight_types_exist(self):
+        assert len(CAPTAIN_TEMPLATES) == 8
         assert CaptainType.MERCHANT in CAPTAIN_TEMPLATES
         assert CaptainType.SMUGGLER in CAPTAIN_TEMPLATES
         assert CaptainType.NAVIGATOR in CAPTAIN_TEMPLATES
+        assert CaptainType.PRIVATEER in CAPTAIN_TEMPLATES
+        assert CaptainType.CORSAIR in CAPTAIN_TEMPLATES
+        assert CaptainType.SCHOLAR in CAPTAIN_TEMPLATES
+        assert CaptainType.MERCHANT_PRINCE in CAPTAIN_TEMPLATES
+        assert CaptainType.DOCKHAND in CAPTAIN_TEMPLATES
 
     def test_get_captain_template(self):
         t = get_captain_template(CaptainType.MERCHANT)
         assert t.name == "The Merchant"
         assert t.home_port_id == "porto_novo"
 
-    def test_each_has_different_home_port(self):
-        homes = set()
-        for ct in CaptainType:
-            t = CAPTAIN_TEMPLATES[ct]
-            homes.add(t.home_port_id)
-        assert len(homes) == 3  # all different starting locations
+    def test_each_has_home_port(self):
+        for ct, t in CAPTAIN_TEMPLATES.items():
+            assert t.home_port_id, f"{ct.value} missing home_port_id"
 
-    def test_each_has_different_starting_silver(self):
-        silvers = set()
-        for ct in CaptainType:
-            t = CAPTAIN_TEMPLATES[ct]
-            silvers.add(t.starting_silver)
-        assert len(silvers) == 3  # all different
+    def test_each_has_starting_silver(self):
+        for ct, t in CAPTAIN_TEMPLATES.items():
+            assert t.starting_silver > 0, f"{ct.value} has no starting silver"
+
+    def test_all_starting_ports_valid(self):
+        from portlight.content.ports import PORTS
+        for ct, t in CAPTAIN_TEMPLATES.items():
+            assert t.home_port_id in PORTS, f"{ct.value} home port '{t.home_port_id}' not in PORTS"
 
     def test_templates_have_strengths_and_weaknesses(self):
-        for ct in CaptainType:
+        for ct in CAPTAIN_TEMPLATES:
             t = CAPTAIN_TEMPLATES[ct]
             assert len(t.strengths) >= 2
             assert len(t.weaknesses) >= 2
@@ -78,13 +82,13 @@ class TestCaptainCreation:
         assert world.captain.captain_type == "navigator"
 
     def test_starting_silver_matches_template(self):
-        for ct in CaptainType:
+        for ct in CAPTAIN_TEMPLATES:
             t = CAPTAIN_TEMPLATES[ct]
             world = new_game(captain_type=ct)
             assert world.captain.silver == t.starting_silver
 
     def test_starting_provisions_matches_template(self):
-        for ct in CaptainType:
+        for ct in CAPTAIN_TEMPLATES:
             t = CAPTAIN_TEMPLATES[ct]
             world = new_game(captain_type=ct)
             assert world.captain.provisions == t.starting_provisions
@@ -324,17 +328,17 @@ class TestSaveLoadCaptainState:
 class TestCaptainEconomicDifference:
     """Three captains produce meaningfully different opening games."""
 
-    def test_merchant_has_most_silver(self):
+    def test_merchant_prince_has_most_silver(self):
         silvers = {}
-        for ct in CaptainType:
+        for ct in CAPTAIN_TEMPLATES:
             world = new_game(captain_type=ct)
             silvers[ct] = world.captain.silver
-        assert silvers[CaptainType.MERCHANT] == max(silvers.values())
+        assert silvers[CaptainType.MERCHANT_PRINCE] == max(silvers.values())
 
     def test_smuggler_has_less_silver_than_merchant(self):
         """Smuggler starts with less capital than Merchant but more than Navigator."""
         silvers = {}
-        for ct in CaptainType:
+        for ct in CAPTAIN_TEMPLATES:
             world = new_game(captain_type=ct)
             silvers[ct] = world.captain.silver
         assert silvers[CaptainType.SMUGGLER] < silvers[CaptainType.MERCHANT]
@@ -343,7 +347,7 @@ class TestCaptainEconomicDifference:
     def test_different_effective_grain_prices(self):
         """Each captain sees different grain prices at the same port."""
         prices = {}
-        for ct in CaptainType:
+        for ct in CAPTAIN_TEMPLATES:
             world = new_game(starting_port="porto_novo", captain_type=ct)
             port = world.ports["porto_novo"]
             pricing = CAPTAIN_TEMPLATES[ct].pricing
