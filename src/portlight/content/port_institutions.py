@@ -4372,6 +4372,14 @@ MONSOON_REACH_PROFILE = PortInstitutionalProfile(
 )
 
 
+
+# =========================================================================
+# Remaining East Indies + South Seas ports are in port_institutions_east.py
+# =========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Master registry
 # ---------------------------------------------------------------------------
 
 PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
@@ -4389,6 +4397,10 @@ PORT_INSTITUTIONAL_PROFILES: dict[str, PortInstitutionalProfile] = {
     "jade_port": JADE_PORT_PROFILE,
     "monsoon_reach": MONSOON_REACH_PROFILE,
 }
+
+# Merge in East Indies + South Seas profiles from continuation file
+from portlight.content.port_institutions_east import EAST_PROFILES  # noqa: E402
+PORT_INSTITUTIONAL_PROFILES.update(EAST_PROFILES)
 
 ALL_NPCS: dict[str, PortNPC] = {npc.id: npc for profile in PORT_INSTITUTIONAL_PROFILES.values() for npc in profile.npcs}
 
