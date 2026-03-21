@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
+textual = pytest.importorskip("textual", reason="textual not installed")
+
 
 def test_tui_app_import():
     """PortlightApp can be imported."""
