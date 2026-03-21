@@ -18,7 +18,7 @@ Point allocation (10 points to distribute):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from portlight.engine.captain_identity import (
     CaptainTemplate,
