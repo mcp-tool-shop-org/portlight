@@ -29,15 +29,15 @@ def run_balance_simulation(config: BalanceRunConfig) -> RunMetrics:
     from portlight.app.session import GameSession
 
     with tempfile.TemporaryDirectory() as tmp:
-        session = GameSession(Path(tmp))
-        session.new("BalanceBot", captain_type=config.captain_type)
-
-        # Override seed for reproducibility — both the session RNG and
-        # module-level random (used by contract destination selection)
+        # Seed module-level random BEFORE session creation for full determinism.
         import random
         random.seed(config.seed)
+
+        session = GameSession(Path(tmp))
+        session.new("BalanceBot", captain_type=config.captain_type, seed=config.seed)
+
+        # Ensure session RNG matches the deterministic seed
         session._rng = random.Random(config.seed)
-        session.world.seed = config.seed
 
         route_tracker: dict[str, RouteRunMetrics] = {}
         timing = PhaseTiming()

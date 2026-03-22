@@ -180,8 +180,10 @@ def _pick_destination(
     issuer_port: "Port",
     ports: dict[str, "Port"],
     routes: list,
+    rng: random.Random | None = None,
 ) -> "Port | None":
     """Pick a valid destination port for a contract."""
+    _rng = rng or random.Random()
     candidates = []
     for pid, port in ports.items():
         if pid == issuer_port.id:
@@ -203,7 +205,7 @@ def _pick_destination(
             )
         if has_route:
             candidates.append(port)
-    return random.choice(candidates) if candidates else None
+    return _rng.choice(candidates) if candidates else None
 
 
 def _compute_offer_reason(
@@ -326,7 +328,7 @@ def generate_offers(
         good_id = rng.choice(template.goods_pool)
 
         # Pick destination
-        dest = _pick_destination(template, port, world.ports, world.routes)
+        dest = _pick_destination(template, port, world.ports, world.routes, rng=rng)
         if dest is None:
             continue
 
