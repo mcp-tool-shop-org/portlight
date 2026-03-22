@@ -343,6 +343,8 @@ def hunt() -> None:
 
     crew_count = s.captain.ship.crew if s.captain.ship else 1
     result = do_hunt(s.captain, location, crew_count, s._rng)
+    # hunt() advances captain.day but not world.day — keep them in sync
+    s.world.day = s.captain.day
 
     console.print(f"\n[bold]Hunting {'at port' if location == 'port' else 'at sea'}...[/bold]")
     console.print(f"  {result.flavor}")
@@ -402,6 +404,8 @@ def work() -> None:
         console.print("[yellow]Must be docked to work the docks.[/yellow]")
         return
     earned = work_docks(s.captain, s._rng)
+    # work_docks() advances captain.day but not world.day — keep them in sync
+    s.world.day = s.captain.day
     console.print(f"\n[bold]Day's work on the {s.current_port.name} docks.[/bold]")
     console.print(f"  Hauled crates, mended rope, cleaned bilges.")
     console.print(f"  Earned [green]{earned} silver[/green]. Day {s.captain.day}.")
@@ -1864,23 +1868,49 @@ def naval(
         console.print(f"[red]Invalid action. Available: {', '.join(valid)}[/red]")
         return
 
-    # Handle flee attempt — uses encounter-level flee, not a naval round
+    # Handle flee attempt during naval combat
     if action == "flee":
-        from portlight.engine.encounter import resolve_flee
+        from portlight.engine.naval import attempt_flee
+        from portlight.engine.models import EnemyShip
         import random
         flee_rng = random.Random(s.world.seed + s.world.day * 1000 + enc.naval_turns + 8888)
         combat_ship = resolved_ship(s.captain.ship, UPGRADES)
-        escaped, damage, msg = resolve_flee(enc, combat_ship, flee_rng)
+        enemy_ship = EnemyShip(
+            name=f"{enc.enemy_captain_name}'s Ship",
+            hull=enc.enemy_ship_hull, hull_max=enc.enemy_ship_hull_max,
+            cannons=enc.enemy_ship_cannons, maneuver=enc.enemy_ship_maneuver,
+            speed=enc.enemy_ship_speed, crew=enc.enemy_ship_crew,
+            crew_max=enc.enemy_ship_crew_max,
+        )
+        escaped, damage = attempt_flee(combat_ship, enemy_ship, flee_rng)
         s.captain.ship.hull = max(0, s.captain.ship.hull - damage)
+        enc.naval_turns += 1  # Flee counts as a turn
         if escaped:
+            msg = "You break away!"
+            if damage > 0:
+                msg += f" A parting shot catches your hull for {damage} damage."
             console.print(f"\n[bold green]{msg}[/bold green]")
+            enc.phase = "resolved"
             _active_encounter = None
         else:
-            console.print(f"\n[bold red]{msg}[/bold red]")
+            console.print(f"\n[bold red]Flee failed! Their broadside rakes you for {damage} hull damage.[/bold red]")
             if s.captain.ship.hull <= 0:
                 console.print("\n[bold red]Your ship is sinking![/bold red]")
                 s.world.pirates.naval_defeats += 1
                 _active_encounter = None
+            elif s.captain.ship.crew <= 0:
+                console.print("\n[bold red]No crew left to sail! Your ship drifts helplessly.[/bold red]")
+                s.world.pirates.naval_defeats += 1
+                _active_encounter = None
+            else:
+                # Show naval status so player sees the damage in context
+                console.print(combat_views.naval_status_view(
+                    s.captain.ship.hull, s.captain.ship.hull_max,
+                    s.captain.ship.crew, s.captain.ship.cannons,
+                    enc.enemy_ship_hull, enc.enemy_ship_hull_max,
+                    enc.enemy_ship_crew, enc.enemy_ship_cannons,
+                    enc.boarding_progress, enc.boarding_threshold, enc.naval_turns,
+                ))
         _sync_encounter_phase(s)
         s._save()
         return
