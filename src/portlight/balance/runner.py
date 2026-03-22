@@ -173,7 +173,7 @@ def _execute_one(
         session.hire_crew(args.get("count", 1), args.get("role", "sailor"))
 
     elif a == "fire_role":
-        session.fire_crew(args.get("role", "sailor"), args.get("count", 1))
+        session.fire_crew(count=args.get("count", 1), role=args.get("role", "sailor"))
 
     elif a == "buy_ship":
         session.buy_ship(args["ship_id"])

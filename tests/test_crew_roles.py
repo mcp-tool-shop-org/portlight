@@ -228,14 +228,14 @@ class TestSessionCrewManagement:
         s.captain.silver = 500
         s.hire_crew(2, "gunner")
         assert s.captain.ship.roster.gunners == 2
-        err = s.fire_crew("gunner", 1)
+        err = s.fire_crew(1, "gunner")
         assert err is None
         assert s.captain.ship.roster.gunners == 1
 
     def test_fire_nonexistent_role(self, tmp_path: Path):
         s = GameSession(tmp_path)
         s.new()
-        err = s.fire_crew("surgeon")
+        err = s.fire_crew(role="surgeon")
         assert err is not None
 
     def test_crew_sync_after_hire(self, tmp_path: Path):

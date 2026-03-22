@@ -850,7 +850,7 @@ class GameSession:
         self._save()
         return None
 
-    def fire_crew(self, count: int, role: str = "sailor") -> str | None:
+    def fire_crew(self, count: int = 1, role: str = "sailor") -> str | None:
         """Fire crew of a specific role. Returns error or None."""
         if not self.world:
             return "No active game"
