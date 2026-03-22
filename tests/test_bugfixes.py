@@ -5,6 +5,11 @@ Bug #2: No port fee warning when buying cargo
 Bug #3: Sail command rejects display names
 Bug #4: Buy-drain-sell exploit via scarcity pricing
 Bug #5: Repeated atmospheric text on consecutive days
+Bug #7: hire/fire asymmetric argument order
+Bug #8: buy grain -5 typer crash
+Bug #9: Guide command misleading syntax
+Bug #10: Same arrival weather for all Med ports
+Bug #11: No hint where to sell pelts
 Hunting expansion: silver, dangers, consequences
 """
 
@@ -256,14 +261,16 @@ class TestSeaCultureDedup:
 
 class TestStartingPortContracts:
     def test_new_game_has_contracts(self):
-        """New game should have contract offers at starting port."""
+        """New game should have contract offers at starting port on first access."""
         from portlight.app.session import GameSession
 
         with tempfile.TemporaryDirectory() as tmp:
             s = GameSession(Path(tmp))
             s.new("Tester", captain_type="merchant")
-            # Board should be populated (may be empty if no templates match,
-            # but last_refresh_day should be set)
+            # Board uses lazy refresh — trigger it
+            port = s.current_port
+            assert port is not None
+            s._refresh_board(port)
             assert s.board.last_refresh_day == 1
 
 
@@ -330,3 +337,75 @@ class TestHuntingExpansion:
                 break
 
         assert danger_seen, "No danger encountered in 200 sea hunts"
+
+
+# ---------------------------------------------------------------------------
+# Bug #8: buy grain -5 should give friendly error, not typer crash
+# ---------------------------------------------------------------------------
+
+class TestNegativeQuantityBuy:
+    def test_buy_zero_returns_error(self):
+        """Buying with qty=0 should return a friendly error."""
+        from portlight.content.goods import GOODS
+        from portlight.content.world import new_game
+        from portlight.engine.economy import execute_buy
+
+        world = new_game()
+        captain = world.captain
+        captain.silver = 5000
+        port = next(iter(world.ports.values()))
+        good_id = port.market[0].good_id
+        result = execute_buy(captain, port, good_id, 0, GOODS)
+        assert isinstance(result, str)
+        assert "positive" in result.lower()
+
+    def test_buy_negative_returns_error(self):
+        """Buying with negative qty should return a friendly error."""
+        from portlight.content.goods import GOODS
+        from portlight.content.world import new_game
+        from portlight.engine.economy import execute_buy
+
+        world = new_game()
+        captain = world.captain
+        captain.silver = 5000
+        port = next(iter(world.ports.values()))
+        good_id = port.market[0].good_id
+        result = execute_buy(captain, port, good_id, -5, GOODS)
+        assert isinstance(result, str)
+        assert "positive" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# Bug #10: Arrival weather should include port name
+# ---------------------------------------------------------------------------
+
+class TestArrivalWeatherPortName:
+    def test_arrival_weather_contains_port_name(self):
+        """get_arrival_weather with port_name should inject it into text."""
+        from portlight.engine.sea_culture_engine import get_arrival_weather
+        # Day 1 = spring; Mediterranean spring starts with "The port appears"
+        text = get_arrival_weather("Mediterranean", 1, "Genoa")
+        assert text.startswith("Genoa"), f"Expected port name at start: {text[:50]}"
+        assert "The port" not in text
+
+    def test_arrival_weather_without_port_name_unchanged(self):
+        """get_arrival_weather without port_name should return original text."""
+        from portlight.engine.sea_culture_engine import get_arrival_weather
+        from portlight.content.sea_culture import get_weather_narrative
+        text = get_arrival_weather("Mediterranean", 1)
+        narrative = get_weather_narrative("Mediterranean", "spring")
+        assert text == narrative.arrival_text
+
+    def test_all_regions_arrival_text_replaceable(self):
+        """Every arrival_text should start with a known subject phrase."""
+        from portlight.content.sea_culture import WEATHER_NARRATIVES
+        subjects = [
+            "The northern port", "The island port", "The port",
+            "The island", "The harbor", "The lagoon",
+        ]
+        for key, narrative in WEATHER_NARRATIVES.items():
+            matched = any(narrative.arrival_text.startswith(s) for s in subjects)
+            assert matched, (
+                f"Arrival text for {key} doesn't start with a known subject: "
+                f"{narrative.arrival_text[:60]}"
+            )

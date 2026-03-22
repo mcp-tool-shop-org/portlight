@@ -117,10 +117,11 @@ class GameSession:
         captain_name: str = "Captain",
         starting_port: str | None = None,
         captain_type: str = "merchant",
+        seed: int | None = None,
     ) -> None:
         """Start a fresh game. captain_type: 'merchant', 'smuggler', or 'navigator'."""
         ct = CaptainType(captain_type)
-        self.world = new_game(captain_name, starting_port, ct)
+        self.world = new_game(captain_name, starting_port, ct, seed=seed)
         self._rng = random.Random(self.world.seed)
         self.ledger = ReceiptLedger(run_id=f"run-{self.world.seed}")
         self.board = ContractBoard()
@@ -129,13 +130,12 @@ class GameSession:
         self.narrative = NarrativeState()
         self._trade_seq = 0
         self._save()
-        # Populate contract board at starting port (after save, using a
-        # separate RNG seeded from world.seed so it doesn't affect the
-        # main RNG sequence for deterministic replay)
+        # Populate contract board at starting port using a deterministic
+        # RNG derived from world.seed to avoid perturbing the main sequence.
         port = self.current_port
         if port:
             saved_rng = self._rng
-            self._rng = random.Random(self.world.seed + 7919)  # offset to avoid correlation
+            self._rng = random.Random(self.world.seed + 7919)
             self._refresh_board(port)
             self._rng = saved_rng
             self._save()
@@ -148,6 +148,9 @@ class GameSession:
         self.world, self.ledger, self.board, self.infra, self.campaign, self.narrative = result
         self._rng = random.Random(self.world.seed + self.world.day)
         self._trade_seq = len(self.ledger.receipts)
+        # Recalculate prices for all ports (handles migrated slots with price=0)
+        for port in self.world.ports.values():
+            self._recalc(port)
         return True
 
     @property

@@ -132,12 +132,22 @@ def get_departure_weather(region: str, day: int) -> str:
     return ""
 
 
-def get_arrival_weather(region: str, day: int) -> str:
+def get_arrival_weather(region: str, day: int, port_name: str = "") -> str:
     """Get arrival weather text for the end of a voyage."""
     season = get_season(day)
     narrative = get_weather_narrative(region, season.value)
     if narrative:
-        return narrative.arrival_text
+        text = narrative.arrival_text
+        if port_name:
+            # Replace generic subject at start of arrival text with port name
+            for subject in [
+                "The northern port", "The island port", "The port",
+                "The island", "The harbor", "The lagoon",
+            ]:
+                if text.startswith(subject):
+                    text = port_name + text[len(subject):]
+                    break
+        return text
     return ""
 
 

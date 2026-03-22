@@ -243,10 +243,18 @@ def cargo() -> None:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def buy(good: str, qty: int) -> None:
+def buy(good: str, qty: str) -> None:
     """Buy goods from port market."""
+    try:
+        quantity = int(qty)
+    except ValueError:
+        console.print(f"[red]Invalid quantity: {qty}[/red]")
+        return
+    if quantity <= 0:
+        console.print("[red]Quantity must be a positive number.[/red]")
+        return
     s = _session()
-    result = s.buy(good, qty)
+    result = s.buy(good, quantity)
     if isinstance(result, str):
         console.print(f"[red]{result}[/red]")
         return
@@ -270,10 +278,18 @@ def buy(good: str, qty: int) -> None:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def sell(good: str, qty: int) -> None:
+def sell(good: str, qty: str) -> None:
     """Sell goods to port market."""
+    try:
+        quantity = int(qty)
+    except ValueError:
+        console.print(f"[red]Invalid quantity: {qty}[/red]")
+        return
+    if quantity <= 0:
+        console.print("[red]Quantity must be a positive number.[/red]")
+        return
     s = _session()
-    result = s.sell(good, qty)
+    result = s.sell(good, quantity)
     if isinstance(result, str):
         console.print(f"[red]{result}[/red]")
         return
@@ -364,7 +380,8 @@ def hunt() -> None:
                     cost_basis=0, acquired_port=s.current_port.id if s.current_port else "",
                     acquired_region="", acquired_day=s.captain.day,
                 ))
-            console.print(f"  [green]+{result.pelts_gained} pelts[/green]")
+            total_pelts = existing.quantity if existing else result.pelts_gained
+            console.print(f"  [green]+{result.pelts_gained} pelts[/green]  [dim](sell at any port: sell pelts {total_pelts})[/dim]")
         if result.silver_gained > 0:
             s.captain.silver += result.silver_gained
             from portlight.app.formatting import silver
@@ -439,11 +456,13 @@ def hire(
 
 @app.command()
 def fire(
-    role: str = typer.Argument(..., help="Role to fire"),
-    count: int = typer.Argument(1, help="How many to fire"),
+    count: int = typer.Argument(None, help="Crew to fire (default: 1)"),
+    role: str = typer.Option("sailor", "--role", "-r", help="Role: sailor, gunner, navigator, surgeon, marine, quartermaster"),
 ) -> None:
-    """Fire crew members of a specific role."""
+    """Fire crew members. Specify role with --role."""
     s = _session()
+    if count is None:
+        count = 1
     # Track actual count before firing for accurate message
     from portlight.engine.models import CrewRole
     from portlight.content.crew_roles import get_role_count
@@ -1170,6 +1189,9 @@ def contracts() -> None:
     if not s.current_port:
         console.print("[yellow]Must be docked to view the contract board.[/yellow]")
         return
+    # Lazy refresh: populate board on first view at this port
+    s._refresh_board(s.current_port)
+    s._save()
     console.print(views.contracts_view(s.board, s.world.day))
 
 
@@ -1592,7 +1614,8 @@ def guide() -> None:
     lines.append("  port            — view current port info")
     lines.append("  provision [n]   — buy provisions")
     lines.append("  repair [n]      — repair hull")
-    lines.append("  hire [n]        — hire crew")
+    lines.append("  hire [n] [--role <role>]  — hire crew (default: sailor)")
+    lines.append("  fire [n] [--role <role>]  — fire crew (default: sailor)")
     lines.append("  duel <stances>  — fight a pirate captain (e.g. thrust,parry,slash)")
     lines.append("")
 
@@ -1618,12 +1641,12 @@ def guide() -> None:
     lines.append("  inventory           — view all personal gear and status")
     lines.append("  equip <slot> <id>   — equip armor or weapon")
     lines.append("  equip remove <slot> — unequip armor or weapon")
-    lines.append("  merchant [id] [buy] — browse or buy from port merchants")
+    lines.append("  merchant [id] [item] — list merchants, browse one, or buy an item")
     lines.append("  armory [buy] [qty]  — quick-buy weapons/ammo (no markup)")
     lines.append("  train [style]       — learn a fighting style")
     lines.append("  equip-style [id]    — equip or unequip a style")
     lines.append("  injuries            — view current wounds")
-    lines.append("  upgrade [id]        — view or install ship upgrades")
+    lines.append("  upgrade [id] [--remove] — browse, install, or remove ship upgrades")
     lines.append("")
 
     lines.append("[bold]Career[/bold]")
