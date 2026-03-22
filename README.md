@@ -129,7 +129,7 @@ Portlight is in alpha. The core systems are complete and stress-tested, but bala
 
 **What's solid:**
 - All systems functional end-to-end
-- 609 tests across 24 files
+- 1,805+ tests across 72 files
 - 14 cross-system invariants enforced under 9 compound stress scenarios
 - Balance harness with 7 policy bots across 7 scenario packs
 

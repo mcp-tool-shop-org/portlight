@@ -46,12 +46,12 @@
 ## D. Shipping Hygiene
 
 - [x] `[all]` `verify` script exists (test + build + smoke in one command) (2026-03-20) — verify.sh
-- [x] `[all]` Version in manifest matches git tag (2026-03-20) — v0.1.0-alpha in pyproject.toml, tag at release
+- [x] `[all]` Version in manifest matches git tag (2026-03-22) — v2.0.0 in pyproject.toml, tag at release
 - [ ] `[all]` SKIP: no CI configured — local-only development, manual verification
 - [ ] `[all]` SKIP: no CI configured — dependency updates handled manually
 - [ ] `[npm]` SKIP: not an npm package
 - [x] `[pypi]` `python_requires` set (2026-03-20) — `>=3.11` in pyproject.toml
-- [x] `[pypi]` Clean wheel + sdist build (2026-03-20) — `portlight-0.1.0a0-py3-none-any.whl` builds clean
+- [x] `[pypi]` Clean wheel + sdist build (2026-03-22) — `portlight-2.0.0-py3-none-any.whl` builds clean
 - [ ] `[vsix]` SKIP: not a VS Code extension
 - [ ] `[desktop]` SKIP: not a desktop app
 

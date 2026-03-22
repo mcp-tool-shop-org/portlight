@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from rich.columns import Columns
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
@@ -921,7 +922,7 @@ def _event_icon(event_type: str) -> str:
 def contracts_view(board: "ContractBoard", day: int) -> Panel:
     """Contract board: available offers with requirements and rewards."""
     if not board.offers:
-        return Panel("[dim]No contract offers available. Arrive at a port to see the board.[/dim]",
+        return Panel("[dim]No contract offers available. Check back tomorrow or try another port.[/dim]",
                      title="[bold]Contract Board[/bold]", border_style="yellow")
 
     table = Table(show_header=True, header_style="bold")
@@ -1656,3 +1657,468 @@ def milestones_view(
             parts.append(Text.from_markup(f"    [dim]+{len(missing) - 3} more requirements[/dim]"))
 
     return Panel(Group(*parts), title="[bold]Merchant Career Ledger[/bold]", border_style="bright_blue")
+
+
+# ---------------------------------------------------------------------------
+# Captain selection views — interactive character creation
+# ---------------------------------------------------------------------------
+
+_SHIP_SILHOUETTES: dict[str, str] = {
+    "sloop": "   __|__\n__|     |__\n|___________|",
+    "cutter": "  ___|___\n_|       |_\n|___________|~",
+}
+
+
+def _port_name(port_id: str) -> str:
+    """Convert port_id to display name, using real port data when available."""
+    from portlight.content.ports import PORTS
+    port = PORTS.get(port_id)
+    if port:
+        return port.name
+    return port_id.replace("_", " ").title()
+
+
+def captain_roster_view(
+    templates: "dict",
+    order: list,
+    quotes: dict,
+    colors: dict,
+    console_width: int = 80,
+) -> Group:
+    """3x3 grid of compact captain cards for the selection screen."""
+
+    cards: list[Panel] = []
+    for idx, ct in enumerate(order):
+        tmpl: CaptainTemplate = templates[ct]
+        num = idx + 1
+        quote = quotes.get(ct, "")
+        color = colors.get(ct, "white")
+        diff = fmt.difficulty_tag(tmpl.starting_silver)
+        ship_tmpl = SHIPS.get(tmpl.starting_ship_id)
+        ship_name = ship_tmpl.name if ship_tmpl else tmpl.starting_ship_id
+
+        # Card body
+        lines = []
+        lines.append(f"[dim]{tmpl.title}[/dim]")
+        lines.append(f"{_port_name(tmpl.home_port_id)} - [yellow]{tmpl.starting_silver}s[/yellow]")
+        lines.append(f"{ship_name} - {diff}")
+        lines.append("")
+        # Signature strength (first, truncated for card)
+        if tmpl.strengths:
+            lines.append(f"[green]+[/green] {tmpl.strengths[0]}")
+        # Signature weakness (first, truncated for card)
+        if tmpl.weaknesses:
+            lines.append(f"[red]-[/red] {tmpl.weaknesses[0]}")
+        lines.append("")
+        # Quote
+        if quote:
+            lines.append(f'[italic dim]"{quote}"[/italic dim]')
+
+        card = Panel(
+            "\n".join(lines),
+            title=f"[bold {color}]{num} - {tmpl.name}[/bold {color}]",
+            border_style=color,
+            width=28,
+            padding=(0, 1),
+        )
+        cards.append(card)
+
+    # Determine column count based on terminal width
+    if console_width >= 88:
+        col_count = 3
+    elif console_width >= 60:
+        col_count = 2
+    else:
+        col_count = 1
+
+    # Build rows manually for clean alignment
+    rows = []
+    for i in range(0, len(cards), col_count):
+        row_cards = cards[i:i + col_count]
+        rows.append(Columns(row_cards, equal=True, expand=False))
+
+    header = Text.from_markup(
+        "\n"
+        "  [bold]===================================================[/bold]\n"
+        "  [bold]      Choose Your Captain[/bold]\n"
+        "  [dim]      Who will you become on the open sea?[/dim]\n"
+        "  [bold]===================================================[/bold]\n"
+    )
+
+    footer = Text.from_markup(
+        "\n  [dim]Enter a number[/dim] [bold](1-9)[/bold] [dim]to learn more,"
+        " or[/dim] [bold]0[/bold] [dim]for Custom Captain[/dim]\n"
+    )
+
+    return Group(header, *rows, footer)
+
+
+def captain_spotlight_view(
+    template: "CaptainTemplate",
+    index: int,
+    total: int,
+    color: str = "blue",
+) -> Panel:
+    """Full detail view for a single captain during selection."""
+    ship_tmpl = SHIPS.get(template.starting_ship_id)
+    ship_name = ship_tmpl.name if ship_tmpl else template.starting_ship_id
+    diff = fmt.difficulty_tag(template.starting_silver)
+
+    lines: list[str] = []
+
+    # Backstory + ship silhouette
+    lines.append(f"[italic]{template.backstory}[/italic]")
+    lines.append("")
+
+    # Ship silhouette
+    ship_class = template.starting_ship_id.split("_")[0] if "_" in template.starting_ship_id else "sloop"
+    # Map ship IDs to silhouette keys
+    if "cutter" in template.starting_ship_id:
+        ship_class = "cutter"
+    else:
+        ship_class = "sloop"
+    silhouette = _SHIP_SILHOUETTES.get(ship_class, "")
+    if silhouette:
+        lines.append(f"[dim]{silhouette}[/dim]")
+        lines.append("")
+
+    # Starting position
+    lines.append("[bold]Starting Position[/bold]")
+    lines.append(f"  Silver:     [yellow]{template.starting_silver:,}[/yellow]     Difficulty: {diff}")
+    lines.append(f"  Ship:       {ship_name} (cargo {ship_tmpl.cargo_capacity}, speed {ship_tmpl.speed})" if ship_tmpl else f"  Ship:       {ship_name}")
+    lines.append(f"  Home:       {_port_name(template.home_port_id)}, {template.home_region}")
+    lines.append(f"  Provisions: {template.starting_provisions} days")
+    lines.append("")
+
+    # Trade profile
+    p = template.pricing
+    lines.append("[bold]Trade Profile[/bold]")
+    lines.append(f"  Buy prices:    {fmt.modifier_str(p.buy_price_mult, invert=True)}")
+    lines.append(f"  Sell prices:   {fmt.modifier_str(p.sell_price_mult)}")
+    if p.luxury_sell_bonus > 0:
+        lines.append(f"  Luxury bonus:  [green]+{int(p.luxury_sell_bonus * 100)}% on silk/spice/porcelain[/green]")
+    lines.append(f"  Port fees:     {fmt.modifier_str(p.port_fee_mult, invert=True)}")
+    lines.append("")
+
+    # Voyage profile
+    v = template.voyage
+    lines.append("[bold]Voyage Profile[/bold]")
+    lines.append(f"  Provision burn:  {fmt.modifier_str(v.provision_burn, invert=True)}")
+    if v.speed_bonus > 0:
+        lines.append(f"  Speed bonus:     [green]+{v.speed_bonus}[/green]")
+    else:
+        lines.append("  Speed bonus:     [dim]--[/dim]")
+    if v.storm_resist_bonus > 0:
+        lines.append(f"  Storm resist:    [green]+{int(v.storm_resist_bonus * 100)}%[/green]")
+    lines.append(f"  Cargo damage:    {fmt.modifier_str(v.cargo_damage_mult, invert=True)}")
+    lines.append("")
+
+    # Inspection profile
+    i = template.inspection
+    lines.append("[bold]Inspection Profile[/bold]")
+    lines.append(f"  Frequency:  {fmt.modifier_str(i.inspection_chance_mult, invert=True)}")
+    if i.seizure_risk > 0:
+        lines.append(f"  Seizure:    [red]{int(i.seizure_risk * 100)}% per inspection[/red]")
+    else:
+        lines.append("  Seizure:    [green]None[/green]")
+    lines.append(f"  Fines:      {fmt.modifier_str(i.fine_mult, invert=True)}")
+    lines.append("")
+
+    # Reputation seed
+    rs = template.reputation_seed
+    lines.append("[bold]Starting Reputation[/bold]")
+    lines.append(f"  Trust: {fmt.trust_tag(rs.commercial_trust)}     Heat: {fmt.heat_tag(rs.customs_heat)}")
+    regions = []
+    for region, val in [
+        ("Mediterranean", rs.mediterranean),
+        ("North Atlantic", rs.north_atlantic),
+        ("West Africa", rs.west_africa),
+        ("East Indies", rs.east_indies),
+        ("South Seas", rs.south_seas),
+    ]:
+        if val != 0:
+            color_r = "green" if val > 0 else "red"
+            regions.append(f"{region}: [{color_r}]{val:+d}[/{color_r}]")
+    if regions:
+        lines.append(f"  Standing:   {', '.join(regions)}")
+    if template.faction_alignment:
+        factions = []
+        for fac, val in template.faction_alignment.items():
+            fc = "green" if val > 0 else "red"
+            factions.append(f"{fac.replace('_', ' ').title()}: [{fc}]{val:+d}[/{fc}]")
+        lines.append(f"  Factions:   {', '.join(factions)}")
+    lines.append("")
+
+    # Strengths / weaknesses
+    lines.append("[bold green]Strengths[/bold green]")
+    for s in template.strengths:
+        lines.append(f"  [green]+[/green] {s}")
+    lines.append("[bold red]Weaknesses[/bold red]")
+    for w in template.weaknesses:
+        lines.append(f"  [red]-[/red] {w}")
+
+    title = f"[bold]{template.name}[/bold] — {template.title}  [{index}/{total}]"
+    return Panel("\n".join(lines), title=title, border_style=color, padding=(1, 2))
+
+
+def captain_confirm_view(
+    name: str,
+    template: "CaptainTemplate",
+    color: str = "green",
+) -> Panel:
+    """Compact confirmation panel before starting the game."""
+    ship_tmpl = SHIPS.get(template.starting_ship_id)
+    ship_name = ship_tmpl.name if ship_tmpl else template.starting_ship_id
+
+    lines = [
+        "",
+        f"  [bold]{name}[/bold] - {template.name}",
+        f"  [dim]{template.title} of {_port_name(template.home_port_id)}[/dim]",
+        "",
+        f"  [yellow]{template.starting_silver}[/yellow] silver - {ship_name} - {template.home_region}",
+        "",
+    ]
+    return Panel("\n".join(lines), title="[bold]Set Sail?[/bold]", border_style=color)
+
+
+# ---------------------------------------------------------------------------
+# World map - ASCII chart of ports, routes, regions
+# ---------------------------------------------------------------------------
+
+# Region display colors (Rich markup)
+_REGION_COLORS: dict[str, str] = {
+    "Mediterranean": "blue",
+    "North Atlantic": "cyan",
+    "West Africa": "yellow",
+    "East Indies": "red",
+    "South Seas": "green",
+}
+
+# Feature icons
+_FEATURE_ICON: dict[str, str] = {
+    "shipyard": "[S]",
+    "black_market": "[B]",
+    "safe_harbor": "[H]",
+}
+
+# Ship class -> route style
+_ROUTE_STYLES: dict[str, tuple[str, str]] = {
+    "sloop":       ("dim",    "."),
+    "brigantine":  ("white",  "-"),
+    "galleon":     ("yellow", "="),
+    "man_of_war":  ("red",    "#"),
+}
+
+
+def _bresenham(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
+    """Integer Bresenham line between two points (excludes endpoints)."""
+    points: list[tuple[int, int]] = []
+    dx = abs(x1 - x0)
+    dy = abs(y1 - y0)
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    err = dx - dy
+    cx, cy = x0, y0
+    while True:
+        if (cx, cy) != (x0, y0) and (cx, cy) != (x1, y1):
+            points.append((cx, cy))
+        if cx == x1 and cy == y1:
+            break
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            cx += sx
+        if e2 < dx:
+            err += dx
+            cy += sy
+    return points
+
+
+def world_map_view(
+    world: "WorldState",
+    player_port_id: str | None = None,
+    show_routes: bool = False,
+    region_filter: str | None = None,
+) -> Panel:
+    """Render the full world map as ASCII art.
+
+    Grid: 100 columns x 36 rows (2x horizontal stretch for terminal aspect).
+    Ports shown as colored markers with name labels.
+    Routes drawn as lines between connected ports when show_routes=True.
+    """
+    from portlight.content.ports import PORTS
+    from portlight.content.routes import ROUTES
+
+    # --- Grid setup ---
+    MAP_W = 100
+    MAP_H = 36
+    GAME_W = 50
+    GAME_H = 36
+
+    # Character grid: (char, style) per cell
+    grid: list[list[tuple[str, str]]] = [
+        [(".", "dim blue")] * MAP_W for _ in range(MAP_H)
+    ]
+
+    # Ocean texture - vary the fill slightly
+    for y in range(MAP_H):
+        for x in range(MAP_W):
+            if (x + y) % 7 == 0:
+                grid[y][x] = ("~", "dim blue")
+            elif (x + y) % 11 == 0:
+                grid[y][x] = (".", "dim blue")
+
+    def game_to_grid(gx: int, gy: int) -> tuple[int, int]:
+        """Convert game coords (50x36) to grid coords (100x36)."""
+        mx = int(gx * (MAP_W - 2) / GAME_W) + 1
+        my = int(gy * (MAP_H - 2) / GAME_H) + 1
+        return (max(0, min(MAP_W - 1, mx)), max(0, min(MAP_H - 1, my)))
+
+    # Filter ports by region if requested
+    region_map: dict[str, str] = {
+        "med": "Mediterranean", "mediterranean": "Mediterranean",
+        "atl": "North Atlantic", "north_atlantic": "North Atlantic", "atlantic": "North Atlantic",
+        "afr": "West Africa", "west_africa": "West Africa", "africa": "West Africa",
+        "ind": "East Indies", "east_indies": "East Indies", "indies": "East Indies",
+        "sea": "South Seas", "south_seas": "South Seas", "seas": "South Seas",
+    }
+    active_region = region_map.get(region_filter.lower(), region_filter) if region_filter else None
+
+    ports_to_show = {
+        pid: p for pid, p in PORTS.items()
+        if active_region is None or p.region == active_region
+    }
+
+    # --- Draw routes ---
+    port_grid_coords: dict[str, tuple[int, int]] = {}
+    for pid, port in ports_to_show.items():
+        port_grid_coords[pid] = game_to_grid(port.map_x, port.map_y)
+
+    if show_routes:
+        for route in ROUTES:
+            if route.port_a not in ports_to_show or route.port_b not in ports_to_show:
+                continue
+            ax, ay = port_grid_coords[route.port_a]
+            bx, by = port_grid_coords[route.port_b]
+            style_color, style_char = _ROUTE_STYLES.get(
+                route.min_ship_class, ("dim", "\u00b7"))
+            for px, py in _bresenham(ax, ay, bx, by):
+                if 0 <= px < MAP_W and 0 <= py < MAP_H:
+                    grid[py][px] = (style_char, style_color)
+
+    # --- Draw ports (two passes: labels first, then markers on top) ---
+    # Reserve all marker positions first so labels avoid them
+    occupied: set[tuple[int, int]] = set()
+    marker_data: list[tuple[int, int, str, str]] = []  # (x, y, char, style)
+
+    sorted_ports = sorted(ports_to_show.items(), key=lambda kv: kv[1].map_x)
+
+    for pid, port in sorted_ports:
+        mx, my = port_grid_coords[pid]
+        color = _REGION_COLORS.get(port.region, "white")
+        is_current = pid == player_port_id
+
+        if is_current:
+            marker = "*"
+            marker_style = f"bold {color}"
+        else:
+            icon = "o"
+            for feat in port.features:
+                if feat.value in _FEATURE_ICON:
+                    icon = _FEATURE_ICON[feat.value]
+                    break
+            marker = icon
+            marker_style = f"bold {color}"
+
+        if 0 <= mx < MAP_W and 0 <= my < MAP_H:
+            occupied.add((mx, my))
+            marker_data.append((mx, my, marker, marker_style))
+
+    # Pass 1: place labels (avoiding marker positions and each other)
+    for pid, port in sorted_ports:
+        mx, my = port_grid_coords[pid]
+        color = _REGION_COLORS.get(port.region, "white")
+        is_current = pid == player_port_id
+
+        label = port.name
+        if is_current:
+            label = f"> {label}"
+        label_style = f"bold {color}" if is_current else color
+
+        placed = False
+        for dy in (0, -1, 1, -2, 2, -3, 3):
+            ly = my + dy
+            if ly < 0 or ly >= MAP_H:
+                continue
+            for try_x in (mx + 2, mx - len(label) - 1):
+                cells = [(try_x + i, ly) for i in range(len(label))]
+                if all(0 <= cx < MAP_W and (cx, ly) not in occupied for cx, _ in cells):
+                    for i, ch in enumerate(label):
+                        lx = try_x + i
+                        grid[ly][lx] = (ch, label_style)
+                        occupied.add((lx, ly))
+                    placed = True
+                    break
+            if placed:
+                break
+
+        if not placed:
+            label_x = mx + 2
+            if label_x + len(label) >= MAP_W:
+                label_x = mx - len(label) - 1
+            for i, ch in enumerate(label):
+                lx = label_x + i
+                if 0 <= lx < MAP_W and 0 <= my < MAP_H:
+                    grid[my][lx] = (ch, label_style)
+
+    # Pass 2: stamp markers on top (they always win)
+    for mx, my, marker, marker_style in marker_data:
+        grid[my][mx] = (marker, marker_style)
+
+    # --- Build Rich Text output ---
+    output_lines: list[str] = []
+    for row in grid:
+        line_parts: list[str] = []
+        for ch, style in row:
+            line_parts.append(f"[{style}]{ch}[/{style}]")
+        output_lines.append("".join(line_parts))
+
+    map_text = "\n".join(output_lines)
+
+    # --- Legend ---
+    _REGION_ABBR: dict[str, str] = {
+        "Mediterranean": "MED",
+        "North Atlantic": "ATL",
+        "West Africa": "AFR",
+        "East Indies": "IND",
+        "South Seas": "SEA",
+    }
+    legend_parts = ["[bold]Legend:[/bold]  "]
+    for region, color in _REGION_COLORS.items():
+        if active_region and region != active_region:
+            continue
+        abbr = _REGION_ABBR.get(region, region[:3].upper())
+        legend_parts.append(f"[{color}]o {abbr}[/{color}]  ")
+    legend_parts.append("  ")
+    legend_parts.append("[S] Shipyard  [B] Black Market  [H] Safe Harbor")
+    if player_port_id:
+        legend_parts.append("  [bold]* You[/bold]")
+
+    if show_routes:
+        legend_parts.append("\n[bold]Routes:[/bold]  ")
+        legend_parts.append("[dim]\u00b7 Sloop[/dim]  ")
+        legend_parts.append("[white]- Brigantine[/white]  ")
+        legend_parts.append("[yellow]= Galleon[/yellow]  ")
+        legend_parts.append("[red]# Man-of-War[/red]")
+
+    legend = "".join(legend_parts)
+
+    title = "[bold cyan]The Known World[/bold cyan]"
+    if active_region:
+        title = f"[bold cyan]{active_region}[/bold cyan]"
+    if player_port_id and player_port_id in PORTS:
+        port_name = PORTS[player_port_id].name
+        title += f"  [dim]|[/dim]  [bold]Docked: {port_name}[/bold]"
+
+    content = f"{map_text}\n\n{legend}"
+    return Panel(content, title=title, border_style="cyan", padding=(0, 1))
