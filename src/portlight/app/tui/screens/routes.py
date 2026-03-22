@@ -178,6 +178,29 @@ def execute_advance(app, session: "GameSession") -> None:
                 timeout=3,
             )
 
+    # Check for pirate encounter
+    if events:
+        for ev in events:
+            if hasattr(ev, "_pending_duel") and ev._pending_duel is not None:
+                from portlight.engine.encounter import create_encounter
+                enc = create_encounter(
+                    session.world.ports,
+                    session.world.voyage.destination_id if session.world.voyage else "porto_novo",
+                    session._rng,
+                )
+                if enc:
+                    pd = ev._pending_duel
+                    enc.enemy_captain_id = pd.captain_id
+                    enc.enemy_captain_name = pd.captain_name
+                    enc.enemy_faction_id = pd.faction_id
+                    enc.enemy_personality = pd.personality
+                    enc.enemy_strength = pd.strength
+                    enc.enemy_region = pd.region
+
+                    from portlight.app.tui.screens.encounter import EncounterScreen
+                    app.push_screen(EncounterScreen(session, enc))
+                    return  # Encounter takes over
+
     # Auto-switch to dashboard on arrival
     if was_at_sea and not session.at_sea:
         app.action_switch_tab("dashboard")

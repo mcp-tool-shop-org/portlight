@@ -36,12 +36,27 @@ class PortlightApp(App):
         Binding("g", "sail", "Sail", priority=True),
         Binding("a", "advance", "Advance", priority=True),
         Binding("q", "quit", "Quit", priority=True),
+        # Encounter-specific keys (only active when EncounterScreen is pushed)
+        Binding("n", "encounter_dispatch('negotiate')", show=False, priority=True),
+        Binding("t", "encounter_dispatch('thrust')", show=False, priority=True),
+        Binding("z", "encounter_dispatch('slash')", show=False, priority=True),
+        Binding("x", "encounter_dispatch('parry')", show=False, priority=True),
+        Binding("o", "encounter_dispatch('shoot')", show=False, priority=True),
+        Binding("e", "encounter_dispatch('evade')", show=False, priority=True),
     ]
 
     def __init__(self, session: GameSession | None = None) -> None:
         super().__init__()
         self.session = session or GameSession()
         self._current_tab = "dashboard"
+
+    @property
+    def _encounter_screen(self):
+        """Return the active EncounterScreen if one is pushed, else None."""
+        from portlight.app.tui.screens.encounter import EncounterScreen
+        if isinstance(self.screen, EncounterScreen):
+            return self.screen
+        return None
 
     def compose(self) -> ComposeResult:
         from portlight.app.tui.screens.dashboard import DashboardScreen
@@ -56,8 +71,21 @@ class PortlightApp(App):
                     timeout=8,
                 )
 
+    def action_encounter_dispatch(self, key: str) -> None:
+        """Dispatch encounter-specific keys (n/t/z/x/o/e) to EncounterScreen."""
+        enc = self._encounter_screen
+        if enc:
+            enc.action_encounter_key(key)
+
     def action_switch_tab(self, tab: str) -> None:
         """Switch the content area to a different tab."""
+        enc = self._encounter_screen
+        if enc:
+            # f→fleet, c→cargo, r→routes: remap to encounter actions
+            _remap = {"fleet": "flee", "cargo": "close", "routes": "rake"}
+            if tab in _remap:
+                enc.action_encounter_key(_remap[tab])
+            return  # Block all tab switches during encounter
         if not self.session.active:
             self.notify("No active game.", severity="warning")
             return
@@ -67,29 +95,48 @@ class PortlightApp(App):
             dashboard.switch_tab(tab)
 
     def action_buy(self) -> None:
-        """Open buy dialog."""
+        """Open buy dialog. During encounter: b=broadside."""
+        enc = self._encounter_screen
+        if enc:
+            enc.action_encounter_key("broadside")
+            return
         if not self.session.active:
             return
         from portlight.app.tui.screens.market import execute_buy_flow
         execute_buy_flow(self, self.session)
 
     def action_sell(self) -> None:
-        """Open sell dialog."""
+        """Open sell dialog. During encounter: s=spare."""
+        enc = self._encounter_screen
+        if enc:
+            enc.action_encounter_key("spare")
+            return
         if not self.session.active:
             return
         from portlight.app.tui.screens.market import execute_sell_flow
         execute_sell_flow(self, self.session)
 
     def action_sail(self) -> None:
-        """Open sail dialog."""
+        """Open sail dialog. During encounter: g=fight."""
+        enc = self._encounter_screen
+        if enc:
+            enc.action_encounter_key("fight")
+            return
         if not self.session.active:
             return
         from portlight.app.tui.screens.routes import execute_sail_flow
         execute_sail_flow(self, self.session)
 
     def action_advance(self) -> None:
-        """Advance one day."""
+        """Advance one day. During encounter: a=take_all."""
+        enc = self._encounter_screen
+        if enc:
+            enc.action_encounter_key("take_all")
+            return
         if not self.session.active:
+            return
+        if self.session.world.pirates.pending_duel is not None:
+            self.notify("Resolve the encounter first!", severity="warning")
             return
         from portlight.app.tui.screens.routes import execute_advance
         execute_advance(self, self.session)

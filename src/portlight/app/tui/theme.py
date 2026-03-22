@@ -261,4 +261,71 @@ DataTable {
     background: #0d1f3c;
     border: tall #264653;
 }
+
+/* Encounter screen */
+.hidden {
+    display: none;
+}
+
+#encounter-header {
+    height: auto;
+    padding: 1;
+    border: tall #e76f51;
+    background: #1a0a0a;
+}
+
+#ship-panels {
+    height: auto;
+}
+
+#ship-player {
+    width: 1fr;
+    height: auto;
+    border: tall #2a9d8f;
+    padding: 1;
+    background: #0d1f3c;
+}
+
+#ship-enemy {
+    width: 1fr;
+    height: auto;
+    border: tall #e76f51;
+    padding: 1;
+    background: #1a0a0a;
+}
+
+#combatant-panels {
+    height: auto;
+}
+
+#combatant-player {
+    width: 1fr;
+    height: auto;
+    border: tall #2a9d8f;
+    padding: 1;
+    background: #0d1f3c;
+}
+
+#combatant-enemy {
+    width: 1fr;
+    height: auto;
+    border: tall #e76f51;
+    padding: 1;
+    background: #1a0a0a;
+}
+
+#encounter-log {
+    height: 1fr;
+    overflow-y: auto;
+    padding: 0 1;
+    border-top: tall #264653;
+    background: #0a1628;
+}
+
+#encounter-actions {
+    dock: bottom;
+    height: 1;
+    background: #0d1f3c;
+    padding: 0 1;
+}
 """

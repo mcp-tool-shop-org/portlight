@@ -1,5 +1,9 @@
 """Combat screen — maritime-themed duel and naval combat.
 
+Deprecated: replaced by EncounterScreen which handles all combat phases
+(approach, naval, boarding, duel, victory/defeat) in a single continuous
+screen. This file is kept for backward compatibility.
+
 Features:
 - Visual HP/stamina bars with block characters
 - Color-coded combatant panels (green for player, red for enemy)
