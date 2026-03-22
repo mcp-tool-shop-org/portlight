@@ -287,9 +287,13 @@ def _resolve_event(
                         seized = min(target.quantity, rng.randint(1, 3))
                         seized_goods = {target.good_id: seized}
                         seizure_msg = f" They confiscate {seized} units of {target.good_id}!"
-            msg = f"A patrol inspects your cargo and levies a {fee} silver fee.{seizure_msg}"
+            actual_fee = min(fee, captain.silver)
+            if actual_fee < fee:
+                msg = f"A patrol inspects your cargo and levies a {fee} silver fee (only {actual_fee} collected).{seizure_msg}"
+            else:
+                msg = f"A patrol inspects your cargo and levies a {fee} silver fee.{seizure_msg}"
             return VoyageEvent(EventType.INSPECTION, msg,
-                               silver_delta=-fee, cargo_lost=seized_goods)
+                               silver_delta=-actual_fee, cargo_lost=seized_goods)
 
         case EventType.FAVORABLE_WIND:
             return VoyageEvent(EventType.FAVORABLE_WIND,

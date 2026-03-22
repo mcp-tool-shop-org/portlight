@@ -168,6 +168,41 @@ class TestVoyageEvents:
 # Next upgrade display
 # ---------------------------------------------------------------------------
 
+class TestInspectionFee:
+    """Inspection fee should reflect what captain can actually pay."""
+
+    def test_inspection_fee_capped_to_silver(self):
+        """When captain has less silver than the fee, only take what they have."""
+        from portlight.engine.voyage import _resolve_event, EventType
+        world = new_game()
+        depart(world, "al_manar")
+        world.captain.silver = 3  # less than any possible fee (min 5)
+        event = _resolve_event(
+            EventType.INSPECTION, random.Random(42),
+            world.captain, world.captain.ship,
+            world=world, voyage=world.voyage,
+        )
+        assert event.silver_delta >= -3, \
+            f"Fee should be capped to captain's 3 silver, got {event.silver_delta}"
+        assert "only" in event.message.lower(), \
+            "Message should note partial collection"
+
+    def test_inspection_fee_full_when_affordable(self):
+        """When captain can afford the fee, take the full amount."""
+        from portlight.engine.voyage import _resolve_event, EventType
+        world = new_game()
+        depart(world, "al_manar")
+        world.captain.silver = 500  # plenty
+        event = _resolve_event(
+            EventType.INSPECTION, random.Random(42),
+            world.captain, world.captain.ship,
+            world=world, voyage=world.voyage,
+        )
+        assert event.silver_delta < 0, "Should deduct silver"
+        assert "only" not in event.message.lower(), \
+            "Message should not mention partial collection"
+
+
 class TestEncounterBypass:
     """Pirate encounters must block advancement until resolved."""
 
