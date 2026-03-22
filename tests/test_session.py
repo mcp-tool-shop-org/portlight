@@ -89,6 +89,7 @@ class TestSessionVoyage:
     def test_full_voyage_completes(self, tmp_path: Path):
         s = GameSession(tmp_path)
         s.new()
+        s.auto_resolve_duels = True
         s.sail("silva_bay")  # distance=16, speed=8, ~2 days
         for _ in range(10):
             s.advance()
@@ -288,6 +289,7 @@ class TestFullVoyageLoop:
         """Buy grain at Porto Novo (producer), sell at Al-Manar (consumer)."""
         s = GameSession(tmp_path)
         s.new("Hawk")
+        s.auto_resolve_duels = True
 
         # 1. Buy grain at Porto Novo (cheap here, affinity 1.3)
         buy_result = s.buy("grain", 10)
@@ -324,11 +326,13 @@ class TestFullVoyageLoop:
         """Save at sea, reload, and complete the voyage."""
         s = GameSession(tmp_path)
         s.new()
+        s.auto_resolve_duels = True
         s.sail("al_manar")
         s.advance()  # one day at sea
 
         # Reload
         s2 = GameSession(tmp_path)
+        s2.auto_resolve_duels = True
         assert s2.load()
         assert s2.at_sea
         assert s2.world.voyage.progress > 0

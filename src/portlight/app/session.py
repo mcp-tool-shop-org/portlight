@@ -71,6 +71,7 @@ class GameSession:
         self.narrative: NarrativeState = NarrativeState()
         self._trade_seq: int = 0
         self._rng: random.Random = random.Random()
+        self.auto_resolve_duels: bool = False
 
     @property
     def active(self) -> bool:
@@ -169,6 +170,31 @@ class GameSession:
     def _recalc(self, port) -> None:
         """Recalculate prices at a port with captain modifiers."""
         recalculate_prices(port, GOODS, self._pricing)
+
+    def _resolve_pending_duel(self) -> None:
+        """Auto-resolve a pending pirate duel (for bots/tests)."""
+        from portlight.engine.duel import resolve_duel
+        from portlight.engine.models import PirateEncounterRecord
+        pd = self.world.pirates.pending_duel
+        stances = [self._rng.choice(["thrust", "slash", "parry"]) for _ in range(5)]
+        result = resolve_duel(
+            player_stances=stances,
+            opponent_id=pd.captain_id, opponent_name=pd.captain_name,
+            opponent_personality=pd.personality, opponent_strength=pd.strength,
+            rng=self._rng,
+            player_crew=self.captain.ship.crew if self.captain.ship else 5,
+        )
+        self.captain.silver = max(0, self.captain.silver + result.silver_delta)
+        outcome_str = "duel_win" if result.player_won else ("duel_draw" if result.draw else "duel_loss")
+        self.world.pirates.encounters.append(PirateEncounterRecord(
+            captain_id=pd.captain_id, faction_id=pd.faction_id,
+            day=self.world.day, outcome=outcome_str, region=pd.region,
+        ))
+        if result.player_won:
+            self.world.pirates.duels_won += 1
+        elif not result.draw:
+            self.world.pirates.duels_lost += 1
+        self.world.pirates.pending_duel = None
 
     # --- Trading ---
 
@@ -385,6 +411,10 @@ class GameSession:
             self._evaluate_campaign()
             self._save()
             return []
+
+        # Auto-resolve pending pirate duels (for bots/tests that can't respond)
+        if self.auto_resolve_duels and self.world.pirates.pending_duel is not None:
+            self._resolve_pending_duel()
 
         events = advance_day(self.world, self._rng)
 

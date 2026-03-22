@@ -441,6 +441,7 @@ class TestSessionIntegration:
 
         s = GameSession(base_path=tmp_path)
         s.new("Arrival Tester")
+        s.auto_resolve_duels = True
         spec = get_policy_spec("hull_basic")
         s.purchase_policy_cmd(spec)
         assert s.infra.policies[0].active is True
