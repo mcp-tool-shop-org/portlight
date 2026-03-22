@@ -8,116 +8,131 @@
 
 <p align="center">
   <a href="https://github.com/mcp-tool-shop-org/portlight/actions"><img src="https://github.com/mcp-tool-shop-org/portlight/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/portlight/"><img src="https://img.shields.io/pypi/v/portlight" alt="PyPI"></a>
   <a href="https://github.com/mcp-tool-shop-org/portlight/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://mcp-tool-shop-org.github.io/portlight/"><img src="https://img.shields.io/badge/docs-landing_page-blue" alt="Landing Page"></a>
+  <a href="https://mcp-tool-shop-org.github.io/portlight/"><img src="https://img.shields.io/badge/docs-handbook-blue" alt="Handbook"></a>
 </p>
 
-A trade-first maritime strategy CLI where you build a merchant career through route arbitrage, contracts, infrastructure, finance, and commercial reputation across a living regional economy.
+Trade-first maritime strategy game. Build a merchant career across five regions through route arbitrage, contracts, infrastructure, finance, and reputation — all from the terminal.
+
+## Install
+
+```bash
+pip install portlight
+```
+
+No Python? Use the npm wrapper instead:
+
+```bash
+npx @mcptoolshop/portlight
+```
 
 ## Why Portlight
 
 Most trading games flatten trade into a number that goes up. Portlight treats trade as a commercial discipline:
 
 - **Prices react to your trades.** Dump grain at a port and the price crashes. Every sale shifts the local market.
-- **Ports have real economic identities.** Porto Novo produces grain cheaply. Al-Manar consumes silk hungrily. These aren't random — they're structural.
-- **Voyages carry risk.** Storms, pirates, inspections. Your provisions, hull, and crew matter.
-- **Contracts require proof.** Deliver the right goods to the right port with tracked provenance. No faking it.
-- **Infrastructure changes how you trade.** Warehouses let you stage cargo. Brokers improve contract quality. Licenses unlock premium access.
-- **Finance is leverage with teeth.** Credit lets you move faster. Default, and doors close.
-- **The game reads what you built.** Your trade history, infrastructure, reputation, and routes form a career profile. The game tells you what kind of trade house you actually are.
+- **Ports have real economic identities.** Porto Novo produces grain cheaply. Silk Haven exports silk at volume. These are structural, not random.
+- **Voyages carry risk.** Storms, pirates, inspections, seasonal danger. Your provisions, hull, and crew matter.
+- **Contracts require proof.** Deliver the right goods to the right port before the deadline. Provenance is tracked.
+- **Infrastructure changes how you trade.** Warehouses stage cargo. Brokers improve contracts. Licenses unlock premium access.
+- **Reputation opens and closes doors.** Commercial trust, customs heat, regional standing, and underworld connections — four axes that shape what you can do and where.
+- **The game reads what you built.** Your trade history, infrastructure, reputation, and routes form a career profile. Four distinct victory paths based on what kind of merchant you actually became.
 
-## The Core Loop
+## The World
 
-1. Inspect the market — find what's cheap here and expensive elsewhere
-2. Buy cargo — load your hold
-3. Sail — cross routes under weather, crew, and provision pressure
-4. Sell — earn margin, shift the local market
-5. Reinvest — upgrade your ship, lease a warehouse, open a broker office
-6. Build access — earn trust, reduce heat, unlock contracts and licenses
-7. Pursue a commercial destiny — four distinct victory paths based on what you actually built
+Five regions. Twenty ports. Forty-three routes. A living economy.
+
+| Region | Ports | Character |
+|--------|-------|-----------|
+| **Mediterranean** | Porto Novo, Al-Manar, Silva Bay, Corsair's Rest | Grain, timber, spice markets. Safe starting waters. |
+| **North Atlantic** | Ironhaven, Stormwall, Thornport | Iron, weapons, military trade. Strict inspections. |
+| **West Africa** | Sun Harbor, Palm Cove, Iron Point, Pearl Shallows | Cotton, rum, pearls. Cheapest provisions. |
+| **East Indies** | Jade Port, Monsoon Reach, Silk Haven, Crosswind Isle, Dragon's Gate, Spice Narrows | Silk, spice, porcelain, tea. Highest margins. Monsoon risk. |
+| **South Seas** | Ember Isle, Typhoon Anchorage, Coral Throne | Pearls, medicines. Remote endgame waters. |
+
+134 named NPCs across every port. Four pirate factions controlling different waters. Seasonal weather that shifts danger and demand. A culture layer with festivals, superstitions, and crew morale.
+
+## Nine Captains
+
+| Captain | Home | Edge | Trade-off |
+|---------|------|------|-----------|
+| **Merchant** | Porto Novo | Better prices, trust grows fast | Heat penalties doubled |
+| **Smuggler** | Corsair's Rest | Black market, contraband trade | Higher heat, more inspections |
+| **Navigator** | Monsoon Reach | Faster ships, longer range | Weaker initial standing |
+| **Privateer** | Ironhaven | Naval combat, boarding advantage | Poor merchant reputation |
+| **Corsair** | Corsair's Rest | Balanced combat + trade | Master of none |
+| **Scholar** | Jade Port | Information advantage, better contracts | Low capital, fragile |
+| **Merchant Prince** | Porto Novo | High starting capital, premium access | Higher fees, pirate target |
+| **Dockhand** | Crosswind Isle | Cheapest crew, scrappy | Lowest starting capital |
+| **Bounty Hunter** | Stormwall | Combat mastery, faction standing | Poor prices, distrusted |
+
+Each captain starts in a different port, sees different contracts, and leans toward a different victory path. The game doesn't lock you in — it watches what you do and tells you what you built.
+
+## Core Loop
+
+```
+Inspect market → Buy cargo → Sail → Sell → Reinvest → Build access → Pursue destiny
+```
 
 ## Quick Start
 
 ```bash
-# Install
-pip install -e ".[dev]"
-
-# Start a new game
 portlight new "Captain Hawk" --type merchant
-
-# Look at what's for sale
 portlight market
-
-# Buy cheap goods
 portlight buy grain 10
-
-# Check available routes
 portlight routes
-
-# Sail to where grain sells high
 portlight sail al_manar
-
-# Advance through the voyage
 portlight advance
-
-# Sell at destination
 portlight sell grain 10
-
-# See your trade history
-portlight ledger
-
-# Check your career progress
 portlight milestones
 ```
 
-See [docs/START_HERE.md](docs/START_HERE.md) for a guided first session and [docs/FIRST_VOYAGE.md](docs/FIRST_VOYAGE.md) for a detailed early-game walkthrough.
-
-## Captain Types
-
-| Captain | Home Region | Edge | Trade-off |
-|---------|-------------|------|-----------|
-| **Merchant** | Mediterranean | Better prices, lower inspections, trust grows faster | No black market access |
-| **Smuggler** | West Africa | Black market access, luxury margins, contraband trade | Higher heat, more inspections |
-| **Navigator** | Mediterranean | Faster ships, longer range, East Indies access early | Weaker initial commercial standing |
-| **Privateer** | North Atlantic | Naval combat bonuses, boarding advantage | Poor merchant reputation |
-| **Corsair** | Mediterranean | Balanced combat + trade, flexible approach | Master of none |
-| **Scholar** | East Indies | Information advantage, better contract quality | Low starting capital, fragile |
-| **Merchant Prince** | Mediterranean | High starting capital (700s), premium access | Higher port fees, target for pirates |
-| **Dockhand** | East Indies | Cheapest crew, scrappy resourcefulness | Lowest starting capital (300s) |
-| **Bounty Hunter** | North Atlantic | Combat mastery, faction standing from captures | Poor trade prices, distrusted |
+See [docs/START_HERE.md](docs/START_HERE.md) for a guided first session.
 
 ## Systems
 
-**Economy** — Scarcity-driven pricing across 20 ports, 18 goods, 43 routes spanning 5 regions. Flood penalties punish dumping. Market shocks create regional opportunities.
+**Economy** — Scarcity-driven pricing across 20 ports, 18 goods, 43 routes. Flood penalties punish dumping. Market shocks create opportunities. Regional demand modifiers mean every port has clear import/export identity.
 
-**Voyages** — Multi-day travel with weather events, pirate encounters, inspections. Provisions, hull, and crew are real resources. Seasonal danger zones shift risk by region.
+**Voyages** — Multi-day travel with weather, pirate encounters, inspections. Provisions burn daily. Hull takes damage. Crew morale shifts. Seasonal danger zones change which routes are safe.
 
-**Captains** — Nine distinct archetypes with 8-20% pricing gaps, unique starting positions, and different access profiles. From the disciplined Merchant to the risk-seeking Bounty Hunter.
+**Contracts** — Six families gated by trust and standing. Procurement, shortage relief, luxury discreet, return freight, circuit, and faction commissions. Real deadlines, real consequences.
 
-**Contracts** — Six contract families gated by trust and standing. Provenance-validated delivery. Real deadlines with real consequences.
+**Reputation** — Four axes: regional standing, commercial trust, customs heat, and underworld connections. High trust unlocks premium contracts. High heat triggers inspections and port denials. Different captains play different moral economies.
 
-**Reputation** — Regional standing, port-specific reputation, customs heat, and commercial trust. A multi-axis access model that opens and closes doors.
+**Combat** — Full personal combat (stance triangle: thrust/slash/parry) with 7 melee weapons, 7 ranged weapons, regional fighting styles. Naval combat with boarding and cannons. Short, brutal, consequential.
 
-**Infrastructure** — Warehouses (3 tiers), broker offices (2 tiers across 3 regions), and 5 purchasable licenses. Each changes trade timing, scale, or access.
+**Pirate Factions** — Crimson Tide (Mediterranean), Iron Wolves (North Atlantic), Deep Reef Brotherhood (South Seas), Monsoon Syndicate (East Indies). Each with territory, preferred goods, named captains, and attitude toward you.
 
-**Insurance** — Hull, cargo, and contract guarantee policies. Heat surcharges. Claim resolution with denial conditions.
+**Infrastructure** — Warehouses (3 tiers), broker offices, 5 purchasable licenses. Real upkeep costs. Each changes trade timing, scale, or access.
 
-**Credit** — Three tiers of credit with interest accrual, payment deadlines, and default consequences. Leverage with real risk.
+**Finance** — Insurance (hull, cargo, contract guarantee) and credit (3 tiers with interest). Leverage with teeth.
 
-**Career** — 27 milestones across 6 families. Career profile interpretation (primary/secondary/emerging tags). Four victory paths: Lawful Trade House, Shadow Network, Oceanic Reach, and Commercial Empire.
+**Companions** — Five officer roles (marine, navigator, surgeon, smuggler, quartermaster). Named companions with personality, morale, and departure triggers.
+
+**Career** — 27 milestones across 6 families. 13 career profile tags. Four victory paths: Lawful Trade House, Shadow Network, Oceanic Reach, Commercial Empire.
 
 ## Victory Paths
 
 - **Lawful Trade House** — Disciplined legitimacy. High trust, premium contracts, clean reputation, infrastructure breadth.
-- **Shadow Network** — Profitable discreet trade. Luxury margins under scrutiny, heat management, resilient operations.
-- **Oceanic Reach** — Long-haul commercial power. East Indies access, distant infrastructure, premium route mastery.
-- **Commercial Empire** — Integrated multi-region operation. Infrastructure in every region, diversified revenue, financial leverage.
+- **Shadow Network** — Profitable trade under scrutiny. Luxury margins, heat management, resilient operations.
+- **Oceanic Reach** — Long-haul commercial power. East Indies access, distant infrastructure, route mastery.
+- **Commercial Empire** — Integrated multi-region operation. Infrastructure everywhere, diversified revenue, financial leverage.
 
-See [docs/CAREER_PATHS.md](docs/CAREER_PATHS.md) for detailed player-facing descriptions.
+## Print-and-Play Board Game
+
+Generate a complete board game adaptation — cards, board, rulebook, score tracks:
+
+```bash
+pip install portlight[printandplay]
+portlight print-and-play
+```
+
+A 2-4 player competitive merchant adventure (~90 minutes) with asymmetric captains, contract racing, and reputation/heat tension. See [docs/PRINT_AND_PLAY_RULES.md](docs/PRINT_AND_PLAY_RULES.md) for the full rulebook.
 
 ## Command Reference
 
-Run `portlight guide` in-game for a grouped command reference, or see [docs/COMMANDS.md](docs/COMMANDS.md).
+Run `portlight guide` for a grouped reference, or see [docs/COMMANDS.md](docs/COMMANDS.md).
 
 | Group | Commands |
 |-------|----------|
@@ -128,57 +143,26 @@ Run `portlight guide` in-game for a grouped command reference, or see [docs/COMM
 | Finance | `insure`, `credit` |
 | Career | `captain`, `reputation`, `milestones`, `status`, `ledger`, `shipyard` |
 | World | `map`, `port` |
-| System | `save`, `load`, `guide`, `tui` |
+| Interface | `tui`, `captain-select` |
+| System | `save`, `load`, `guide`, `print-and-play` |
 
-## Print-and-Play Board Game
+## Quality
 
-Portlight includes a complete Print-and-Play board game adaptation. Generate a ready-to-print PDF kit with cards, board, rulebook, and score tracks:
-
-```bash
-pip install portlight[printandplay]
-portlight print-and-play
-```
-
-A 2-4 player competitive merchant adventure game (~90 minutes) with asymmetric captains, contract racing, and reputation/heat tension. See [docs/PRINT_AND_PLAY_RULES.md](docs/PRINT_AND_PLAY_RULES.md) for the full rulebook.
-
-## Alpha Status
-
-Portlight is in alpha. The core systems are complete and stress-tested, but balance is actively being tuned.
-
-**What's solid:**
-- All systems functional end-to-end
-- 1,805+ tests across 72 files
+- 1,832 tests across 72+ files
 - 14 cross-system invariants enforced under 9 compound stress scenarios
-- Balance harness with 7 policy bots across 7 scenario packs
+- Balance harness: 7 policy bots across 7 scenario packs
+- Save format v12 with full migration chain
+- Ruff-clean, Python 3.11/3.12/3.13
 
-**What's being tuned:**
-- Smuggler scaling (currently under-performing on ship progression)
-- Mediterranean route concentration (Porto Novo / Silva Bay dominates traffic)
-- Contract completion rates (delivery logic gaps in automated runs)
-- Insurance adoption (currently near zero in simulated play)
+## Security
 
-See [docs/ALPHA_STATUS.md](docs/ALPHA_STATUS.md) for details and [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for specific items.
-
-## Security and Data
-
-Portlight is a **local-only CLI game**. It makes zero network connections during gameplay. Data touched: local save files (`saves/`) and report artifacts (`artifacts/`), all JSON on the local filesystem. No secrets, credentials, telemetry, or remote services. No elevated permissions required. See [SECURITY.md](SECURITY.md) for the full policy.
+Local-only CLI game. Zero network connections during gameplay. Saves to `saves/` and `artifacts/` as JSON on local filesystem. No secrets, no telemetry, no elevated permissions. See [SECURITY.md](SECURITY.md).
 
 ## Development
 
 ```bash
-# Install with dev dependencies
 pip install -e ".[dev]"
-
-# Run tests
 pytest
-
-# Run balance simulation
-python tools/run_balance.py
-
-# Run stress tests
-python tools/run_stress.py
-
-# Lint
 ruff check src/ tests/
 ```
 

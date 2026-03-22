@@ -57,11 +57,25 @@ Run `portlight guide` in-game to see this reference in the terminal.
 | Command | What it does |
 |---------|-------------|
 | `portlight captain` | View captain identity and advantages |
-| `portlight reputation` | View standing, heat, and trust |
+| `portlight reputation` | View standing, heat, and trust across all regions |
 | `portlight milestones` | View milestones and victory path progress |
 | `portlight status` | View captain overview with daily costs |
 | `portlight ledger` | View trade receipt history |
 | `portlight shipyard [buy]` | View or buy ships |
+| `portlight companions` | View recruited companions and their morale |
+
+## World
+
+| Command | What it does |
+|---------|-------------|
+| `portlight map` | View the world map with ports, routes, and your position |
+
+## Interface
+
+| Command | What it does |
+|---------|-------------|
+| `portlight tui` | Launch the full-screen TUI dashboard |
+| `portlight captain-select` | Interactive captain selection roster |
 
 ## System
 
@@ -70,3 +84,4 @@ Run `portlight guide` in-game to see this reference in the terminal.
 | `portlight save` | Explicitly save the game |
 | `portlight load` | Load a saved game |
 | `portlight guide` | Show grouped command reference |
+| `portlight print-and-play` | Generate the Print-and-Play board game PDF kit |

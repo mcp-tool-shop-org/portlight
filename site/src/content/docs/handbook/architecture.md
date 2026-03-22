@@ -10,18 +10,25 @@ sidebar:
 - **Python 3.11+** with Hatchling build system
 - **Typer** for CLI commands
 - **Rich** for terminal rendering
+- **Textual** for TUI interface (optional)
+- **fpdf2** for Print-and-Play PDF generation (optional)
 - Engine-first design: plain dataclasses, no ORM
 
 ## Module structure
 
 ```
 src/portlight/
-  engine/    — economy, voyage, contracts, reputation, infrastructure, campaign
-  content/   — ports, goods, ships, routes, infrastructure specs, campaign thresholds
-  app/       — Typer CLI (30 commands), Rich views, session manager
-  balance/   — balance harness: policy bots, scenarios, runner, reporting
-  stress/    — stress testing: invariants, scenarios, runner, reporting
-  receipts/  — trade receipt schema and hashing
+  engine/       — economy, voyage, contracts, reputation, infrastructure,
+                  campaign, combat (personal + naval), companions, seasons
+  content/      — ports (20), goods (18), ships (5), routes (43),
+                  contracts (22 templates), factions (4), weapons, armor,
+                  seasons, cultures, port institutions (134 NPCs)
+  app/          — Typer CLI (30+ commands), Rich views, TUI screens,
+                  session manager, captain selection
+  balance/      — balance harness: 7 policy bots, 7 scenarios, reporting
+  stress/       — stress testing: 14 invariants, 9 compound scenarios
+  receipts/     — trade receipt schema and hashing
+  printandplay/ — board game PDF generator (cards, board, rules)
 ```
 
 ## Data flow
@@ -37,25 +44,28 @@ Every command goes through the **GameSession**, which mediates between the CLI a
 
 Each day advances through a fixed sequence:
 
-1. **Reputation tick** — heat decay
-2. **Contract tick** — expiry, stale offers
+1. **Reputation tick** — heat decay, standing adjustments
+2. **Contract tick** — expiry, stale offers, board refresh
 3. **Infrastructure upkeep** — warehouse, broker, license deductions
 4. **Credit tick** — interest accrual, due dates, defaults
-5. **Market shift** — regional shocks
-6. **Voyage events** — storms, pirates, inspections
-7. **Campaign evaluation** — milestone checks
-8. **Auto-save**
+5. **Market shift** — restock, regional shocks, seasonal demand
+6. **Voyage events** — storms, pirates, inspections, cultural encounters
+7. **Companion tick** — morale shifts, departure triggers
+8. **Campaign evaluation** — milestone checks, profile tag scoring
+9. **Auto-save**
 
 ## Save format
 
-JSON on the local filesystem. Returns 5-tuple:
-`(WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState)`
+JSON on the local filesystem. Save version 12 with full migration chain (v1-v12).
 
-Backward compatibility via `.get()` defaults for new fields.
+Compound state tuple:
+`(WorldState, ReceiptLedger, ContractBoard, InfrastructureState, CampaignState)`
 
 ## Testing
 
-- **609 tests** across 24 files
+- **1,832 tests** across 72+ files
 - **Balance harness** — 7 policy bots, 7 scenario packs, deterministic seeds
 - **Stress testing** — 14 cross-system invariants, 9 compound scenarios
 - **Invariant enforcement** — checked after every tick in stress runs
+- **Print-and-Play tests** — content sourcing validation, PDF output verification
+- CI: Python 3.11 + 3.12 matrix, ruff lint, paths-gated triggers
