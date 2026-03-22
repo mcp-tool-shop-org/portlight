@@ -3,10 +3,13 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from portlight.content.world import new_game
 from portlight.engine.economy import execute_buy, recalculate_prices
 from portlight.engine.save import (
     CURRENT_SAVE_VERSION,
+    SaveVersionError,
     load_game,
     migrate_save,
     save_game,
@@ -144,8 +147,8 @@ class TestSaveMigration:
         loaded, _ledger, _board, _infra, _campaign, _narrative = result
         assert loaded.captain.name == "Hawk"
 
-    def test_future_version_returns_none(self, tmp_path: Path):
-        """A save from a newer version gracefully fails to load."""
+    def test_future_version_raises_version_error(self, tmp_path: Path):
+        """A save from a newer version raises SaveVersionError with descriptive message."""
         world = new_game("Hawk")
         data = world_to_dict(world)
         data["version"] = 999
@@ -154,5 +157,5 @@ class TestSaveMigration:
         (save_dir / "portlight_save.json").write_text(
             json.dumps(data, indent=2), encoding="utf-8",
         )
-        result = load_game(base_path=tmp_path)
-        assert result is None
+        with pytest.raises(SaveVersionError, match="version 999 is newer"):
+            load_game(base_path=tmp_path)

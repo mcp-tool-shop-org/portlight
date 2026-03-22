@@ -180,6 +180,19 @@ class TestGenerationLaws:
                 # The offer should only appear if heat was below ceiling
                 # Since our heat is 30, offers with ceiling < 30 should be excluded
                 assert o.heat_ceiling >= 30
+    def test_destination_trades_contract_good(self, world, rng):
+        """Every contract destination must trade the contract good."""
+        for port in world.ports.values():
+            rep = world.captain.standing
+            offers = generate_offers(TEMPLATES, world, port, rep, "merchant", rng)
+            for o in offers:
+                dest = world.ports[o.destination_port_id]
+                dest_goods = {slot.good_id for slot in dest.market}
+                assert o.good_id in dest_goods, (
+                    f"Contract '{o.title}' delivers {o.good_id} to "
+                    f"{dest.name} which doesn't trade it "
+                    f"(trades: {dest_goods})"
+                )
 
 
 # ---------------------------------------------------------------------------

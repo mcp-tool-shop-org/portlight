@@ -37,8 +37,14 @@ def _main(
 
 def _session() -> GameSession:
     """Load or fail with helpful message."""
+    from portlight.engine.save import SaveVersionError
     s = GameSession(slot=_active_slot)
-    if not s.load():
+    try:
+        loaded = s.load()
+    except SaveVersionError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    if not loaded:
         console.print("[red]No saved game found.[/red] Start a new game with: [bold]portlight new YourName --type merchant[/bold]")
         raise typer.Exit(1)
     return s
@@ -471,7 +477,7 @@ def fire(
     except ValueError:
         crew_role = None
     before = get_role_count(s.captain.ship.roster, crew_role) if crew_role and s.captain.ship else 0
-    err = s.fire_crew(role, count)
+    err = s.fire_crew(count, role)
     if err:
         console.print(f"[red]{err}[/red]")
         return
@@ -2061,7 +2067,7 @@ def fight(
     action: str = typer.Argument(..., help="thrust, slash, parry, shoot, throw, dodge, or style action"),
 ) -> None:
     """Execute a personal combat action."""
-    global _active_encounter, _player_combatant, _opponent_combatant
+    global _active_encounter, _player_combatant, _opponent_combatant, _pending_victory
     from portlight.app import combat_views
     from portlight.engine.encounter import (
         create_duel_combatants,

@@ -6,6 +6,8 @@ Contract:
   - WorldState round-trips without data loss
 """
 
+# ruff: noqa: N818  — SaveVersionError inherits ValueError for back-compat
+
 from __future__ import annotations
 
 import json
@@ -66,6 +68,10 @@ SAVE_DIR = "saves"
 SAVE_FILE = "portlight_save.json"  # legacy filename, kept for migration
 DEFAULT_SLOT = "default"
 CURRENT_SAVE_VERSION = 12
+
+
+class SaveVersionError(ValueError):
+    """Save file version is incompatible (newer than code or migration chain broken)."""
 
 
 def save_filename(slot: str = DEFAULT_SLOT) -> str:
@@ -295,7 +301,7 @@ def migrate_save(data: dict) -> dict:
     if version == CURRENT_SAVE_VERSION:
         return data
     if version > CURRENT_SAVE_VERSION:
-        raise ValueError(
+        raise SaveVersionError(
             f"Save file version {version} is newer than supported "
             f"version {CURRENT_SAVE_VERSION}. Update Portlight to load this save."
         )
@@ -306,7 +312,7 @@ def migrate_save(data: dict) -> dict:
             version = to_v
 
     if version != CURRENT_SAVE_VERSION:
-        raise ValueError(
+        raise SaveVersionError(
             f"Migration chain broken: reached version {version}, "
             f"expected {CURRENT_SAVE_VERSION}"
         )
@@ -1408,5 +1414,7 @@ def load_game(
     try:
         data = migrate_save(data)
         return world_from_dict(data)
+    except SaveVersionError:
+        raise  # let version errors surface with their descriptive message
     except (KeyError, TypeError, ValueError):
         return None
