@@ -260,7 +260,7 @@ def resolve_action(
         return CaptainAction(
             cid, captain_name, "warn",
             f"Word reaches you from {captain_name}: \"Watch your back in these waters. "
-            f"The {faction_name} isn't the only danger.\"",
+            f"{faction_name} isn't the only danger.\"",
             "message",
         )
 

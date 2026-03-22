@@ -342,7 +342,7 @@ def check_port_consequences(
                     trigger=f"Standing {faction_standing} with {faction.name} at their port",
                     text=(
                         f"A figure in {faction.name} colors approaches as you dock. "
-                        f"No introduction — they know who you are. 'The {faction.name} "
+                        f"No introduction -- they know who you are. '{faction.name} "
                         f"appreciates your loyalty. A small token.' They press {silver_offer} "
                         f"silver into your hand. 'There's more where that came from. "
                         f"Keep trading with us.' They vanish into the crowd."
