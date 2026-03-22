@@ -57,11 +57,17 @@ def _session() -> GameSession:
 @app.command()
 def new(
     name: str = typer.Argument("Captain", help="Captain name"),
-    captain_type: str = typer.Option("merchant", "--type", "-t",
+    captain_type: str = typer.Option(None, "--type", "-t",
         help="Captain type: merchant, smuggler, navigator, privateer, corsair, scholar, merchant_prince, dockhand, bounty_hunter, custom"),
 ) -> None:
     """Start a new game. Choose your captain type to shape your career."""
     from portlight.engine.captain_identity import CaptainType
+
+    # Interactive selection when --type is omitted
+    if captain_type is None:
+        _interactive_captain_select(name)
+        return
+
     valid_types = {ct.value for ct in CaptainType}
     if captain_type not in valid_types:
         console.print(f"[red]Unknown captain type: {captain_type}[/red]")
@@ -75,6 +81,117 @@ def new(
     s.new(name, captain_type=captain_type)
     console.print("\n[bold green]A new voyage begins.[/bold green]\n")
     console.print(views.welcome_view(s.captain, s.captain_template, s.world, s.infra))
+
+
+def _interactive_captain_select(name: str) -> None:
+    """Interactive captain selection screen with roster, spotlight, and confirmation."""
+    from portlight.engine.captain_identity import (
+        CAPTAIN_COLORS,
+        CAPTAIN_ORDER,
+        CAPTAIN_QUOTES,
+        CAPTAIN_TEMPLATES,
+        CaptainType,
+    )
+
+    order = CAPTAIN_ORDER
+    templates = CAPTAIN_TEMPLATES
+    total = len(order)
+
+    def _show_roster() -> None:
+        console.clear()
+        console.print(views.captain_roster_view(
+            templates, order, CAPTAIN_QUOTES, CAPTAIN_COLORS,
+            console_width=console.width,
+        ))
+
+    def _show_spotlight(idx: int) -> None:
+        ct = order[idx]
+        tmpl = templates[ct]
+        color = CAPTAIN_COLORS.get(ct, "blue")
+        console.clear()
+        console.print(views.captain_spotlight_view(tmpl, idx + 1, total, color=color))
+        console.print(
+            "  [bold green][Enter][/bold green] [dim]Choose this captain[/dim]    "
+            "[bold yellow]B[/bold yellow] [dim]Back to roster[/dim]    "
+            "[bold cyan]N[/bold cyan]/[bold cyan]P[/bold cyan] [dim]Next/Previous[/dim]\n"
+        )
+
+    def _confirm(ct: CaptainType) -> bool:
+        tmpl = templates[ct]
+        color = CAPTAIN_COLORS.get(ct, "green")
+        console.print(views.captain_confirm_view(name, tmpl, color=color))
+        try:
+            answer = input("  Proceed? [Y/n] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            return False
+        return answer in ("", "y", "yes")
+
+    # Main loop
+    _show_roster()
+    while True:
+        try:
+            choice = input("  > ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            console.print("\n[dim]Cancelled.[/dim]")
+            raise typer.Exit(0)
+
+        # Number selection (1-9 for spotlight, 0 for custom)
+        if choice == "0":
+            _create_custom_game(name)
+            return
+        if choice == "q":
+            console.print("[dim]Cancelled.[/dim]")
+            raise typer.Exit(0)
+        if choice in {str(i) for i in range(1, total + 1)}:
+            idx = int(choice) - 1
+            _show_spotlight(idx)
+
+            # Spotlight sub-loop
+            while True:
+                try:
+                    sub = input("  > ").strip().lower()
+                except (EOFError, KeyboardInterrupt):
+                    _show_roster()
+                    break
+
+                if sub in ("", "enter", "y", "yes"):
+                    # Confirm selection
+                    ct = order[idx]
+                    if _confirm(ct):
+                        s = GameSession(slot=_active_slot)
+                        s.new(name, captain_type=ct.value)
+                        console.print("\n[bold green]A new voyage begins.[/bold green]\n")
+                        console.print(views.welcome_view(s.captain, s.captain_template, s.world, s.infra))
+                        return
+                    else:
+                        _show_spotlight(idx)
+                elif sub in ("b", "back"):
+                    _show_roster()
+                    break
+                elif sub in ("n", "next"):
+                    idx = (idx + 1) % total
+                    _show_spotlight(idx)
+                elif sub in ("p", "prev", "previous"):
+                    idx = (idx - 1) % total
+                    _show_spotlight(idx)
+                else:
+                    console.print("  [dim]Enter, B(ack), N(ext), or P(rev)[/dim]")
+            continue
+
+        # Name-based selection (fuzzy match)
+        matched = None
+        for ct in order:
+            tmpl = templates[ct]
+            if choice in tmpl.name.lower() or choice in ct.value:
+                matched = ct
+                break
+        if matched:
+            idx = order.index(matched)
+            _show_spotlight(idx)
+            continue
+
+        # Unknown input
+        console.print("  [dim]Enter 1-9 to preview a captain, 0 for custom, or q to quit.[/dim]")
 
 
 def _create_custom_game(name: str) -> None:
@@ -504,6 +621,24 @@ def routes() -> None:
         console.print("[yellow]You're at sea — check routes when you arrive.[/yellow]")
         return
     console.print(views.routes_view(s.world))
+
+
+# ---------------------------------------------------------------------------
+# Map
+# ---------------------------------------------------------------------------
+
+@app.command(name="map")
+def world_map(
+    routes: bool = typer.Option(False, "--routes", "-r", help="Show trade route lines"),
+    region: str | None = typer.Option(None, "--region", help="Filter to region (med/atl/afr/ind/sea)"),
+) -> None:
+    """Display the world map with all ports and regions."""
+    s = _session()
+    player_port = s.current_port_id
+    console.print(views.world_map_view(
+        s.world, player_port_id=player_port,
+        show_routes=routes, region_filter=region,
+    ))
 
 
 # ---------------------------------------------------------------------------
@@ -2989,6 +3124,32 @@ def party() -> None:
             cs["personality"],
         )
     console.print(table)
+
+
+@app.command("print-and-play")
+def print_and_play(
+    output: str = typer.Option(
+        "portlight-print-and-play.pdf",
+        "--output", "-o",
+        help="Output PDF file path",
+    ),
+) -> None:
+    """Generate the Print-and-Play board game PDF kit."""
+    from pathlib import Path
+
+    try:
+        from portlight.printandplay.generator import generate
+    except ImportError:
+        console.print(
+            "[red]fpdf2 is required for PDF generation.[/red]\n"
+            "Install with: [bold]pip install portlight[printandplay][/bold]"
+        )
+        raise typer.Exit(1)
+
+    out_path = Path(output)
+    console.print(f"[dim]Generating Print-and-Play kit...[/dim]")
+    result = generate(out_path)
+    console.print(f"[green]Board game PDF generated:[/green] {result}")
 
 
 if __name__ == "__main__":
