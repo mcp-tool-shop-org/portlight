@@ -208,8 +208,7 @@ def test_finalize_victory_silver_spare():
     from portlight.app.tui.screens.encounter import EncounterScreen
     s = _make_session()
     enc = _make_encounter(strength=5)
-    screen = EncounterScreen(s, enc)
-    silver_before = s.captain.silver
+    EncounterScreen(s, enc)
     expected_gain = 20 + 5 * 3  # = 35
 
     # We can't call _finalize_victory without the TUI mounted, so test the formula directly
@@ -277,7 +276,7 @@ def test_execute_advance_detects_pirate_event():
 def test_encounter_state_phase_transitions():
     """EncounterState phases transition correctly through engine calls."""
     from portlight.engine.encounter import (
-        begin_fight, resolve_negotiate, resolve_flee,
+        begin_fight,
     )
     from portlight.engine.models import Ship
 
