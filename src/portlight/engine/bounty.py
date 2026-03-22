@@ -109,7 +109,7 @@ def claim_bounty(
         defeated = mem.times_defeated > 0
 
     if not defeated:
-        return f"Target not yet defeated. Find and defeat them at sea."
+        return "Target not yet defeated. Find and defeat them at sea."
 
     # Find reward
     reward = 0

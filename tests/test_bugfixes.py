@@ -132,7 +132,6 @@ class TestBuyDrainSellExploit:
         """Selling at a different port should use normal market price."""
         from portlight.content.goods import GOODS
         from portlight.engine.economy import execute_buy, execute_sell, recalculate_prices
-        from portlight.engine.models import CargoItem
 
         world = self._make_world()
         captain = world.captain
@@ -290,7 +289,6 @@ class TestHuntingExpansion:
         from portlight.engine.hunting import hunt
         from portlight.engine.models import Captain
 
-        rng = random.Random(42)
         captain = Captain.__new__(Captain)
         captain.day = 1
 

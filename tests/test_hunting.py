@@ -3,7 +3,7 @@
 import random
 
 from portlight.content.world import new_game
-from portlight.engine.hunting import hunt, HuntResult
+from portlight.engine.hunting import hunt
 
 
 def _rng(seed: int = 42) -> random.Random:
@@ -13,7 +13,6 @@ def _rng(seed: int = 42) -> random.Random:
 class TestHuntAtPort:
     def test_port_hunt_success_gives_provisions(self):
         """Successful port hunt should yield provisions."""
-        world = new_game()
         # Try many seeds to find a success
         for seed in range(50):
             captain = new_game().captain
@@ -97,6 +96,31 @@ class TestHuntResult:
                 large_crew_yields.append(r.provisions_gained)
         if small_crew_yields and large_crew_yields:
             assert sum(large_crew_yields) / len(large_crew_yields) >= sum(small_crew_yields) / len(small_crew_yields)
+
+
+class TestDaySync:
+    """Regression: hunt/work must keep world.day in sync with captain.day."""
+
+    def test_hunt_world_day_sync(self):
+        """After hunting, world.day should match captain.day (CLI syncs this)."""
+        world = new_game()
+        day_before = world.day
+        hunt(world.captain, "port", 5, _rng())
+        # Engine only bumps captain.day; CLI layer syncs world.day.
+        # Simulate the CLI sync:
+        world.day = world.captain.day
+        assert world.day == day_before + 1
+
+    def test_work_docks_world_day_sync(self):
+        """After working docks, world.day should match captain.day (CLI syncs this)."""
+        from portlight.engine.economy import work_docks
+        world = new_game()
+        day_before = world.day
+        work_docks(world.captain, _rng())
+        # Engine only bumps captain.day; CLI layer syncs world.day.
+        # Simulate the CLI sync:
+        world.day = world.captain.day
+        assert world.day == day_before + 1
 
 
 class TestPeltsGood:

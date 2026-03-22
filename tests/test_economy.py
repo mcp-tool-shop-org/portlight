@@ -253,7 +253,7 @@ class TestBuySell:
         world.captain.silver = 500
         # Advance to arrival
         for _ in range(20):
-            events = advance_day(world, random.Random(42))
+            advance_day(world, random.Random(42))
             if world.voyage and world.voyage.status.value == "arrived":
                 arrive(world)
                 break

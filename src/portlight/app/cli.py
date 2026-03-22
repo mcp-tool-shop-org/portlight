@@ -397,7 +397,6 @@ def hunt() -> None:
 @app.command()
 def work() -> None:
     """Work the docks for a day to earn silver. Safety valve when stranded."""
-    import random as _rng_mod
     from portlight.engine.economy import work_docks
     s = _session()
     if not s.current_port:
@@ -407,7 +406,7 @@ def work() -> None:
     # work_docks() advances captain.day but not world.day — keep them in sync
     s.world.day = s.captain.day
     console.print(f"\n[bold]Day's work on the {s.current_port.name} docks.[/bold]")
-    console.print(f"  Hauled crates, mended rope, cleaned bilges.")
+    console.print("  Hauled crates, mended rope, cleaned bilges.")
     console.print(f"  Earned [green]{earned} silver[/green]. Day {s.captain.day}.")
     s._save()
 
@@ -1547,7 +1546,7 @@ def credit(
             return
         interest = max(1, int(amount * 0.15))
         from portlight.app.formatting import silver
-        console.print(f"\n[bold yellow]Emergency loan![/bold yellow]")
+        console.print("\n[bold yellow]Emergency loan![/bold yellow]")
         console.print(f"  Received: [green]{silver(amount)}[/green]")
         console.print(f"  Owed: [red]{silver(amount + interest)}[/red] (15% interest, collected on next port arrival)")
         console.print(f"  Silver: {silver(s.captain.silver)}")
@@ -1813,7 +1812,7 @@ def encounter(
         if dmg > 0:
             s.captain.ship.hull = max(0, s.captain.ship.hull - dmg)
         if escaped:
-            _active_encounter = None
+            _clear_encounter(s)
         else:
             msg2 = begin_fight(enc, combat_ship)
             console.print(f"\n{msg2}")
@@ -1890,18 +1889,17 @@ def naval(
             if damage > 0:
                 msg += f" A parting shot catches your hull for {damage} damage."
             console.print(f"\n[bold green]{msg}[/bold green]")
-            enc.phase = "resolved"
-            _active_encounter = None
+            _clear_encounter(s)
         else:
             console.print(f"\n[bold red]Flee failed! Their broadside rakes you for {damage} hull damage.[/bold red]")
             if s.captain.ship.hull <= 0:
                 console.print("\n[bold red]Your ship is sinking![/bold red]")
                 s.world.pirates.naval_defeats += 1
-                _active_encounter = None
+                _clear_encounter(s)
             elif s.captain.ship.crew <= 0:
                 console.print("\n[bold red]No crew left to sail! Your ship drifts helplessly.[/bold red]")
                 s.world.pirates.naval_defeats += 1
-                _active_encounter = None
+                _clear_encounter(s)
             else:
                 # Show naval status so player sees the damage in context
                 console.print(combat_views.naval_status_view(
@@ -1942,7 +1940,7 @@ def naval(
             console.print("  Use: [cyan]portlight capture <crew_to_assign>[/cyan]")
         else:
             console.print(f"\n[dim]Cannot capture: {reason}[/dim]")
-            _active_encounter = None
+            _clear_encounter(s)
     elif result["boarding_triggered"]:
         console.print("\n[bold yellow]Boarding action![/bold yellow]")
         boarding = resolve_boarding_phase(enc, s.captain.ship.crew, s._rng)
@@ -1952,7 +1950,7 @@ def naval(
     elif s.captain.ship.hull <= 0:
         console.print("\n[bold red]Your ship is sinking![/bold red]")
         s.world.pirates.naval_defeats += 1
-        _active_encounter = None
+        _clear_encounter(s)
     elif s.captain.ship.crew <= 0:
         console.print("\n[bold red]No crew left to sail! Your ship drifts helplessly.[/bold red]")
         console.print("[dim]The pirates board unopposed and take what they want.[/dim]")
@@ -1964,12 +1962,12 @@ def naval(
             for item in s.captain.ship.cargo:
                 item.quantity = max(0, item.quantity - item.quantity // 2)
             s.captain.ship.cargo = [c for c in s.captain.ship.cargo if c.quantity > 0]
-            console.print(f"[red]Pirates take half your cargo.[/red]")
+            console.print("[red]Pirates take half your cargo.[/red]")
         if silver_loss > 0:
             s.captain.silver -= silver_loss
             console.print(f"[red]Pirates take {silver_loss} silver.[/red]")
         s.world.pirates.naval_defeats += 1
-        _active_encounter = None
+        _clear_encounter(s)
     else:
         console.print(combat_views.naval_status_view(
             s.captain.ship.hull, s.captain.ship.hull_max,
@@ -2027,7 +2025,7 @@ def capture(
     else:
         owned.docked_port_id = s.current_port_id or "porto_novo"
     s.captain.fleet.append(owned)
-    _active_encounter = None
+    _clear_encounter(s)
 
     console.print(f"\n[bold green]Prize captured![/bold green] {owned.ship.name} added to your fleet.")
     console.print(f"  Crew split: {s.captain.ship.crew} on flagship, {crew_to_assign} on prize")
@@ -2560,6 +2558,14 @@ def learn_skill_cmd(
             console.print(f"\n  {t.dialog} — [dim]{t.name}[/dim]")
         return
 
+    # Resolve display name to skill ID (e.g. "blacksmithing" -> "blacksmith")
+    if skill_id not in SKILLS:
+        _lower = skill_id.lower()
+        for _sid, _sdef in SKILLS.items():
+            if _sdef.name.lower() == _lower:
+                skill_id = _sid
+                break
+
     error = can_learn_skill(s.captain.skills, s.captain.silver, port.id, skill_id)
     if error:
         console.print(f"[red]{error}[/red]")
@@ -2722,10 +2728,7 @@ def _finalize_victory(s, spared: bool) -> None:
             console.print(f"\n[italic]{captain_data.duel_victory}[/italic]")
 
     # Cleanup
-    _active_encounter = None
-    _player_combatant = None
-    _opponent_combatant = None
-    _pending_victory = False
+    _clear_encounter(s)
     s._save()
 
 

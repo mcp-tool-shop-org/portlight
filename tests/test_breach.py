@@ -9,7 +9,6 @@ from portlight.engine.contracts import (
     _record_breach,
     get_breach_count_for_family,
     ContractBoard,
-    ContractOffer,
     ContractStatus,
     ActiveContract,
 )
