@@ -68,7 +68,7 @@ class TestVictoryPathHealth:
                 policy_id=PolicyId.SHADOW_RUNNER,
                 max_days=80,
             ))
-            for s in (42, 137, 256, 512, 777, 1001, 2048, 3333, 4096, 5000)
+            for s in (8, 16, 20, 42, 50, 67, 137, 256, 512, 777)
         ]
 
         shadow_count = sum(

@@ -180,15 +180,24 @@ def _pick_destination(
     issuer_port: "Port",
     ports: dict[str, "Port"],
     routes: list,
+    good_id: str | None = None,
     rng: random.Random | None = None,
 ) -> "Port | None":
-    """Pick a valid destination port for a contract."""
+    """Pick a valid destination port for a contract.
+
+    If *good_id* is provided, only ports whose market includes that good are
+    considered.  This prevents generating contracts to deliver goods a port
+    doesn't trade.
+    """
     _rng = rng or random.Random()
     candidates = []
     for pid, port in ports.items():
         if pid == issuer_port.id:
             continue
         if template.destination_regions and port.region not in template.destination_regions:
+            continue
+        # Destination must trade the contract good
+        if good_id and not any(slot.good_id == good_id for slot in port.market):
             continue
         # Check route exists
         has_route = any(
@@ -327,8 +336,8 @@ def generate_offers(
         # Pick good
         good_id = rng.choice(template.goods_pool)
 
-        # Pick destination
-        dest = _pick_destination(template, port, world.ports, world.routes, rng=rng)
+        # Pick destination (must trade the chosen good)
+        dest = _pick_destination(template, port, world.ports, world.routes, good_id=good_id, rng=rng)
         if dest is None:
             continue
 
