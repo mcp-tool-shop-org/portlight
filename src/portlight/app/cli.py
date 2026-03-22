@@ -3147,7 +3147,7 @@ def print_and_play(
         raise typer.Exit(1)
 
     out_path = Path(output)
-    console.print(f"[dim]Generating Print-and-Play kit...[/dim]")
+    console.print("[dim]Generating Print-and-Play kit...[/dim]")
     result = generate(out_path)
     console.print(f"[green]Board game PDF generated:[/green] {result}")
 
