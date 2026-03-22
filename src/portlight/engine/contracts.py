@@ -175,6 +175,9 @@ def _offer_id(template_id: str, port_id: str, day: int, seq: int) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
 
+_SHIP_CLASS_RANK = {"sloop": 0, "cutter": 1, "brigantine": 2, "galleon": 3, "man_of_war": 4}
+
+
 def _pick_destination(
     template: ContractTemplate,
     issuer_port: "Port",
@@ -182,12 +185,16 @@ def _pick_destination(
     routes: list,
     good_id: str | None = None,
     rng: random.Random | None = None,
+    player_ship_rank: int | None = None,
 ) -> "Port | None":
     """Pick a valid destination port for a contract.
 
     If *good_id* is provided, only ports whose market includes that good are
     considered.  This prevents generating contracts to deliver goods a port
     doesn't trade.
+
+    If *player_ship_rank* is provided, only destinations reachable by routes
+    whose min_ship_class the player can handle are considered.
     """
     _rng = rng or random.Random()
     candidates = []
@@ -199,17 +206,26 @@ def _pick_destination(
         # Destination must trade the contract good
         if good_id and not any(slot.good_id == good_id for slot in port.market):
             continue
-        # Check route exists
+        # Check route exists (and player can sail it)
+        def _route_accessible(r) -> bool:
+            if player_ship_rank is not None:
+                route_rank = _SHIP_CLASS_RANK.get(getattr(r, "min_ship_class", "sloop"), 0)
+                if player_ship_rank < route_rank:
+                    return False
+            return True
+
         has_route = any(
-            (r.port_a == issuer_port.id and r.port_b == pid) or
-            (r.port_a == pid and r.port_b == issuer_port.id)
+            ((r.port_a == issuer_port.id and r.port_b == pid) or
+             (r.port_a == pid and r.port_b == issuer_port.id))
+            and _route_accessible(r)
             for r in routes
         )
         # Also accept multi-hop (destination reachable from somewhere connected)
-        if not has_route:
-            # Check if destination is reachable from ANY port
+        # Skip multi-hop when ship filtering is active — a destination may have
+        # sloop routes locally but be unreachable from the player's region.
+        if not has_route and player_ship_rank is None:
             has_route = any(
-                r.port_a == pid or r.port_b == pid
+                (r.port_a == pid or r.port_b == pid) and _route_accessible(r)
                 for r in routes
             )
         if has_route:
@@ -248,6 +264,7 @@ def generate_offers(
     rep: "ReputationState",
     captain_type: str,
     rng: random.Random,
+    player_ship_rank: int | None = None,
     max_offers: int = 5,
     board_effects: dict[str, float] | None = None,
 ) -> list[ContractOffer]:
@@ -281,8 +298,8 @@ def generate_offers(
         required_trust = trust_rank.get(t.trust_requirement, 0)
         if player_trust < required_trust:
             continue
-        # Standing gate
-        if region_standing < t.standing_requirement:
+        # Standing gate (requirement=0 means no gate — allows negative standing)
+        if t.standing_requirement > 0 and region_standing < t.standing_requirement:
             continue
         # Heat ceiling
         if t.heat_ceiling is not None and region_heat > t.heat_ceiling:
@@ -331,15 +348,26 @@ def generate_offers(
             break
 
         template = rng.choices(choices, weights=weights, k=1)[0]
-        used_templates.add(template.id)
 
         # Pick good
         good_id = rng.choice(template.goods_pool)
 
-        # Pick destination (must trade the chosen good)
-        dest = _pick_destination(template, port, world.ports, world.routes, good_id=good_id, rng=rng)
+        # Pick destination (must trade the contract good)
+        dest = _pick_destination(template, port, world.ports, world.routes, good_id=good_id, rng=rng, player_ship_rank=player_ship_rank)
         if dest is None:
-            continue
+            # Try another good from the pool before giving up on this template
+            alt_goods = [g for g in template.goods_pool if g != good_id]
+            rng.shuffle(alt_goods)
+            for alt in alt_goods:
+                dest = _pick_destination(template, port, world.ports, world.routes, good_id=alt, rng=rng, player_ship_rank=player_ship_rank)
+                if dest is not None:
+                    good_id = alt
+                    break
+            if dest is None:
+                used_templates.add(template.id)
+                continue
+
+        used_templates.add(template.id)
 
         # Compute quantity
         qty = rng.randint(template.quantity_min, template.quantity_max)
@@ -378,6 +406,56 @@ def generate_offers(
             tags=list(template.tags),
         )
         offers.append(offer)
+
+    # Fallback: if no offers were generated despite eligible templates, retry
+    # with relaxed destination regions (drop region constraint for one offer)
+    if not offers and eligible:
+        for t, _w in eligible:
+            if t.id in used_templates:
+                continue
+            for g in t.goods_pool:
+                dest = _pick_destination(
+                    t, port, world.ports, world.routes, good_id=g, rng=rng,
+                    player_ship_rank=player_ship_rank,
+                )
+                if dest is None:
+                    # Try without good filter — any reachable port
+                    dest = _pick_destination(
+                        t, port, world.ports, world.routes, good_id=None, rng=rng,
+                        player_ship_rank=player_ship_rank,
+                    )
+                if dest is not None:
+                    qty = rng.randint(t.quantity_min, t.quantity_max)
+                    reward = qty * t.reward_per_unit
+                    reason = _compute_offer_reason(t, port, dest, g)
+                    offers.append(ContractOffer(
+                        id=_offer_id(t.id, port.id, world.day, 0),
+                        template_id=t.id,
+                        family=t.family,
+                        title=t.title_pattern.format(
+                            good=g, destination=dest.name, source=port.name,
+                        ),
+                        description=t.description,
+                        issuer_port_id=port.id,
+                        destination_port_id=dest.id,
+                        good_id=g,
+                        quantity=qty,
+                        created_day=world.day,
+                        deadline_day=world.day + t.deadline_days,
+                        reward_silver=reward,
+                        bonus_reward=t.bonus_reward,
+                        required_trust_tier=t.trust_requirement,
+                        required_standing=t.standing_requirement,
+                        heat_ceiling=t.heat_ceiling,
+                        inspection_modifier=t.inspection_modifier,
+                        source_region=t.source_region,
+                        source_port=t.source_port,
+                        offer_reason=reason,
+                        tags=list(t.tags),
+                    ))
+                    break
+            if offers:
+                break
 
     return offers
 

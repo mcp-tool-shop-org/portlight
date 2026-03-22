@@ -1949,8 +1949,10 @@ def world_map_view(
     from portlight.content.ports import PORTS
     from portlight.content.routes import ROUTES
 
-    # --- Grid setup ---
-    MAP_W = 100
+    # --- Grid setup (adaptive to terminal width) ---
+    import shutil
+    term_w = shutil.get_terminal_size((120, 36)).columns
+    MAP_W = max(60, min(100, term_w - 6))  # leave room for panel borders
     MAP_H = 36
     GAME_W = 50
     GAME_H = 36

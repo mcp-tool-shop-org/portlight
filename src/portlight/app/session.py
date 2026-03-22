@@ -929,7 +929,10 @@ class GameSession:
             return  # already refreshed today
         # Compute infrastructure effects on contract board
         from portlight.content.infrastructure import LICENSE_CATALOG
+        from portlight.engine.voyage import ship_class_rank
         effects = compute_board_effects(self.infra, port.region, LICENSE_CATALOG)
+        ship = self.world.captain.ship
+        ship_rank = ship_class_rank(ship.template_id) if ship else 0
         offers = generate_offers(
             CONTRACT_TEMPLATES,
             self.world,
@@ -937,6 +940,7 @@ class GameSession:
             self.world.captain.standing,
             self.world.captain.captain_type,
             self._rng,
+            player_ship_rank=ship_rank,
             max_offers=self.board.max_offers,
             board_effects=effects,
         )

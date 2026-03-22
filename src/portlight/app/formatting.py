@@ -170,3 +170,14 @@ def modifier_str(value: float, invert: bool = False) -> str:
     color = "green" if is_good else "red"
     sign = "+" if pct > 0 else ""
     return f"[{color}]{sign}{pct}%[/{color}]"
+
+
+def difficulty_tag(starting_silver: int) -> str:
+    """Difficulty label based on starting capital."""
+    if starting_silver >= 700:
+        return "[green]Easy[/green]"
+    elif starting_silver >= 550:
+        return "[dim]Standard[/dim]"
+    elif starting_silver >= 350:
+        return "[yellow]Moderate[/yellow]"
+    return "[bold red]Hard[/bold red]"

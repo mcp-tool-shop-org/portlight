@@ -650,6 +650,50 @@ CAPTAIN_TEMPLATES: dict[CaptainType, CaptainTemplate] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Selection screen metadata
+# ---------------------------------------------------------------------------
+
+# Ordered list for roster display (narrative arc: safe → risky → exotic → hard)
+CAPTAIN_ORDER: list[CaptainType] = [
+    CaptainType.MERCHANT,
+    CaptainType.SMUGGLER,
+    CaptainType.NAVIGATOR,
+    CaptainType.PRIVATEER,
+    CaptainType.CORSAIR,
+    CaptainType.SCHOLAR,
+    CaptainType.MERCHANT_PRINCE,
+    CaptainType.DOCKHAND,
+    CaptainType.BOUNTY_HUNTER,
+]
+
+# One-line personality hooks distilled from backstory
+CAPTAIN_QUOTES: dict[CaptainType, str] = {
+    CaptainType.MERCHANT:       "Your ledger is clean, your contracts are honored.",
+    CaptainType.SMUGGLER:       "Rules are suggestions.",
+    CaptainType.NAVIGATOR:      "Every horizon is an invitation.",
+    CaptainType.PRIVATEER:      "The line between law and piracy is wherever Vogt draws it.",
+    CaptainType.CORSAIR:        "The legitimate world doesn't want you. You don't want it back.",
+    CaptainType.SCHOLAR:        "The wind told you to go.",
+    CaptainType.MERCHANT_PRINCE: "They invested in you. They expect returns.",
+    CaptainType.DOCKHAND:       "You are perfectly, terrifyingly free.",
+    CaptainType.BOUNTY_HUNTER:  "The bounty board is always full.",
+}
+
+# Signature border color per captain
+CAPTAIN_COLORS: dict[CaptainType, str] = {
+    CaptainType.MERCHANT:       "green",
+    CaptainType.SMUGGLER:       "magenta",
+    CaptainType.NAVIGATOR:      "cyan",
+    CaptainType.PRIVATEER:      "blue",
+    CaptainType.CORSAIR:        "red",
+    CaptainType.SCHOLAR:        "yellow",
+    CaptainType.MERCHANT_PRINCE: "bright_green",
+    CaptainType.DOCKHAND:       "white",
+    CaptainType.BOUNTY_HUNTER:  "dark_orange",
+}
+
+
 def get_captain_template(captain_type: CaptainType) -> CaptainTemplate:
     """Get template for a captain type. Raises KeyError if unknown."""
     return CAPTAIN_TEMPLATES[captain_type]

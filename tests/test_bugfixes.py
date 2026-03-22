@@ -272,6 +272,27 @@ class TestStartingPortContracts:
             assert port is not None
             s._refresh_board(port)
             assert s.board.last_refresh_day == 1
+            assert len(s.board.offers) > 0, "Starting port must generate at least one contract offer"
+
+    def test_all_captain_types_get_contracts(self):
+        """Every captain type should get at least one contract at their start port."""
+        from portlight.app.session import GameSession
+
+        captain_types = [
+            "merchant", "smuggler", "navigator", "privateer",
+            "corsair", "scholar", "merchant_prince", "dockhand",
+            "bounty_hunter",
+        ]
+        for ctype in captain_types:
+            with tempfile.TemporaryDirectory() as tmp:
+                s = GameSession(Path(tmp))
+                s.new("Tester", captain_type=ctype)
+                port = s.current_port
+                assert port is not None, f"{ctype}: no starting port"
+                s._refresh_board(port)
+                assert len(s.board.offers) > 0, (
+                    f"{ctype} at {port.name}: no contracts generated"
+                )
 
 
 # ---------------------------------------------------------------------------
