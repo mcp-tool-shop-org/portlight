@@ -212,6 +212,34 @@ class TestBalanceHarness:
     They exist to catch balance problems, not enforce exact numbers.
     """
 
+    @staticmethod
+    def _auto_resolve_duel(s: GameSession):
+        """Auto-resolve pending pirate duels so bots can continue sailing."""
+        if s.world.pirates.pending_duel is None:
+            return
+        from portlight.engine.duel import resolve_duel
+        from portlight.engine.models import PirateEncounterRecord
+        pd = s.world.pirates.pending_duel
+        stances = [s._rng.choice(["thrust", "slash", "parry"]) for _ in range(5)]
+        result = resolve_duel(
+            player_stances=stances,
+            opponent_id=pd.captain_id, opponent_name=pd.captain_name,
+            opponent_personality=pd.personality, opponent_strength=pd.strength,
+            rng=s._rng,
+            player_crew=s.captain.ship.crew if s.captain.ship else 5,
+        )
+        s.captain.silver = max(0, s.captain.silver + result.silver_delta)
+        outcome_str = "duel_win" if result.player_won else ("duel_draw" if result.draw else "duel_loss")
+        s.world.pirates.encounters.append(PirateEncounterRecord(
+            captain_id=pd.captain_id, faction_id=pd.faction_id,
+            day=s.world.day, outcome=outcome_str, region=pd.region,
+        ))
+        if result.player_won:
+            s.world.pirates.duels_won += 1
+        elif not result.draw:
+            s.world.pirates.duels_lost += 1
+        s.world.pirates.pending_duel = None
+
     def _run_trade_loop(self, tmp_path: Path, buy_port: str, buy_good: str,
                         sell_port: str, qty: int, loops: int = 3,
                         seed: int = 42) -> list[int]:
@@ -228,6 +256,7 @@ class TestBalanceHarness:
                 if err:
                     break
                 for _ in range(30):
+                    self._auto_resolve_duel(s)
                     s.advance()
                     if s.current_port_id is not None:
                         break
@@ -241,6 +270,7 @@ class TestBalanceHarness:
             if err:
                 break
             for _ in range(30):
+                self._auto_resolve_duel(s)
                 s.advance()
                 if s.current_port_id is not None:
                     break
