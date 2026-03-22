@@ -272,6 +272,13 @@ def check_superstitions(
 # Main enrichment function
 # ---------------------------------------------------------------------------
 
+def _is_recent(text: str, recent: list[str]) -> bool:
+    """Check if text (or a close variant) was shown recently."""
+    # Use first 60 chars as a fingerprint to catch same-text repeats
+    fingerprint = text[:60].lower().strip()
+    return any(fingerprint == r[:60].lower().strip() for r in recent)
+
+
 def enrich_voyage_day(
     world: "WorldState",
     route: "Route | None",
@@ -287,6 +294,7 @@ def enrich_voyage_day(
     Returns the enriched list (original events + new flavor events).
     """
     enriched = list(base_events)
+    recent = world.voyage.recent_events if world.voyage else []
 
     dest_port = world.ports.get(
         world.voyage.destination_id if world.voyage else ""
@@ -294,10 +302,20 @@ def enrich_voyage_day(
     dest_region = dest_port.region if dest_port else "Mediterranean"
     voyage_day = world.voyage.days_elapsed if world.voyage else 0
 
+    def _add_flavor(event: VoyageEvent) -> None:
+        """Add a flavor event, skipping if text was shown recently."""
+        if _is_recent(event.message, recent):
+            return
+        enriched.append(event)
+        recent.append(event.message)
+        # Keep only last 10 entries to prevent unbounded growth
+        while len(recent) > 10:
+            recent.pop(0)
+
     # 1. Route-specific encounter (~25% chance)
     route_enc = _pick_route_encounter(route, dest_region, rng)
     if route_enc:
-        enriched.append(VoyageEvent(
+        _add_flavor(VoyageEvent(
             event_type=EventType.NOTHING,
             message=route_enc.text,
             flavor=f"[{route_enc.category}]",
@@ -306,12 +324,12 @@ def enrich_voyage_day(
     # 2. NPC sighting (~10% chance)
     npc_event = _pick_npc_sighting(dest_region, rng)
     if npc_event:
-        enriched.append(npc_event)
+        _add_flavor(npc_event)
 
     # 3. Weather flavor (~30% chance)
     weather_text = _pick_weather_flavor(dest_region, world.day, voyage_day, rng)
-    if weather_text:
-        enriched.append(VoyageEvent(
+    if weather_text and not _is_recent(weather_text, recent):
+        _add_flavor(VoyageEvent(
             event_type=EventType.NOTHING,
             message=weather_text,
             flavor="[weather]",
@@ -320,7 +338,7 @@ def enrich_voyage_day(
     # 4. Crew mood (~20% chance)
     mood_text = _pick_crew_mood(world, rng)
     if mood_text:
-        enriched.append(VoyageEvent(
+        _add_flavor(VoyageEvent(
             event_type=EventType.NOTHING,
             message=mood_text,
             flavor="[crew]",

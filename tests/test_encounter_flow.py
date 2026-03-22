@@ -211,8 +211,10 @@ class TestNavalCombat:
     def test_valid_naval_actions(self):
         armed = get_encounter_naval_actions(6)
         assert "broadside" in armed
+        assert "flee" in armed
         unarmed = get_encounter_naval_actions(0)
         assert "broadside" not in unarmed
+        assert "flee" in unarmed
 
 
 # ---------------------------------------------------------------------------

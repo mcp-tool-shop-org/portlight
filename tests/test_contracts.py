@@ -605,7 +605,8 @@ class TestSessionIntegration:
         s = GameSession(base_path=tmp_path)
         s.new("Tester", captain_type="merchant")
 
-        # Manually add an offer to test acceptance
+        # Clear auto-generated offers and add our test offer
+        s.board.offers.clear()
         offer = ContractOffer(
             id="session-test", template_id="proc_grain_feed",
             family=ContractFamily.PROCUREMENT, title="Session Test",

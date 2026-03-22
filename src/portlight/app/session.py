@@ -129,6 +129,16 @@ class GameSession:
         self.narrative = NarrativeState()
         self._trade_seq = 0
         self._save()
+        # Populate contract board at starting port (after save, using a
+        # separate RNG seeded from world.seed so it doesn't affect the
+        # main RNG sequence for deterministic replay)
+        port = self.current_port
+        if port:
+            saved_rng = self._rng
+            self._rng = random.Random(self.world.seed + 7919)  # offset to avoid correlation
+            self._refresh_board(port)
+            self._rng = saved_rng
+            self._save()
 
     def load(self) -> bool:
         """Load saved game. Returns True if loaded."""
@@ -249,10 +259,34 @@ class GameSession:
     # --- Voyage ---
 
     def sail(self, destination_id: str, defer_fee: bool = False) -> str | None:
-        """Depart for destination. Returns error string or None on success."""
+        """Depart for destination. Returns error string or None on success.
+
+        Accepts port IDs (jade_port) or display names (Jade Port, "jade port").
+        """
         if not self.world:
             return "No active game"
-        result = depart(self.world, destination_id, defer_fee=defer_fee)
+        def _normalize(s: str) -> str:
+            return s.lower().replace("_", " ").replace("-", " ").replace("'", "").strip()
+
+        # Try exact ID first
+        resolved = destination_id
+        if resolved not in self.world.ports:
+            # Try matching by display name (case-insensitive, punctuation-tolerant)
+            needle = _normalize(destination_id)
+            for pid, port in self.world.ports.items():
+                if _normalize(port.name) == needle:
+                    resolved = pid
+                    break
+            else:
+                # Try partial match (e.g. "monsoon" matches "Monsoon Reach")
+                matches = [
+                    pid for pid, port in self.world.ports.items()
+                    if needle in _normalize(port.name)
+                ]
+                if len(matches) == 1:
+                    resolved = matches[0]
+
+        result = depart(self.world, resolved, defer_fee=defer_fee)
         if isinstance(result, str):
             return result
         self._save()

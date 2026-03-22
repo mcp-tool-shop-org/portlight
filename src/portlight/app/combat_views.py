@@ -483,7 +483,8 @@ def armory_view(
 
     lines.append("[bold]Ammo Inventory[/bold]")
     ammo = current_gear.get("ammo", 0)
-    throwing = current_gear.get("throwing", 0)
+    throwing_raw = current_gear.get("throwing", 0)
+    throwing = sum(throwing_raw.values()) if isinstance(throwing_raw, dict) else throwing_raw
     lines.append(f"  Shot/powder:  [bold]{ammo}[/bold]")
     lines.append(f"  Throwing:     [bold]{throwing}[/bold]")
 

@@ -70,17 +70,28 @@ RNG = random.Random(42)
 
 class TestActionValidation:
     def test_armed_ship_has_all_actions(self):
-        assert get_valid_actions(6) == NAVAL_ACTIONS
+        actions = get_valid_actions(6)
+        for a in NAVAL_ACTIONS:
+            assert a in actions
+        assert "flee" in actions
 
-    def test_unarmed_ship_only_close_and_evade(self):
+    def test_unarmed_ship_only_close_evade_flee(self):
         actions = get_valid_actions(0)
         assert "close" in actions
         assert "evade" in actions
+        assert "flee" in actions
         assert "broadside" not in actions
         assert "rake" not in actions
 
     def test_negative_cannons_treated_as_unarmed(self):
-        assert get_valid_actions(-1) == ("close", "evade")
+        actions = get_valid_actions(-1)
+        assert "flee" in actions
+        assert "broadside" not in actions
+
+    def test_flee_always_available(self):
+        """Flee must be available regardless of armament — prevents soft-lock."""
+        for cannons in [0, 1, 6, 12]:
+            assert "flee" in get_valid_actions(cannons)
 
 
 # ---------------------------------------------------------------------------

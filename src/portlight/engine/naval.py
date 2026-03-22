@@ -133,10 +133,13 @@ def attempt_flee(
 # ---------------------------------------------------------------------------
 
 def get_valid_actions(cannons: int) -> tuple[str, ...]:
-    """Return valid naval actions for a ship. Ships with 0 cannons can't fire."""
+    """Return valid naval actions for a ship. Ships with 0 cannons can't fire.
+
+    Flee is always available — any ship can attempt to disengage.
+    """
     if cannons <= 0:
-        return ("close", "evade")
-    return NAVAL_ACTIONS
+        return ("close", "evade", "flee")
+    return (*NAVAL_ACTIONS, "flee")
 
 
 # ---------------------------------------------------------------------------

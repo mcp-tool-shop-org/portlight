@@ -474,6 +474,9 @@ def cargo_view(captain: "Captain") -> Panel:
     if not captain.cargo:
         return Panel("[dim]Hold is empty[/dim]", title="[bold]Cargo[/bold]", border_style="yellow")
 
+    from portlight.content.upgrades import UPGRADES as _UPG
+    from portlight.engine.ship_stats import resolve_cargo_capacity
+
     table = Table(show_header=True, header_style="bold")
     table.add_column("Good", style="bold")
     table.add_column("Qty", justify="right")
@@ -489,7 +492,8 @@ def cargo_view(captain: "Captain") -> Panel:
     ship = captain.ship
     if ship:
         cargo_used = sum(c.quantity for c in captain.cargo)
-        footer = f"\nCargo: {fmt.cargo_bar(cargo_used, ship.cargo_capacity)}"
+        eff_cargo = resolve_cargo_capacity(ship, _UPG)
+        footer = f"\nCargo: {fmt.cargo_bar(cargo_used, eff_cargo)}"
     else:
         footer = ""
 
@@ -1349,7 +1353,7 @@ def insurance_view(infra: "InfrastructureState", heat: int = 0) -> Panel:
             )
         parts.append(active_table)
     else:
-        parts.append(Text("[dim]No active policies.[/dim]\n"))
+        parts.append(Text.from_markup("[dim]No active policies.[/dim]\n"))
 
     # Available policies
     avail_table = Table(show_header=True, header_style="bold", expand=True)
@@ -1409,7 +1413,7 @@ def insurance_view(infra: "InfrastructureState", heat: int = 0) -> Panel:
                 fmt.silver(c.payout),
                 status,
             )
-        parts.append(Text("\n[bold]Recent Claims[/bold]"))
+        parts.append(Text.from_markup("\n[bold]Recent Claims[/bold]"))
         parts.append(claims_table)
 
     return Panel(Group(*parts), title="[bold]Insurance[/bold]", border_style="green")
@@ -1458,9 +1462,9 @@ def credit_view(infra: "InfrastructureState", rep: "ReputationState") -> Panel:
         parts.append(status_table)
     else:
         if credit.defaults >= 3:
-            parts.append(Text("[red]Credit line frozen — too many defaults.[/red]\n"))
+            parts.append(Text.from_markup("[red]Credit line frozen -- too many defaults.[/red]\n"))
         else:
-            parts.append(Text("[dim]No credit line established.[/dim]\n"))
+            parts.append(Text.from_markup("[dim]No credit line established.[/dim]\n"))
 
     # Available tiers
     tier_table = Table(show_header=True, header_style="bold", expand=True)
@@ -1543,14 +1547,14 @@ def milestones_view(
                 )
 
         parts.append(ms_table)
-        parts.append(Text(f"\n[bold]{len(completed_ids)}[/bold] of {len(MILESTONE_SPECS)} milestones completed.\n"))
+        parts.append(Text.from_markup(f"\n[bold]{len(completed_ids)}[/bold] of {len(MILESTONE_SPECS)} milestones completed.\n"))
     else:
-        parts.append(Text("[dim]No milestones completed yet.[/dim]\n"))
+        parts.append(Text.from_markup("[dim]No milestones completed yet.[/dim]\n"))
 
     # --- In-progress milestones (not yet completed) ---
     pending = [s for s in MILESTONE_SPECS if s.id not in completed_ids]
     if pending and len(pending) < len(MILESTONE_SPECS):  # only show if some progress
-        parts.append(Text("[bold]Next milestones:[/bold]"))
+        parts.append(Text.from_markup("[bold]Next milestones:[/bold]"))
         # Show up to 5 from different families
         shown_families: set[str] = set()
         shown = 0
@@ -1561,21 +1565,21 @@ def milestones_view(
                 continue
             shown_families.add(spec.family.value)
             family_label = spec.family.value.replace("_", " ").title()
-            parts.append(Text(f"  [dim]{family_label}:[/dim] {spec.name} — {spec.description}"))
+            parts.append(Text.from_markup(f"  [dim]{family_label}:[/dim] {spec.name} -- {spec.description}"))
             shown += 1
         parts.append(Text(""))
 
     # --- Career profile ---
     profile = compute_career_profile(snap)
     if profile.primary and profile.primary.combined_score > 0:
-        parts.append(Text("[bold]Career Profile[/bold]"))
+        parts.append(Text.from_markup("[bold]Career Profile[/bold]"))
 
         # Primary identity
         p = profile.primary
         bar_len = min(int(p.combined_score / 4), 20)
         bar = "#" * bar_len
         ev = ", ".join(p.evidence[:3]) if p.evidence else ""
-        parts.append(Text(f"  [bold cyan]{p.tag}[/bold cyan] {bar} {p.combined_score:.0f}  [{p.confidence.value}]"))
+        parts.append(Text.from_markup(f"  [bold cyan]{p.tag}[/bold cyan] {bar} {p.combined_score:.0f}  \\[{p.confidence.value}]"))
         if ev:
             parts.append(Text(f"    Primary: {ev}"))
 
@@ -1584,7 +1588,7 @@ def milestones_view(
             bar_len = min(int(s.combined_score / 4), 20)
             bar = "#" * bar_len
             ev = ", ".join(s.evidence[:2]) if s.evidence else ""
-            parts.append(Text(f"  [dim]{s.tag}[/dim] {bar} {s.combined_score:.0f}  [{s.confidence.value}]"))
+            parts.append(Text.from_markup(f"  [dim]{s.tag}[/dim] {bar} {s.combined_score:.0f}  \\[{s.confidence.value}]"))
             if ev:
                 parts.append(Text(f"    Secondary: {ev}"))
 
@@ -1592,7 +1596,7 @@ def milestones_view(
         if profile.emerging:
             e = profile.emerging
             ev = ", ".join(e.evidence[:2]) if e.evidence else ""
-            parts.append(Text(f"  [italic yellow]{e.tag}[/italic yellow] ^ {e.recent_score:.0f} recent  [{e.confidence.value}]"))
+            parts.append(Text.from_markup(f"  [italic yellow]{e.tag}[/italic yellow] ^ {e.recent_score:.0f} recent  \\[{e.confidence.value}]"))
             if ev:
                 parts.append(Text(f"    Emerging: {ev}"))
 
@@ -1600,7 +1604,7 @@ def milestones_view(
 
     # --- Victory progress ---
     victory = compute_victory_progress(snap)
-    parts.append(Text("[bold]Victory Paths[/bold]"))
+    parts.append(Text.from_markup("[bold]Victory Paths[/bold]"))
 
     for i, path in enumerate(victory):
         if path.is_complete:
@@ -1620,12 +1624,12 @@ def milestones_view(
             "Secondary" if i == 1 and path.is_active_candidate else ""
         )
         rank_text = f"  ({rank})" if rank else ""
-        parts.append(Text(f"  [{style}]{path.name}[/{style}] — {label}  strength {path.candidate_strength:.0f}{rank_text}"))
+        parts.append(Text.from_markup(f"  [{style}]{path.name}[/{style}] -- {label}  strength {path.candidate_strength:.0f}{rank_text}"))
 
         # Completion summary
         if path.is_complete and path.completion_summary:
             day_text = f" (day {path.completion_day})" if path.completion_day > 0 else ""
-            parts.append(Text(f"    [green italic]{path.completion_summary}[/green italic]{day_text}"))
+            parts.append(Text.from_markup(f"    [green italic]{path.completion_summary}[/green italic]{day_text}"))
 
         # Show met requirements briefly
         met = path.requirements_met
@@ -1633,22 +1637,22 @@ def milestones_view(
             met_names = ", ".join(r.description for r in met[:3])
             if len(met) > 3:
                 met_names += f" +{len(met) - 3} more"
-            parts.append(Text(f"    [green]Met:[/green] {met_names}"))
+            parts.append(Text.from_markup(f"    [green]Met:[/green] {met_names}"))
 
         # Show blockers prominently
         blocked = path.requirements_blocked
         for req in blocked:
             detail = f" ({req.detail})" if req.detail else ""
             action = f" -> {req.action}" if req.action else ""
-            parts.append(Text(f"    [bold red]Blocked:[/bold red] {req.description}{detail}{action}"))
+            parts.append(Text.from_markup(f"    [bold red]Blocked:[/bold red] {req.description}{detail}{action}"))
 
         # Show missing requirements with actions
         missing = path.requirements_missing
         for req in missing[:3]:
             action = f" -> {req.action}" if req.action else ""
             detail = f" ({req.detail})" if req.detail else ""
-            parts.append(Text(f"    [red]Missing:[/red] {req.description}{detail}{action}"))
+            parts.append(Text.from_markup(f"    [red]Missing:[/red] {req.description}{detail}{action}"))
         if len(missing) > 3:
-            parts.append(Text(f"    [dim]+{len(missing) - 3} more requirements[/dim]"))
+            parts.append(Text.from_markup(f"    [dim]+{len(missing) - 3} more requirements[/dim]"))
 
     return Panel(Group(*parts), title="[bold]Merchant Career Ledger[/bold]", border_style="bright_blue")

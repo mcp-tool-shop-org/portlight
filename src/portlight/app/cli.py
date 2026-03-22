@@ -253,6 +253,14 @@ def buy(good: str, qty: int) -> None:
     # Show updated market + cargo after trade
     from portlight.app.formatting import silver
     console.print(f"\n[green]Bought {result.quantity}x {result.good_id} for {silver(result.total_price)}[/green]\n")
+
+    # Warn if remaining silver is too low for port fees
+    port = s.current_port
+    if port and s.captain.silver < port.port_fee:
+        console.print(f"[yellow]Warning: You have {silver(s.captain.silver)} left — "
+                       f"port fee to depart is {silver(port.port_fee)}. "
+                       f"You may need to sell cargo, hunt, or work the docks.[/yellow]\n")
+
     console.print(views.market_view(s.current_port, s.captain))
     console.print(views.cargo_view(s.captain))
 
@@ -319,7 +327,11 @@ def repair(amount: int = typer.Argument(None, help="Hull points to repair (defau
 
 @app.command()
 def hunt() -> None:
-    """Hunt or forage for provisions and pelts. Works at port or at sea."""
+    """Hunt or forage for provisions, pelts, and silver. Works at port or at sea.
+
+    Port hunting is safe and reliable. Sea hunting yields more but carries
+    dangers: crew injuries, hull damage, predator encounters.
+    """
     from portlight.engine.hunting import hunt as do_hunt
     from portlight.engine.models import CargoItem
     s = _session()
@@ -351,8 +363,22 @@ def hunt() -> None:
                     acquired_region="", acquired_day=s.captain.day,
                 ))
             console.print(f"  [green]+{result.pelts_gained} pelts[/green]")
+        if result.silver_gained > 0:
+            s.captain.silver += result.silver_gained
+            from portlight.app.formatting import silver
+            console.print(f"  [green]+{silver(result.silver_gained)}[/green]")
     else:
         console.print("  [dim]Nothing useful found.[/dim]")
+
+    # Apply dangers
+    if result.danger_text:
+        console.print(f"  [red]{result.danger_text}[/red]")
+    if result.crew_lost > 0 and s.captain.ship:
+        s.captain.ship.crew = max(1, s.captain.ship.crew - result.crew_lost)
+        console.print(f"  [red]Lost {result.crew_lost} crew member{'s' if result.crew_lost > 1 else ''}.[/red]")
+    if result.hull_damage > 0 and s.captain.ship:
+        s.captain.ship.hull = max(1, s.captain.ship.hull - result.hull_damage)
+        console.print(f"  [red]Hull damage: -{result.hull_damage} HP[/red]")
 
     if result.morale_cost > 0 and s.captain.ship:
         s.captain.ship.morale = max(0, s.captain.ship.morale - result.morale_cost)
@@ -415,11 +441,20 @@ def fire(
 ) -> None:
     """Fire crew members of a specific role."""
     s = _session()
+    # Track actual count before firing for accurate message
+    from portlight.engine.models import CrewRole
+    from portlight.content.crew_roles import get_role_count
+    try:
+        crew_role = CrewRole(role.lower())
+    except ValueError:
+        crew_role = None
+    before = get_role_count(s.captain.ship.roster, crew_role) if crew_role and s.captain.ship else 0
     err = s.fire_crew(role, count)
     if err:
         console.print(f"[red]{err}[/red]")
         return
-    console.print(f"[yellow]Fired {count} {role}(s).[/yellow]")
+    actual_fired = min(count, before)
+    console.print(f"[yellow]Fired {actual_fired} {role}(s).[/yellow]")
 
 
 @app.command(name="crew")
@@ -1829,6 +1864,27 @@ def naval(
         console.print(f"[red]Invalid action. Available: {', '.join(valid)}[/red]")
         return
 
+    # Handle flee attempt — uses encounter-level flee, not a naval round
+    if action == "flee":
+        from portlight.engine.encounter import resolve_flee
+        import random
+        flee_rng = random.Random(s.world.seed + s.world.day * 1000 + enc.naval_turns + 8888)
+        combat_ship = resolved_ship(s.captain.ship, UPGRADES)
+        escaped, damage, msg = resolve_flee(enc, combat_ship, flee_rng)
+        s.captain.ship.hull = max(0, s.captain.ship.hull - damage)
+        if escaped:
+            console.print(f"\n[bold green]{msg}[/bold green]")
+            _active_encounter = None
+        else:
+            console.print(f"\n[bold red]{msg}[/bold red]")
+            if s.captain.ship.hull <= 0:
+                console.print("\n[bold red]Your ship is sinking![/bold red]")
+                s.world.pirates.naval_defeats += 1
+                _active_encounter = None
+        _sync_encounter_phase(s)
+        s._save()
+        return
+
     combat_ship = resolved_ship(s.captain.ship, UPGRADES)
     # Unique RNG per turn to avoid replay on process restart
     import random
@@ -1865,6 +1921,23 @@ def naval(
         console.print("\n[bold]Personal combat begins! Use [cyan]portlight fight <action>[/cyan][/bold]")
     elif s.captain.ship.hull <= 0:
         console.print("\n[bold red]Your ship is sinking![/bold red]")
+        s.world.pirates.naval_defeats += 1
+        _active_encounter = None
+    elif s.captain.ship.crew <= 0:
+        console.print("\n[bold red]No crew left to sail! Your ship drifts helplessly.[/bold red]")
+        console.print("[dim]The pirates board unopposed and take what they want.[/dim]")
+        # Lose some cargo and silver as penalty
+        cargo_loss = sum(c.quantity for c in s.captain.ship.cargo) // 2
+        silver_loss = s.captain.silver // 4
+        if cargo_loss > 0:
+            # Remove half of each cargo type
+            for item in s.captain.ship.cargo:
+                item.quantity = max(0, item.quantity - item.quantity // 2)
+            s.captain.ship.cargo = [c for c in s.captain.ship.cargo if c.quantity > 0]
+            console.print(f"[red]Pirates take half your cargo.[/red]")
+        if silver_loss > 0:
+            s.captain.silver -= silver_loss
+            console.print(f"[red]Pirates take {silver_loss} silver.[/red]")
         s.world.pirates.naval_defeats += 1
         _active_encounter = None
     else:

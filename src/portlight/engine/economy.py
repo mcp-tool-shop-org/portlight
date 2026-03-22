@@ -244,9 +244,25 @@ def execute_sell(
         have = existing.quantity if existing else 0
         return f"Only have {have} units of {good_id}"
 
+    # Anti-exploit: when selling goods back to the SAME port within 3 days of
+    # buying, cap the sell price at purchase cost. This prevents buy-drain-sell
+    # loops that exploit self-created scarcity (buy all stock at normal price,
+    # wait 1 day for anti-exploit to expire, sell back at inflated price).
+    same_port_sellback = (
+        existing.acquired_port == port.id
+        and hasattr(existing, 'acquired_day')
+        and (captain.day - existing.acquired_day) <= 3
+    )
+
     # Execute
     stock_before = slot.stock_current
-    total = slot.sell_price * qty
+    unit_price = slot.sell_price
+    if same_port_sellback and existing.quantity > 0:
+        cost_per_unit = existing.cost_basis / existing.quantity
+        # Cap: never profit from instant same-port round-trip
+        if unit_price > cost_per_unit:
+            unit_price = max(1, round(cost_per_unit))
+    total = unit_price * qty
     captain.silver += total
     slot.stock_current += qty
 
@@ -269,7 +285,7 @@ def execute_sell(
         good_id=good_id,
         action=TradeAction.SELL,
         quantity=qty,
-        unit_price=slot.sell_price,
+        unit_price=unit_price,
         total_price=total,
         day=captain.day,
         stock_before=stock_before,
