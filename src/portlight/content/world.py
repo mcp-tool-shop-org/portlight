@@ -18,10 +18,12 @@ def new_game(
     captain_name: str = "Captain",
     starting_port: str | None = None,
     captain_type: CaptainType = CaptainType.MERCHANT,
+    seed: int | None = None,
 ) -> WorldState:
     """Create a fresh game world with initial market prices computed.
 
     If starting_port is None, uses the captain template's home port.
+    If seed is None, uses current time.
     """
     template = CAPTAIN_TEMPLATES[captain_type]
 
@@ -32,26 +34,27 @@ def new_game(
     ship_template = SHIPS[template.starting_ship_id]
     ship = create_ship_from_template(ship_template)
 
-    # Build reputation from seed
-    seed = template.reputation_seed
+    # Build reputation from template's reputation seed
+    # (renamed to rep_seed to avoid shadowing the seed parameter)
+    rep_seed = template.reputation_seed
     standing = ReputationState(
         regional_standing={
-            "Mediterranean": seed.mediterranean,
-            "North Atlantic": seed.north_atlantic,
-            "West Africa": seed.west_africa,
-            "East Indies": seed.east_indies,
-            "South Seas": seed.south_seas,
+            "Mediterranean": rep_seed.mediterranean,
+            "North Atlantic": rep_seed.north_atlantic,
+            "West Africa": rep_seed.west_africa,
+            "East Indies": rep_seed.east_indies,
+            "South Seas": rep_seed.south_seas,
         },
         port_standing={},
         customs_heat={
-            "Mediterranean": seed.customs_heat,
-            "North Atlantic": seed.customs_heat,
-            "West Africa": seed.customs_heat,
-            "East Indies": seed.customs_heat,
-            "South Seas": seed.customs_heat,
+            "Mediterranean": rep_seed.customs_heat,
+            "North Atlantic": rep_seed.customs_heat,
+            "West Africa": rep_seed.customs_heat,
+            "East Indies": rep_seed.customs_heat,
+            "South Seas": rep_seed.customs_heat,
         },
-        commercial_trust=seed.commercial_trust,
-        underworld_standing=dict(seed.underworld) if seed.underworld else {},
+        commercial_trust=rep_seed.commercial_trust,
+        underworld_standing=dict(rep_seed.underworld) if rep_seed.underworld else {},
     )
 
     port_id = starting_port or template.home_port_id
@@ -76,7 +79,7 @@ def new_game(
             status=VoyageStatus.IN_PORT,
         ),
         day=1,
-        seed=int(time.time()),
+        seed=seed if seed is not None else int(time.time()),
     )
 
     # Compute initial prices
