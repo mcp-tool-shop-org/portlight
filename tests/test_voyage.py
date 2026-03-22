@@ -168,6 +168,69 @@ class TestVoyageEvents:
 # Next upgrade display
 # ---------------------------------------------------------------------------
 
+class TestEncounterBypass:
+    """Pirate encounters must block advancement until resolved."""
+
+    def test_advance_blocked_when_pending_duel(self):
+        """advance_day returns empty when a pirate encounter is pending."""
+        world = new_game()
+        depart(world, "al_manar")
+        # Simulate a pending pirate encounter
+        from portlight.engine.models import PendingDuel
+        world.pirates.pending_duel = PendingDuel(
+            captain_id="gnaw",
+            captain_name="Gnaw",
+            faction_id="red_tide",
+            personality="aggressive",
+            strength=3,
+            region="West Africa",
+        )
+        progress_before = world.voyage.progress
+        events = advance_day(world, random.Random(42))
+        assert events == [], "advance_day should return no events with pending duel"
+        assert world.voyage.progress == progress_before, "voyage should not progress"
+
+    def test_advance_resumes_after_duel_cleared(self):
+        """Once pending_duel is cleared, advancement resumes normally."""
+        world = new_game()
+        depart(world, "al_manar")
+        from portlight.engine.models import PendingDuel
+        world.pirates.pending_duel = PendingDuel(
+            captain_id="gnaw",
+            captain_name="Gnaw",
+            faction_id="red_tide",
+            personality="aggressive",
+            strength=3,
+            region="West Africa",
+        )
+        # Blocked
+        events = advance_day(world, random.Random(42))
+        assert events == []
+        # Clear the encounter
+        world.pirates.pending_duel = None
+        # Now should advance
+        events = advance_day(world, random.Random(42))
+        assert len(events) > 0, "advance_day should produce events after duel cleared"
+        assert world.voyage.progress > 0
+
+    def test_pending_duel_not_overwritten(self):
+        """A second advance must not overwrite the pending duel captain."""
+        world = new_game()
+        depart(world, "al_manar")
+        from portlight.engine.models import PendingDuel
+        world.pirates.pending_duel = PendingDuel(
+            captain_id="gnaw",
+            captain_name="Gnaw",
+            faction_id="red_tide",
+            personality="aggressive",
+            strength=3,
+            region="West Africa",
+        )
+        advance_day(world, random.Random(99))
+        assert world.pirates.pending_duel.captain_id == "gnaw", \
+            "pending duel should not be overwritten by advance"
+
+
 class TestNextUpgrade:
     def test_next_upgrade_is_actually_upgrade(self):
         """_next_upgrade should return a ship costing more than current."""

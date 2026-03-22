@@ -642,6 +642,10 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     if captain.ship is None:
         return []
 
+    # Block advancement if a pirate encounter is pending resolution
+    if world.pirates.pending_duel is not None:
+        return []
+
     events: list[VoyageEvent] = []
 
     # Captain modifiers
