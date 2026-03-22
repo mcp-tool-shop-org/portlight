@@ -74,19 +74,25 @@ See [docs/START_HERE.md](docs/START_HERE.md) for a guided first session and [doc
 
 ## Captain Types
 
-| Captain | Identity | Edge | Trade-off |
-|---------|----------|------|-----------|
-| **Merchant** | Licensed trader, Mediterranean base | Better prices, lower inspection rates, trust grows faster | No black market access |
-| **Smuggler** | Discreet operator, West Africa base | Black market access, luxury margins, contraband trade | Higher heat, more inspections |
-| **Navigator** | Deep-water explorer, Mediterranean base | Faster ships, longer range, East Indies access early | Weaker initial commercial standing |
+| Captain | Home Region | Edge | Trade-off |
+|---------|-------------|------|-----------|
+| **Merchant** | Mediterranean | Better prices, lower inspections, trust grows faster | No black market access |
+| **Smuggler** | West Africa | Black market access, luxury margins, contraband trade | Higher heat, more inspections |
+| **Navigator** | Mediterranean | Faster ships, longer range, East Indies access early | Weaker initial commercial standing |
+| **Privateer** | North Atlantic | Naval combat bonuses, boarding advantage | Poor merchant reputation |
+| **Corsair** | Mediterranean | Balanced combat + trade, flexible approach | Master of none |
+| **Scholar** | East Indies | Information advantage, better contract quality | Low starting capital, fragile |
+| **Merchant Prince** | Mediterranean | High starting capital (700s), premium access | Higher port fees, target for pirates |
+| **Dockhand** | East Indies | Cheapest crew, scrappy resourcefulness | Lowest starting capital (300s) |
+| **Bounty Hunter** | North Atlantic | Combat mastery, faction standing from captures | Poor trade prices, distrusted |
 
 ## Systems
 
-**Economy** — Scarcity-driven pricing across 10 ports, 8 goods, 17 routes. Flood penalties punish dumping. Market shocks create regional opportunities.
+**Economy** — Scarcity-driven pricing across 20 ports, 18 goods, 43 routes spanning 5 regions. Flood penalties punish dumping. Market shocks create regional opportunities.
 
-**Voyages** — Multi-day travel with weather events, pirate encounters, inspections. Provisions, hull, and crew are real resources.
+**Voyages** — Multi-day travel with weather events, pirate encounters, inspections. Provisions, hull, and crew are real resources. Seasonal danger zones shift risk by region.
 
-**Captains** — Three distinct archetypes with 8-20% pricing gaps, unique starting positions, and different access profiles.
+**Captains** — Nine distinct archetypes with 8-20% pricing gaps, unique starting positions, and different access profiles. From the disciplined Merchant to the risk-seeking Bounty Hunter.
 
 **Contracts** — Six contract families gated by trust and standing. Provenance-validated delivery. Real deadlines with real consequences.
 
@@ -121,7 +127,19 @@ Run `portlight guide` in-game for a grouped command reference, or see [docs/COMM
 | Infrastructure | `warehouse`, `office`, `license` |
 | Finance | `insure`, `credit` |
 | Career | `captain`, `reputation`, `milestones`, `status`, `ledger`, `shipyard` |
-| System | `save`, `load`, `guide` |
+| World | `map`, `port` |
+| System | `save`, `load`, `guide`, `tui` |
+
+## Print-and-Play Board Game
+
+Portlight includes a complete Print-and-Play board game adaptation. Generate a ready-to-print PDF kit with cards, board, rulebook, and score tracks:
+
+```bash
+pip install portlight[printandplay]
+portlight print-and-play
+```
+
+A 2-4 player competitive merchant adventure game (~90 minutes) with asymmetric captains, contract racing, and reputation/heat tension. See [docs/PRINT_AND_PLAY_RULES.md](docs/PRINT_AND_PLAY_RULES.md) for the full rulebook.
 
 ## Alpha Status
 
