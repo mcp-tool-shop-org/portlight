@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.1] - 2026-03-25
+
+### Added
+
+- 4 version consistency tests (semver, >= 1.0.0, pyproject match, CHANGELOG)
+
+### Fixed
+
+- `__version__` was hardcoded — now reads dynamically from package metadata via importlib.metadata
+
 ## [2.0.0] - 2026-03-22
 
 ### Added

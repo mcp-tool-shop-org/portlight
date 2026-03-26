@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "portlight"
-version = "2.0.0"
+version = "2.0.1"
 description = "Trade-first maritime strategy CLI — route arbitrage, contracts, infrastructure, finance, and commercial reputation across a living regional economy"
 readme = "README.md"
 license = "MIT"
