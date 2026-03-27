@@ -19,11 +19,14 @@ sidebar:
 ```
 src/portlight/
   engine/       — economy, voyage, contracts, reputation, infrastructure,
-                  campaign, combat (personal + naval), companions, seasons
+                  campaign, combat (personal + naval), companions, seasons,
+                  bounty, fleet, skills, weapon quality, injuries, narrative
   content/      — ports (20), goods (18), ships (5), routes (43),
-                  contracts (22 templates), factions (4), weapons, armor,
-                  seasons, cultures, port institutions (134 NPCs)
-  app/          — Typer CLI (30+ commands), Rich views, TUI screens,
+                  contracts (24 templates), factions (4), companions (10),
+                  melee weapons (8), ranged weapons (8), fighting styles (5),
+                  ship upgrades (18), armor, seasons, cultures,
+                  port institutions (134 NPCs)
+  app/          — Typer CLI (50+ commands), Rich views, TUI screens,
                   session manager, captain selection
   balance/      — balance harness: 7 policy bots, 7 scenarios, reporting
   stress/       — stress testing: 14 invariants, 9 compound scenarios
@@ -63,9 +66,9 @@ Compound state tuple:
 
 ## Testing
 
-- **1,832 tests** across 72+ files
+- **1,836 tests** across 72+ files
 - **Balance harness** — 7 policy bots, 7 scenario packs, deterministic seeds
 - **Stress testing** — 14 cross-system invariants, 9 compound scenarios
 - **Invariant enforcement** — checked after every tick in stress runs
 - **Print-and-Play tests** — content sourcing validation, PDF output verification
-- CI: Python 3.11 + 3.12 matrix, ruff lint, paths-gated triggers
+- CI: Python 3.11 + 3.12 + 3.13 matrix, ruff lint, paths-gated triggers

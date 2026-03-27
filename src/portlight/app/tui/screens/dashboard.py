@@ -249,6 +249,8 @@ class ContentArea(Widget):
             return self._enhanced_ledger()
         elif tab == "infrastructure":
             return self._infra_view()
+        elif tab == "map":
+            return self._map_view()
         elif tab == "help":
             return self._help_view()
         return Text(f"Unknown tab: {tab}", style="red")
@@ -662,6 +664,16 @@ class ContentArea(Widget):
         parts.append(insurance_view(s.infra, heat))
         return Group(*parts)
 
+    def _map_view(self):
+        """World map view — reuses the ASCII map renderer from views."""
+        from portlight.app import views
+        s = self.session
+        player_port = s.current_port_id
+        return views.world_map_view(
+            s.world, player_port_id=player_port,
+            show_routes=True, region_filter=None,
+        )
+
     def _help_view(self):
         """Keybinding help with maritime styling."""
         lines = [
@@ -672,7 +684,7 @@ class ContentArea(Widget):
             "  [bold cyan]D[/bold cyan] Dashboard    [bold cyan]M[/bold cyan] Market     [bold cyan]R[/bold cyan] Routes",
             "  [bold cyan]C[/bold cyan] Cargo        [bold cyan]I[/bold cyan] Inventory  [bold cyan]F[/bold cyan] Fleet",
             "  [bold cyan]K[/bold cyan] Contracts    [bold cyan]P[/bold cyan] Port       [bold cyan]L[/bold cyan] Ledger",
-            "  [bold cyan]W[/bold cyan] Infra        [bold cyan]?[/bold cyan] Help       [bold cyan]Q[/bold cyan] Quit",
+            "  [bold cyan]W[/bold cyan] Infra        [bold cyan]V[/bold cyan] Map        [bold cyan]?[/bold cyan] Help       [bold cyan]Q[/bold cyan] Quit",
             "",
             "[bold #2a9d8f]Actions[/bold #2a9d8f]",
             "  [bold #e9c46a]B[/bold #e9c46a] Buy goods    [bold #e9c46a]S[/bold #e9c46a] Sell goods",
@@ -709,7 +721,7 @@ class TabBar(Static):
         ("D", "Dash"), ("M", "Market"), ("R", "Routes"),
         ("C", "Cargo"), ("I", "Inv"), ("F", "Fleet"),
         ("K", "Contracts"), ("P", "Port"), ("L", "Ledger"),
-        ("W", "Infra"), ("?", "Help"),
+        ("W", "Infra"), ("V", "Map"), ("?", "Help"),
     ]
 
     def __init__(self) -> None:
@@ -728,7 +740,7 @@ class TabBar(Static):
             "D": "dashboard", "M": "market", "R": "routes",
             "C": "cargo", "I": "inventory", "F": "fleet",
             "K": "contracts", "P": "port", "L": "ledger",
-            "W": "infrastructure", "?": "help",
+            "W": "infrastructure", "V": "map", "?": "help",
         }
         parts = []
         for key, label in self.TAB_LABELS:

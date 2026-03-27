@@ -58,6 +58,7 @@ async def test_switch_all_tabs():
             ("port", "p"),
             ("ledger", "l"),
             ("infrastructure", "w"),
+            ("map", "v"),
             # skip help — "?" key binding varies by platform
         ]
         for tab_name, key in tabs_and_keys:

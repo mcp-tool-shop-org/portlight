@@ -19,21 +19,21 @@ Requires Python 3.11+. No Python? Use `npx @mcptoolshop/portlight` instead.
 portlight new "Your Name" --type merchant
 ```
 
-Or run `portlight captain-select` for the interactive roster with all nine captains.
+Or run `portlight new "Your Name"` without `--type` for the interactive captain selection roster.
 
 ### Captain types
 
 | Captain | Home | Edge | Trade-off |
 |---------|------|------|-----------|
 | **Merchant** | Porto Novo | Best prices, trust grows fast | Heat penalties doubled |
-| **Smuggler** | Corsair's Rest | Black market, contraband trade | Higher heat, more inspections |
-| **Navigator** | Monsoon Reach | Faster ships, longer range | Weaker initial standing |
-| **Privateer** | Ironhaven | Naval combat, boarding advantage | Poor merchant reputation |
+| **Smuggler** | Palm Cove | Black market, contraband trade | Higher heat, more inspections |
+| **Navigator** | Silva Bay | Faster ships, longer range | Weaker initial standing |
+| **Privateer** | Stormwall | Naval combat, boarding advantage | Poor merchant reputation |
 | **Corsair** | Corsair's Rest | Balanced combat + trade | Master of none |
-| **Scholar** | Jade Port | Information advantage | Low capital, fragile |
-| **Merchant Prince** | Porto Novo | High starting capital | Higher fees, pirate target |
+| **Scholar** | Monsoon Reach | Information advantage | Low capital, fragile |
+| **Merchant Prince** | Al-Manar | High starting capital | Higher fees, pirate target |
 | **Dockhand** | Crosswind Isle | Cheapest crew | Lowest starting capital |
-| **Bounty Hunter** | Stormwall | Combat mastery | Poor prices, distrusted |
+| **Bounty Hunter** | Crosswind Isle | Combat mastery | Poor prices, distrusted |
 
 Start with **merchant** for your first run. It has the smoothest early game.
 

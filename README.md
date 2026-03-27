@@ -58,14 +58,14 @@ Five regions. Twenty ports. Forty-three routes. A living economy.
 | Captain | Home | Edge | Trade-off |
 |---------|------|------|-----------|
 | **Merchant** | Porto Novo | Better prices, trust grows fast | Heat penalties doubled |
-| **Smuggler** | Corsair's Rest | Black market, contraband trade | Higher heat, more inspections |
-| **Navigator** | Monsoon Reach | Faster ships, longer range | Weaker initial standing |
-| **Privateer** | Ironhaven | Naval combat, boarding advantage | Poor merchant reputation |
+| **Smuggler** | Palm Cove | Black market, contraband trade | Higher heat, more inspections |
+| **Navigator** | Silva Bay | Faster ships, longer range | Weaker initial standing |
+| **Privateer** | Stormwall | Naval combat, boarding advantage | Poor merchant reputation |
 | **Corsair** | Corsair's Rest | Balanced combat + trade | Master of none |
-| **Scholar** | Jade Port | Information advantage, better contracts | Low capital, fragile |
-| **Merchant Prince** | Porto Novo | High starting capital, premium access | Higher fees, pirate target |
+| **Scholar** | Monsoon Reach | Information advantage, better contracts | Low capital, fragile |
+| **Merchant Prince** | Al-Manar | High starting capital, premium access | Higher fees, pirate target |
 | **Dockhand** | Crosswind Isle | Cheapest crew, scrappy | Lowest starting capital |
-| **Bounty Hunter** | Stormwall | Combat mastery, faction standing | Poor prices, distrusted |
+| **Bounty Hunter** | Crosswind Isle | Combat mastery, faction standing | Poor prices, distrusted |
 
 Each captain starts in a different port, sees different contracts, and leans toward a different victory path. The game doesn't lock you in — it watches what you do and tells you what you built.
 
@@ -96,11 +96,11 @@ See [docs/START_HERE.md](docs/START_HERE.md) for a guided first session.
 
 **Voyages** — Multi-day travel with weather, pirate encounters, inspections. Provisions burn daily. Hull takes damage. Crew morale shifts. Seasonal danger zones change which routes are safe.
 
-**Contracts** — Six families gated by trust and standing. Procurement, shortage relief, luxury discreet, return freight, circuit, and faction commissions. Real deadlines, real consequences.
+**Contracts** — Seven families gated by trust and standing. Procurement, shortage relief, luxury discreet, return freight, circuit, smuggling, and reputation charter. 24 templates with real deadlines, real consequences.
 
 **Reputation** — Four axes: regional standing, commercial trust, customs heat, and underworld connections. High trust unlocks premium contracts. High heat triggers inspections and port denials. Different captains play different moral economies.
 
-**Combat** — Full personal combat (stance triangle: thrust/slash/parry) with 7 melee weapons, 7 ranged weapons, regional fighting styles. Naval combat with boarding and cannons. Short, brutal, consequential.
+**Combat** — Full personal combat (stance triangle: thrust/slash/parry) with 8 melee weapons, 8 ranged weapons, 5 regional fighting styles, and a weapon quality/maintenance system. Naval combat with boarding and cannons. Short, brutal, consequential.
 
 **Pirate Factions** — Crimson Tide (Mediterranean), Iron Wolves (North Atlantic), Deep Reef Brotherhood (South Seas), Monsoon Syndicate (East Indies). Each with territory, preferred goods, named captains, and attitude toward you.
 
@@ -108,9 +108,13 @@ See [docs/START_HERE.md](docs/START_HERE.md) for a guided first session.
 
 **Finance** — Insurance (hull, cargo, contract guarantee) and credit (3 tiers with interest). Leverage with teeth.
 
-**Companions** — Five officer roles (marine, navigator, surgeon, smuggler, quartermaster). Named companions with personality, morale, and departure triggers.
+**Companions** — Ten named companions across five officer roles (marine, navigator, surgeon, smuggler, quartermaster). Each with personality, morale, and departure triggers.
 
-**Career** — 27 milestones across 6 families. 13 career profile tags. Four victory paths: Lawful Trade House, Shadow Network, Oceanic Reach, Commercial Empire.
+**Fleet** — Own multiple ships, dock and board between them at the same port, transfer cargo between vessels. 18 ship upgrades (rigging, hull, armament, crew quarters).
+
+**Skills** — Learnable trade skills (blacksmithing) with trainer progression at ports.
+
+**Career** — 27 milestones across 6 families. 7 career profile tags. Four victory paths: Lawful Trade House, Shadow Network, Oceanic Reach, Commercial Empire.
 
 ## Victory Paths
 
@@ -137,18 +141,22 @@ Run `portlight guide` for a grouped reference, or see [docs/COMMANDS.md](docs/CO
 | Group | Commands |
 |-------|----------|
 | Trading | `market`, `buy`, `sell`, `cargo` |
-| Navigation | `routes`, `sail`, `advance`, `port`, `provision`, `repair`, `hire` |
+| Navigation | `routes`, `sail`, `advance`, `port`, `provision`, `repair`, `hire`, `fire`, `crew`, `hunt`, `work` |
+| Combat | `duel`, `fight`, `encounter`, `naval`, `capture`, `spare`, `take-all`, `bounty` |
+| Equipment | `inventory`, `equip`, `merchant`, `sell-gear`, `armory`, `train`, `equip-style`, `maintain`, `smith`, `field-repair`, `injuries`, `learn-skill` |
+| Fleet | `shipyard`, `drydock`, `fleet`, `dock`, `board`, `transfer`, `rename`, `upgrade` |
 | Contracts | `contracts`, `accept`, `obligations`, `abandon` |
+| Companions | `recruit`, `dismiss-companion`, `party` |
 | Infrastructure | `warehouse`, `office`, `license` |
 | Finance | `insure`, `credit` |
-| Career | `captain`, `reputation`, `milestones`, `status`, `ledger`, `shipyard` |
-| World | `map`, `port` |
-| Interface | `tui`, `captain-select` |
+| Career | `captain`, `reputation`, `milestones`, `status`, `ledger` |
+| World | `map` |
+| Interface | `tui` |
 | System | `save`, `load`, `guide`, `print-and-play` |
 
 ## Quality
 
-- 1,832 tests across 72+ files
+- 1,836 tests across 72+ test files
 - 14 cross-system invariants enforced under 9 compound stress scenarios
 - Balance harness: 7 policy bots across 7 scenario packs
 - Save format v12 with full migration chain

@@ -23,13 +23,15 @@ Portlight is a trade-first maritime strategy game played in the terminal. You st
 - **9 captain types** with distinct starting positions and advantages
 - **5 ship classes** from sloop to man-of-war
 - **4 pirate factions** controlling different waters
+- **10 recruitable companions** across 5 officer roles (marine, navigator, surgeon, smuggler, quartermaster)
 - **134 named NPCs** with personality, agenda, and relationship webs
 - **4 victory paths** representing different commercial identities
 
 ## Next steps
 
-- [Getting Started](./getting-started/) — install and play your first 10 minutes
+- [Beginner Guide](./beginners/) — zero-to-trading walkthrough for new players
+- [Getting Started](./getting-started/) — install, pick a captain, and play your first 10 minutes
 - [Trading Guide](./trading/) — understand the economy and find profitable routes
-- [Commands](./commands/) — full command reference
+- [Commands](./commands/) — full command reference (50+ commands)
 - [Career Paths](./career-paths/) — victory paths and profile tags explained
 - [Architecture](./architecture/) — how Portlight is built

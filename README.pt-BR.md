@@ -3,102 +3,114 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/mcp-tool-shop-org/brand/main/logos/portlight/readme.png" width="400" alt="Portlight">
+  <img src="https://raw.githubusercontent.com/mcp-tool-shop-org/brand/main/logos/portlight/readme.png" width="600" alt="Portlight">
 </p>
 
 <p align="center">
   <a href="https://github.com/mcp-tool-shop-org/portlight/actions"><img src="https://github.com/mcp-tool-shop-org/portlight/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/portlight/"><img src="https://img.shields.io/pypi/v/portlight" alt="PyPI"></a>
   <a href="https://github.com/mcp-tool-shop-org/portlight/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://mcp-tool-shop-org.github.io/portlight/"><img src="https://img.shields.io/badge/docs-landing_page-blue" alt="Landing Page"></a>
+  <a href="https://mcp-tool-shop-org.github.io/portlight/"><img src="https://img.shields.io/badge/docs-handbook-blue" alt="Handbook"></a>
 </p>
 
-Uma estratégia marítima focada em comércio, onde você constrói uma carreira como mercador através de arbitragem de rotas, contratos, infraestrutura, finanças e reputação comercial em uma economia regional dinâmica.
+Jogo de estratégia marítima focado em comércio. Construa uma carreira como comerciante em cinco regiões, utilizando estratégias de arbitragem de rotas, contratos, infraestrutura, finanças e reputação — tudo a partir do terminal.
+
+## Instalação
+
+```bash
+pip install portlight
+```
+
+Não tem Python? Use o wrapper npm em vez disso:
+
+```bash
+npx @mcptoolshop/portlight
+```
 
 ## Por que Portlight?
 
 A maioria dos jogos de comércio simplifica o comércio em um número que simplesmente aumenta. Portlight trata o comércio como uma disciplina comercial:
 
 - **Os preços reagem às suas transações.** Despejar grãos em um porto faz com que o preço caia. Cada venda altera o mercado local.
-- **Os portos têm identidades econômicas reais.** Porto Novo produz grãos a baixo custo. Al-Manar consome seda avidamente. Isso não é aleatório — é estrutural.
-- **As viagens envolvem riscos.** Tempestades, piratas, inspeções. Suas provisões, casco e tripulação são importantes.
-- **Os contratos exigem comprovação.** Entregue os produtos certos no porto certo, com rastreabilidade. Não é possível falsificar.
-- **A infraestrutura muda a forma como você comercializa.** Armazéns permitem que você prepare a carga. Corretores melhoram a qualidade dos contratos. Licenças desbloqueiam acesso premium.
-- **O financiamento é uma alavancagem com consequências.** O crédito permite que você avance mais rapidamente. Se você não pagar, as portas se fecham.
-- **O jogo analisa o que você construiu.** Seu histórico de comércio, infraestrutura, reputação e rotas formam um perfil de carreira. O jogo lhe diz que tipo de empresa comercial você realmente é.
+- **Os portos têm identidades econômicas reais.** Porto Novo produz grãos a baixo custo. Silk Haven exporta seda em grande volume. Essas são características estruturais, não aleatórias.
+- **As viagens envolvem riscos.** Tempestades, piratas, inspeções, perigos sazonais. Suas provisões, casco e tripulação são importantes.
+- **Os contratos exigem comprovação.** Entregue os produtos certos no porto certo antes do prazo. A procedência é rastreada.
+- **A infraestrutura muda a forma como você comercializa.** Armazéns armazenam carga. Corretores melhoram os contratos. Licenças desbloqueiam acesso premium.
+- **A reputação abre e fecha portas.** Confiança comercial, rigor alfandegário, posição regional e conexões com o submundo — quatro fatores que moldam o que você pode fazer e onde.
+- **O jogo analisa o que você construiu.** Seu histórico de comércio, infraestrutura, reputação e rotas formam um perfil de carreira. Quatro caminhos distintos para a vitória, baseados no tipo de comerciante que você realmente se tornou.
 
-## O Ciclo Principal
+## O Mundo
 
-1. Analise o mercado — encontre o que é barato aqui e caro em outro lugar.
-2. Compre carga — carregue sua embarcação.
-3. Navegue — atravesse rotas sob a pressão do clima, da tripulação e das provisões.
-4. Venda — obtenha lucro, altere o mercado local.
-5. Reinvista — atualize seu navio, alugue um armazém, abra um escritório de corretagem.
-6. Construa acesso — ganhe confiança, reduza a atenção indesejada, desbloqueie contratos e licenças.
-7. Siga um destino comercial — quatro caminhos distintos para a vitória, baseados no que você realmente construiu.
+Cinco regiões. Vinte portos. Quarenta e três rotas. Uma economia dinâmica.
+
+| Região | Portos | Personagem |
+|--------|-------|-----------|
+| **Mediterranean** | Porto Novo, Al-Manar, Silva Bay, Corsair's Rest | Grãos, madeira, mercados de especiarias. Águas iniciais seguras. |
+| **North Atlantic** | Ironhaven, Stormwall, Thornport | Ferro, armas, comércio militar. Inspeções rigorosas. |
+| **West Africa** | Sun Harbor, Palm Cove, Iron Point, Pearl Shallows | Algodão, rum, pérolas. Provisões mais baratas. |
+| **East Indies** | Jade Port, Monsoon Reach, Silk Haven, Crosswind Isle, Dragon's Gate, Spice Narrows | Seda, especiarias, porcelana, chá. Margens mais altas. Risco de monções. |
+| **South Seas** | Ember Isle, Typhoon Anchorage, Coral Throne | Pérolas, medicamentos. Águas remotas para o final do jogo. |
+
+134 NPCs nomeados em todos os portos. Quatro facções de piratas controlando diferentes áreas. Clima sazonal que altera o perigo e a demanda. Uma camada cultural com festivais, superstições e moral da tripulação.
+
+## Nove Capitães
+
+| Capitão | Início | Vantagem | Compromisso |
+|---------|------|------|-----------|
+| **Merchant** | Porto Novo | Melhores preços, confiança aumenta rapidamente | Penalidades de "heat" dobradas |
+| **Smuggler** | Corsair's Rest | Mercado negro, comércio de contrabando | Maior atenção indesejada, mais inspeções. |
+| **Navigator** | Monsoon Reach | Navios mais rápidos, maior alcance | Reputação inicial mais fraca |
+| **Privateer** | Ironhaven | Combate naval, vantagem de abordagem | Má reputação comercial |
+| **Corsair** | Corsair's Rest | Combate equilibrado + comércio | Mestre de nada |
+| **Scholar** | Jade Port | Vantagem de informações, melhores contratos | Capital inicial baixo, instável |
+| **Merchant Prince** | Porto Novo | Alto capital inicial, acesso premium | Taxas mais altas, alvo de piratas |
+| **Dockhand** | Crosswind Isle | Tripulação mais barata, aguerrida | Menor capital inicial |
+| **Bounty Hunter** | Stormwall | Domínio do combate, posição na facção | Preços ruins, desconfiança |
+
+Cada capitão começa em um porto diferente, vê contratos diferentes e tende a um caminho de vitória diferente. O jogo não te limita — ele observa o que você faz e te mostra o que você construiu.
+
+## Ciclo Principal
+
+```
+Inspect market → Buy cargo → Sail → Sell → Reinvest → Build access → Pursue destiny
+```
 
 ## Início Rápido
 
 ```bash
-# Install
-pip install -e ".[dev]"
-
-# Start a new game
 portlight new "Captain Hawk" --type merchant
-
-# Look at what's for sale
 portlight market
-
-# Buy cheap goods
 portlight buy grain 10
-
-# Check available routes
 portlight routes
-
-# Sail to where grain sells high
 portlight sail al_manar
-
-# Advance through the voyage
 portlight advance
-
-# Sell at destination
 portlight sell grain 10
-
-# See your trade history
-portlight ledger
-
-# Check your career progress
 portlight milestones
 ```
 
-Consulte [docs/START_HERE.md](docs/START_HERE.md) para uma primeira sessão guiada e [docs/FIRST_VOYAGE.md](docs/FIRST_VOYAGE.md) para uma análise detalhada do início do jogo.
-
-## Tipos de Capitães
-
-| Capitão | Identidade | Vantagem | Compromisso |
-|---------|----------|------|-----------|
-| **Merchant** | Comerciante licenciado, base no Mediterrâneo | Melhores preços, taxas de inspeção mais baixas, a confiança aumenta mais rapidamente. | Sem acesso ao mercado negro. |
-| **Smuggler** | Operador discreto, base na África Ocidental. | Acesso ao mercado negro, margens de produtos de luxo, comércio de contrabando. | Maior atenção indesejada, mais inspeções. |
-| **Navigator** | Explorador de águas profundas, base no Mediterrâneo. | Navios mais rápidos, maior alcance, acesso precoce às Índias Orientais. | Status comercial inicial mais fraco. |
+Consulte [docs/START_HERE.md](docs/START_HERE.md) para uma primeira sessão guiada.
 
 ## Sistemas
 
-**Economia** — Preços determinados pela escassez em 10 portos, 8 produtos, 17 rotas. Penalidades por excesso de oferta punem o despejo. Choques de mercado criam oportunidades regionais.
+**Economia** — Preços determinados pela escassez em 20 portos, envolvendo 18 produtos, 43 rotas. Penalidades por descarte (dumping) são aplicadas. Crises de mercado criam oportunidades. Modificadores regionais de demanda fazem com que cada porto tenha uma identidade clara de importação/exportação.
 
-**Viagens** — Viagens de vários dias com eventos climáticos, encontros com piratas, inspeções. Provisões, casco e tripulação são recursos reais.
+**Viagens** — Viagens de vários dias, com condições climáticas, encontros com piratas e inspeções. As provisões são consumidas diariamente. O casco sofre danos. A moral da tripulação varia. Zonas de perigo sazonais alteram quais rotas são seguras.
 
-**Capitães** — Três arquétipos distintos com diferenças de preços de 8 a 20%, posições iniciais únicas e perfis de acesso diferentes.
+**Contratos** — Seis famílias, ligadas por confiança e reputação. Inclui: aquisição, alívio de escassez, produtos de luxo discretos, transporte de carga de retorno, rotas específicas e comissões de facções. Prazos reais, com consequências reais.
 
-**Contratos** — Seis famílias de contratos bloqueadas por confiança e reputação. Entrega com rastreabilidade validada. Prazos reais com consequências reais.
+**Reputação** — Quatro aspectos: reputação regional, confiança comercial, atenção das autoridades alfandegárias e conexões com o submundo. Alta confiança desbloqueia contratos premium. Alta atenção das autoridades alfandegárias aciona inspeções e proibições de acesso a portos. Diferentes capitães adotam diferentes modelos de ética nos negócios.
 
-**Reputação** — Reputação regional, reputação específica do porto, atenção indesejada alfandegária e confiança comercial. Um modelo de acesso de vários eixos que abre e fecha portas.
+**Combate** — Combate pessoal completo (triângulo de posturas: ataque/corte/defesa) com 7 armas de combate corpo a corpo, 7 armas de longo alcance e estilos de luta regionais. Combate naval com abordagens e canhões. Curto, brutal e com consequências.
 
-**Infraestrutura** — Armazéns (3 níveis), escritórios de corretagem (2 níveis em 3 regiões) e 5 licenças compráveis. Cada um altera o tempo, a escala ou o acesso ao comércio.
+**Facções Piratas** — Crimson Tide (Mar Mediterrâneo), Iron Wolves (Atlântico Norte), Deep Reef Brotherhood (Oceanos do Sul), Monsoon Syndicate (Sudeste Asiático). Cada uma com seu território, produtos preferidos, capitães e atitude em relação ao jogador.
 
-**Seguro** — Apólices de garantia de casco, carga e contrato. Taxas de atenção indesejada. Resolução de sinistros com condições de negação.
+**Infraestrutura** — Armazéns (3 níveis), escritórios de corretores, 5 licenças disponíveis para compra. Custos de manutenção reais. Cada um altera o tempo, a escala ou o acesso ao comércio.
 
-**Crédito** — Três níveis de crédito com juros, prazos de pagamento e consequências de inadimplência. Alavancagem com risco real.
+**Finanças** — Seguros (para o casco, a carga e a garantia de contratos) e crédito (3 níveis com juros). Alavancagem com riscos.
 
-**Carreira** — 27 marcos em 6 áreas. Interpretação do perfil de carreira (tags primárias/secundárias/emergentes). Quatro caminhos para a vitória: Casa Comercial Legal, Rede Sombria, Alcance Oceânico e Império Comercial.
+**Companheiros** — Cinco funções de oficiais (fuzileiro, navegador, médico, contrabandista, administrador). Companheiros com nomes, personalidade, moral e gatilhos para sua saída.
+
+**Carreira** — 27 marcos em 6 famílias. 13 tags de perfil de carreira. Quatro caminhos para a vitória: Casa Comercial Legal, Rede Clandestina, Expansão Oceânica, Império Comercial.
 
 ## Caminhos para a Vitória
 
@@ -107,7 +119,16 @@ Consulte [docs/START_HERE.md](docs/START_HERE.md) para uma primeira sessão guia
 - **Alcance Oceânico** — Poder comercial de longo alcance. Acesso às Índias Orientais, infraestrutura distante, domínio de rotas premium.
 - **Império Comercial** — Operação integrada em múltiplas regiões. Infraestrutura em todas as regiões, receita diversificada, alavancagem financeira.
 
-Consulte [docs/CAREER_PATHS.md](docs/CAREER_PATHS.md) para descrições detalhadas voltadas para o jogador.
+## Jogo de tabuleiro para jogar e se divertir
+
+Gere uma adaptação completa para jogo de tabuleiro — cartas, tabuleiro, manual de regras, rastreadores de pontuação:
+
+```bash
+pip install portlight[printandplay]
+portlight print-and-play
+```
+
+Uma aventura comercial competitiva para 2 a 4 jogadores (aproximadamente 90 minutos) com capitães assimétricos, competição por contratos e tensão entre reputação e perigo. Consulte [docs/PRINT_AND_PLAY_RULES.md](docs/PRINT_AND_PLAY_RULES.md) para o manual de regras completo.
 
 ## Referência de Comandos
 
@@ -121,46 +142,27 @@ Execute `portlight guide` no jogo para obter uma referência de comandos organiz
 | Infraestrutura | `warehouse`, `office`, `license` |
 | Finanças | `insure`, `credit` |
 | Carreira | `captain`, `reputation`, `milestones`, `status`, `ledger`, `shipyard` |
-| Sistema | `save`, `load`, `guide` |
+| Mundo | `map`, `port` |
+| Interface | `tui`, `captain-select` |
+| Sistema | `save`, `load`, `guide`, `print-and-play` |
 
-## Status Alpha
+## Qualidade
 
-Portlight está em fase alpha. Os sistemas principais estão completos e foram testados sob carga, mas o equilíbrio está sendo ajustado ativamente.
+- 1.832 testes em mais de 72 arquivos
+- 14 invariantes de sistema aplicadas em 9 cenários de estresse complexos
+- Sistema de balanceamento: 7 bots de política em 7 pacotes de cenários
+- Formato de salvamento v12 com cadeia completa de migração
+- Código limpo, Python 3.11/3.12/3.13
 
-**O que está funcionando:**
-- Todos os sistemas funcionais de ponta a ponta
-- 609 testes em 24 arquivos
-- 14 invariantes entre sistemas aplicadas sob 9 cenários de teste complexos
-- Sistema de balanceamento com 7 bots de política em 7 pacotes de cenários
+## Segurança
 
-**O que está sendo ajustado:**
-- Escalonamento de contrabandistas (atualmente com desempenho abaixo do esperado na progressão da embarcação)
-- Concentração de rotas no Mediterrâneo (Porto Novo / Silva Bay dominam o tráfego)
-- Taxas de conclusão de contratos (falhas na lógica de entrega em execuções automatizadas)
-- Adoção de seguros (atualmente próxima de zero em testes simulados)
-
-Consulte [docs/ALPHA_STATUS.md](docs/ALPHA_STATUS.md) para detalhes e [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) para problemas específicos.
-
-## Segurança e Dados
-
-Portlight é um **jogo de linha de comando que funciona apenas localmente**. Não estabelece nenhuma conexão de rede durante o jogo. Dados acessados: arquivos de salvamento locais (`saves/`) e arquivos de relatório (`artifacts/`), todos em formato JSON no sistema de arquivos local. Não há senhas, credenciais, telemetria ou serviços remotos. Não são necessárias permissões elevadas. Consulte [SECURITY.md](SECURITY.md) para a política completa.
+Jogo de linha de comando (CLI) que funciona apenas localmente. Nenhuma conexão de rede durante o jogo. Os salvamentos são feitos em `saves/` e `artifacts/` como arquivos JSON no sistema de arquivos local. Sem segredos, sem telemetria, sem permissões elevadas. Consulte [SECURITY.md](SECURITY.md).
 
 ## Desenvolvimento
 
 ```bash
-# Install with dev dependencies
 pip install -e ".[dev]"
-
-# Run tests
 pytest
-
-# Run balance simulation
-python tools/run_balance.py
-
-# Run stress tests
-python tools/run_stress.py
-
-# Lint
 ruff check src/ tests/
 ```
 

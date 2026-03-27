@@ -30,6 +30,7 @@ class PortlightApp(App):
         Binding("p", "switch_tab('port')", "Port", priority=True),
         Binding("l", "switch_tab('ledger')", "Ledger", priority=True),
         Binding("w", "switch_tab('infrastructure')", "Infra", priority=True),
+        Binding("v", "switch_tab('map')", "Map", priority=True),
         Binding("question_mark", "switch_tab('help')", "Help", priority=True),
         Binding("b", "buy", "Buy", priority=True),
         Binding("s", "sell", "Sell", priority=True),
