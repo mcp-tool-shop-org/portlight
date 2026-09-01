@@ -27,6 +27,27 @@ from rich.text import Text
 # Formatting helpers (local to combat views, no engine dependency)
 # ---------------------------------------------------------------------------
 
+def _injury_display_fields(inj) -> tuple[str, str, str]:
+    """Normalize an injury (dict, id string, or object) for combat_status_view."""
+    if isinstance(inj, str):
+        return inj.replace("_", " ").title() or "wound", "minor", ""
+    if isinstance(inj, dict):
+        return (
+            str(inj.get("name", "wound")),
+            str(inj.get("severity", "minor")),
+            str(inj.get("effect", "")),
+        )
+    name = getattr(inj, "name", None)
+    severity = getattr(inj, "severity", None)
+    effect = getattr(inj, "effect", None) or getattr(inj, "description", "")
+    if name:
+        return str(name), str(severity or "minor"), str(effect or "")
+    iid = getattr(inj, "injury_id", None)
+    if iid:
+        return str(iid).replace("_", " ").title(), str(severity or "minor"), str(effect or "")
+    return "wound", "minor", ""
+
+
 def _hp_bar(current: int, maximum: int, width: int = 20) -> str:
     """Visual HP/hull bar with color thresholds."""
     ratio = current / maximum if maximum > 0 else 0
@@ -254,10 +275,8 @@ def combat_status_view(
         lines.append("")
         lines.append("[bold]Active Injuries:[/bold]")
         for inj in injuries:
-            name = inj.get("name", "wound")
-            severity = inj.get("severity", "minor")
+            name, severity, effect = _injury_display_fields(inj)
             color = _severity_color(severity)
-            effect = inj.get("effect", "")
             lines.append(f"  [{color}]* {name} ({severity})[/{color}] {effect}")
 
     lines.append("")

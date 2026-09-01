@@ -71,6 +71,19 @@ class PortlightApp(App):
                     severity="error",
                     timeout=8,
                 )
+                return
+        self._resume_encounter_if_pending()
+
+    def _resume_encounter_if_pending(self) -> None:
+        """Re-open EncounterScreen when a save has an unresolved pending_duel."""
+        if not self.session.active or not self.session.world:
+            return
+        if self.session.world.pirates.pending_duel is None:
+            return
+        from portlight.app.tui.screens.encounter import EncounterScreen, reconstruct_encounter
+        enc = reconstruct_encounter(self.session)
+        if enc:
+            self.push_screen(EncounterScreen(self.session, enc))
 
     def action_encounter_dispatch(self, key: str) -> None:
         """Dispatch encounter-specific keys (n/t/z/x/o/e) to EncounterScreen."""
@@ -82,8 +95,13 @@ class PortlightApp(App):
         """Switch the content area to a different tab."""
         enc = self._encounter_screen
         if enc:
-            # f→fleet, c→cargo, r→routes: remap to encounter actions
-            _remap = {"fleet": "flee", "cargo": "close", "routes": "rake"}
+            # f→fleet, c→cargo, r→routes, w→infrastructure: remap to encounter actions
+            _remap = {
+                "fleet": "flee",
+                "cargo": "close",
+                "routes": "rake",
+                "infrastructure": "throw",
+            }
             if tab in _remap:
                 enc.action_encounter_key(_remap[tab])
             return  # Block all tab switches during encounter

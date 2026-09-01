@@ -291,13 +291,18 @@ class ContentArea(Widget):
             lines.append("")
 
         # Active contracts
-        active = [c for c in s.board.active if not c.completed]
+        from portlight.engine.contracts import ContractStatus
+        active = [
+            c for c in s.board.active
+            if getattr(c, "status", None) != ContractStatus.COMPLETED
+        ]
         if active:
             lines.append("[bold]Active Contracts[/bold]")
             for c in active[:3]:
                 days_left = c.deadline_day - w.day
                 urgency = "[red]" if days_left < 5 else "[yellow]" if days_left < 10 else "[dim]"
-                lines.append(f"  {urgency}\u2022 {c.description} ({days_left}d left){urgency.replace('[', '[/')}")
+                title = getattr(c, "title", None) or getattr(c, "description", "")
+                lines.append(f"  {urgency}\u2022 {title} ({days_left}d left){urgency.replace('[', '[/')}")
             lines.append("")
 
         # Location-based tips
@@ -550,7 +555,11 @@ class ContentArea(Widget):
         parts.append(views.contracts_view(s.board, w.day))
 
         # Active obligations with urgency
-        active = [c for c in s.board.active if not c.completed]
+        from portlight.engine.contracts import ContractStatus
+        active = [
+            c for c in s.board.active
+            if getattr(c, "status", None) != ContractStatus.COMPLETED
+        ]
         if active:
             lines = ["\n[bold #e9c46a]Active Obligations[/bold #e9c46a]", ""]
             for c in active:
@@ -564,7 +573,8 @@ class ContentArea(Widget):
                 else:
                     icon = "[green]\u25cf[/green]"
                     style = "dim"
-                lines.append(f"  {icon} [{style}]{c.description}[/{style}]")
+                title = getattr(c, "title", None) or getattr(c, "description", "")
+                lines.append(f"  {icon} [{style}]{title}[/{style}]")
                 lines.append(f"      [dim]{days_left} days remaining[/dim]")
             parts.append(Text.from_markup("\n".join(lines)))
 
@@ -601,49 +611,9 @@ class ContentArea(Widget):
     def _inventory_view(self):
         """Build inventory view data from captain state."""
         from portlight.app.combat_views import inventory_view
+        from portlight.app.session import inventory_gear_data
         cap = self.session.world.captain
-
-        gear_data = {
-            "armor": None,
-            "melee": None,
-            "ranged": None,
-            "style": None,
-            "injuries": [],
-            "cargo_summary": [],
-            "silver": cap.silver,
-        }
-
-        if hasattr(cap, "armor") and cap.armor:
-            gear_data["armor"] = {
-                "name": cap.armor.name,
-                "dr": cap.armor.damage_reduction,
-                "dodge_penalty": getattr(cap.armor, "dodge_penalty", 0),
-            }
-        if hasattr(cap, "melee_weapon") and cap.melee_weapon:
-            gear_data["melee"] = {
-                "name": cap.melee_weapon.name,
-                "damage": cap.melee_weapon.base_damage,
-                "speed": getattr(cap.melee_weapon, "speed_modifier", 0),
-            }
-        if hasattr(cap, "ranged") and cap.ranged:
-            gear_data["ranged"] = {
-                "name": cap.ranged.name,
-                "damage": cap.ranged.base_damage,
-                "ammo": getattr(cap.ranged, "ammo", 0),
-            }
-        if hasattr(cap, "fighting_style") and cap.fighting_style:
-            gear_data["style"] = {"name": cap.fighting_style.name}
-        if hasattr(cap, "injuries"):
-            gear_data["injuries"] = [
-                {"name": inj.name, "severity": inj.severity, "days_remaining": inj.days_remaining}
-                for inj in cap.injuries
-            ]
-        gear_data["cargo_summary"] = [
-            {"good_id": c.good_id, "quantity": c.quantity}
-            for c in cap.cargo
-        ]
-
-        return inventory_view(gear_data)
+        return inventory_view(inventory_gear_data(cap))
 
     def _infra_view(self):
         """Composite infrastructure view."""

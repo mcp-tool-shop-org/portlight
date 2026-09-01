@@ -57,6 +57,176 @@ from portlight.engine.voyage import EventType, VoyageEvent, advance_day, arrive,
 from portlight.receipts.models import ReceiptLedger, TradeReceipt
 
 
+def _trim_cargo_to_capacity(cargo: list, capacity: int) -> list[tuple[str, int]]:
+    """Reduce quantity on trailing stacks until used <= capacity.
+
+    Pops a CargoItem only when its remainder is 0. Returns (good_id, qty)
+    pairs that were jettisoned, last-stack-first.
+    """
+    jettisoned: list[tuple[str, int]] = []
+    if capacity < 0:
+        capacity = 0
+    while cargo and sum(c.quantity for c in cargo) > capacity:
+        last = cargo[-1]
+        if last.quantity <= 0:
+            cargo.pop()
+            continue
+        overflow = sum(c.quantity for c in cargo) - capacity
+        drop = min(last.quantity, overflow)
+        if drop <= 0:
+            break
+        original_qty = last.quantity
+        last.quantity -= drop
+        if original_qty > 0 and getattr(last, "cost_basis", 0):
+            last.cost_basis = int(last.cost_basis * last.quantity / original_qty)
+        jettisoned.append((last.good_id, drop))
+        if last.quantity <= 0:
+            cargo.pop()
+    return jettisoned
+
+
+def apply_crew_casualties(ship, lost: int, *, keep_at_least: int = 0) -> int:
+    """Remove crew losses from the roster (sailors first), then officers, then sync.
+
+    Ship.crew is derived from CrewRoster; mutating crew alone is resurrected on
+    the next hire/fire sync_crew(). Returns the number actually removed.
+    """
+    if ship is None or lost <= 0:
+        return 0
+    roster = getattr(ship, "roster", None)
+    if roster is None or getattr(roster, "total", 0) <= 0:
+        floor = max(0, keep_at_least)
+        applied = min(lost, max(0, ship.crew - floor))
+        ship.crew = max(floor, ship.crew - lost)
+        return applied
+
+    current = roster.total
+    floor = max(0, keep_at_least)
+    lost = min(lost, max(0, current - floor))
+    if lost <= 0:
+        ship.sync_crew()
+        return 0
+
+    remaining = lost
+    # Sailors absorb casualties first; specialists and named officers follow.
+    take = min(getattr(roster, "sailors", 0), remaining)
+    roster.sailors -= take
+    remaining -= take
+
+    from portlight.engine.models import CrewRole
+    specialist_order = (
+        ("gunners", CrewRole.GUNNER),
+        ("navigators", CrewRole.NAVIGATOR),
+        ("surgeons", CrewRole.SURGEON),
+        ("marines", CrewRole.MARINE),
+        ("quartermasters", CrewRole.QUARTERMASTER),
+    )
+    for attr, role in specialist_order:
+        if remaining <= 0:
+            break
+        cur = getattr(roster, attr, 0)
+        take = min(cur, remaining)
+        if take <= 0:
+            continue
+        setattr(roster, attr, cur - take)
+        remaining -= take
+        officers = getattr(ship, "officers", None)
+        if officers and take > 0:
+            to_drop = take
+            kept = []
+            for officer in reversed(officers):
+                o_role = officer.role
+                match = o_role == role or getattr(o_role, "value", o_role) == role.value
+                if match and to_drop > 0:
+                    to_drop -= 1
+                else:
+                    kept.append(officer)
+            ship.officers = list(reversed(kept))
+
+    ship.sync_crew()
+    return lost - remaining
+
+
+def inventory_gear_data(captain) -> dict:
+    """Map captain combat_gear, injuries, and upgrades into inventory_view keys."""
+    gear = captain.combat_gear
+    from portlight.content.armor import ARMOR
+    from portlight.content.melee_weapons import MELEE_WEAPONS
+    from portlight.content.ranged_weapons import RANGED_WEAPONS
+    from portlight.content.fighting_styles import FIGHTING_STYLES
+    from portlight.content.injuries import INJURIES
+
+    armor_def = ARMOR.get(gear.armor) if gear.armor else None
+    melee_def = MELEE_WEAPONS.get(gear.melee_weapon) if gear.melee_weapon else None
+    firearm_def = RANGED_WEAPONS.get(gear.firearm) if gear.firearm else None
+    mechanical_def = RANGED_WEAPONS.get(gear.mechanical_weapon) if gear.mechanical_weapon else None
+    style_def = FIGHTING_STYLES.get(captain.active_style) if captain.active_style else None
+
+    throwing_summary = []
+    for wid, count in (gear.throwing_weapons or {}).items():
+        w = RANGED_WEAPONS.get(wid)
+        throwing_summary.append({"name": w.name if w else wid, "count": count})
+
+    injuries_data = []
+    for inj in captain.injuries or []:
+        iid = getattr(inj, "injury_id", None) or getattr(inj, "id", None)
+        idef = INJURIES.get(iid) if iid else None
+        heal_remaining = getattr(inj, "heal_remaining", None)
+        if idef:
+            if heal_remaining is None and getattr(idef, "heal_days", None) is None:
+                healing = "Permanent"
+            elif heal_remaining is None:
+                healing = "Permanent"
+            elif heal_remaining <= 0:
+                healing = "Healed"
+            else:
+                healing = f"{heal_remaining} days"
+            injuries_data.append({
+                "name": idef.name,
+                "severity": idef.severity,
+                "healing": healing,
+            })
+        elif iid:
+            injuries_data.append({
+                "name": str(iid).replace("_", " ").title(),
+                "severity": str(getattr(inj, "severity", "minor")),
+                "healing": f"{heal_remaining} days" if heal_remaining else "",
+            })
+
+    ship_upgrades = []
+    ship = getattr(captain, "ship", None)
+    if ship and getattr(ship, "upgrades", None):
+        from portlight.content.upgrades import UPGRADES
+        for u in ship.upgrades:
+            uid = u.upgrade_id if hasattr(u, "upgrade_id") else u
+            udef = UPGRADES.get(uid)
+            ship_upgrades.append(udef.name if udef else uid)
+
+    cargo = getattr(captain, "cargo", None) or []
+    cargo_used = sum(c.quantity for c in cargo)
+    cargo_cap = ship.cargo_capacity if ship else 0
+
+    return {
+        "armor_name": armor_def.name if armor_def else "None",
+        "armor_dr": armor_def.damage_reduction if armor_def else 0,
+        "armor_type": armor_def.armor_type if armor_def else "",
+        "melee_name": melee_def.name if melee_def else "Fists",
+        "melee_bonus": f"+{melee_def.damage_bonus} dmg" if melee_def else "",
+        "active_style": style_def.name if style_def else "None",
+        "style_special": style_def.special_action.name if style_def and style_def.special_action else "",
+        "firearm_name": firearm_def.name if firearm_def else "None",
+        "firearm_ammo": gear.firearm_ammo,
+        "mechanical_name": mechanical_def.name if mechanical_def else "None",
+        "mechanical_ammo": gear.mechanical_ammo,
+        "throwing_summary": throwing_summary,
+        "injuries": injuries_data,
+        "ship_upgrades": ship_upgrades,
+        "cargo_used": cargo_used,
+        "cargo_capacity": cargo_cap,
+        "silver": captain.silver,
+    }
+
+
 class GameSession:
     """Holds active game state and mediates all player actions."""
 
@@ -72,6 +242,8 @@ class GameSession:
         self._trade_seq: int = 0
         self._rng: random.Random = random.Random()
         self.auto_resolve_duels: bool = False
+        self.last_provision_cost: int = 0
+        self.last_jettison: list[tuple[str, int]] = []
 
     @property
     def active(self) -> bool:
@@ -370,7 +542,7 @@ class GameSession:
             has_surgeons_bay = False
             if self.world.captain.ship and hasattr(self.world.captain.ship, 'upgrades'):
                 has_surgeons_bay = any(
-                    getattr(u, 'template_id', '') == 'surgeons_bay'
+                    getattr(u, 'upgrade_id', '') == 'surgeons_bay'
                     for u in self.world.captain.ship.upgrades
                 )
             # Heal at sea only if surgeon's bay installed
@@ -526,7 +698,11 @@ class GameSession:
         return get_service_modifier(self.world.captain.standing, port.id)
 
     def provision(self, days: int) -> str | None:
-        """Buy provisions at port-specific cost. Returns error or None."""
+        """Buy provisions at port-specific cost. Returns error or None.
+
+        On success the amount charged is stored in ``last_provision_cost``
+        (port.provision_cost * service modifier, minimum 1/day).
+        """
         if not self.world:
             return "No active game"
         port = self.current_port
@@ -539,6 +715,7 @@ class GameSession:
             return f"Need {cost} silver for {days} days of provisions ({cost_per_day}/day here), have {self.world.captain.silver}"
         self.world.captain.silver -= cost
         self.world.captain.provisions += days
+        self.last_provision_cost = cost
         self._save()
         return None
 
@@ -664,12 +841,11 @@ class GameSession:
         self.world.captain.silver -= template.price
         self.world.captain.ship = create_ship_from_template(template)
 
-        # Transfer cargo (drop excess if new ship is smaller)
-        cargo_used = sum(c.quantity for c in self.world.captain.cargo)
-        if cargo_used > template.cargo_capacity:
-            # Drop from the end until it fits
-            while sum(c.quantity for c in self.world.captain.cargo) > template.cargo_capacity:
-                self.world.captain.cargo.pop()
+        # Transfer cargo: trim overflow quantity from the last stack(s), never
+        # pop a whole stack that still has units that fit.
+        self.last_jettison = _trim_cargo_to_capacity(
+            self.world.captain.cargo, template.cargo_capacity,
+        )
 
         self._save()
         return None

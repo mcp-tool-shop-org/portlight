@@ -49,6 +49,45 @@ _VICTORY_ACTIONS = (
 )
 _DEFEAT_ACTIONS = "  [dim]Esc.Leave[/dim]"
 
+_RESUME_PHASES = frozenset({
+    "approach", "naval", "boarding", "duel",
+    "capture_available", "resolved", "victory", "defeat",
+})
+
+
+def reconstruct_encounter(session: "GameSession"):
+    """Rebuild EncounterState from pending_duel + persisted phase/state."""
+    if not session or not session.world or session.world.pirates.pending_duel is None:
+        return None
+    pd = session.world.pirates.pending_duel
+    from portlight.engine.encounter import create_encounter
+    dest = "porto_novo"
+    if session.world.voyage:
+        dest = session.world.voyage.destination_id
+    enc = create_encounter(session.world.ports, dest, session._rng)
+    if enc is None:
+        return None
+    enc.enemy_captain_id = pd.captain_id
+    enc.enemy_captain_name = pd.captain_name
+    enc.enemy_faction_id = pd.faction_id
+    enc.enemy_personality = pd.personality
+    enc.enemy_strength = pd.strength
+    enc.enemy_region = pd.region
+    phase = session.world.pirates.encounter_phase
+    if phase and phase in _RESUME_PHASES:
+        enc.phase = phase
+    estate = session.world.pirates.encounter_state or {}
+    if estate:
+        enc.boarding_progress = estate.get("boarding_progress", enc.boarding_progress)
+        enc.boarding_threshold = estate.get("boarding_threshold", enc.boarding_threshold)
+        enc.naval_turns = estate.get("naval_turns", enc.naval_turns)
+        enc.duel_turns = estate.get("duel_turns", enc.duel_turns)
+        enc.enemy_ship_hull = estate.get("enemy_ship_hull", enc.enemy_ship_hull)
+        enc.enemy_ship_crew = estate.get("enemy_ship_crew", enc.enemy_ship_crew)
+    if estate.get("pending_victory") and enc.phase != "capture_available":
+        enc.phase = "victory"
+    return enc
+
 
 class EncounterScreen(Screen):
     """Multi-phase pirate encounter -- approach, naval, boarding, duel, resolution."""
@@ -89,7 +128,22 @@ class EncounterScreen(Screen):
             yield Static(_APPROACH_ACTIONS, id="encounter-actions")
 
     def on_mount(self) -> None:
-        self._enter_approach()
+        phase = self.encounter.phase or "approach"
+        if phase == "naval":
+            self._resume_naval()
+        elif phase in ("duel", "boarding"):
+            # Boarding is a one-shot transition; persist as duel so we don't re-apply losses.
+            self._write_header()
+            self._begin_duel()
+        elif phase in ("victory", "capture_available"):
+            self._write_header()
+            self._enter_victory()
+        elif phase in ("resolved", "defeat"):
+            self._write_header()
+            self._phase = phase
+            self._update_actions(_DEFEAT_ACTIONS)
+        else:
+            self._enter_approach()
 
     # ------------------------------------------------------------------
     # Key dispatcher
@@ -139,16 +193,13 @@ class EncounterScreen(Screen):
     # Approach phase
     # ------------------------------------------------------------------
 
-    def _enter_approach(self) -> None:
+    def _write_header(self) -> None:
         from portlight.app.combat_views import _strength_indicator
-        from portlight.content.factions import FACTIONS, PIRATE_CAPTAINS
+        from portlight.content.factions import FACTIONS
 
         enc = self.encounter
         faction = FACTIONS.get(enc.enemy_faction_id)
         faction_name = faction.name if faction else enc.enemy_faction_id
-        captain_data = PIRATE_CAPTAINS.get(enc.enemy_captain_id)
-
-        # Header
         header_text = (
             f"[bold red]Sails on the horizon![/bold red]\n\n"
             f"  Captain:  [bold]{enc.enemy_captain_name}[/bold]\n"
@@ -157,6 +208,12 @@ class EncounterScreen(Screen):
             f"  Strength: {_strength_indicator(enc.enemy_strength)}"
         )
         self.query_one("#encounter-header", Static).update(header_text)
+
+    def _enter_approach(self) -> None:
+        from portlight.content.factions import PIRATE_CAPTAINS
+
+        self._write_header()
+        captain_data = PIRATE_CAPTAINS.get(self.encounter.enemy_captain_id)
 
         # Log
         log = self.query_one("#encounter-log", RichLog)
@@ -168,6 +225,18 @@ class EncounterScreen(Screen):
 
         # Weapon recognition
         self._check_weapon_recognition(log)
+        self._persist_encounter()
+
+    def _resume_naval(self) -> None:
+        self._write_header()
+        self._phase = "naval"
+        self.encounter.phase = "naval"
+        log = self.query_one("#encounter-log", RichLog)
+        log.write("[bold red]NAVAL COMBAT[/bold red]  [dim](resumed)[/dim]")
+        log.write("")
+        self.query_one("#ship-panels").remove_class("hidden")
+        self._refresh_ship_panels()
+        self._update_actions(_NAVAL_ACTIONS)
 
     def _check_weapon_recognition(self, log: RichLog) -> None:
         gear = self.session.captain.combat_gear
@@ -217,6 +286,7 @@ class EncounterScreen(Screen):
             log.write("[green]The encounter ends peacefully.[/green]")
             self.app.notify("Encounter resolved -- safe passage.", severity="information", timeout=4)
             self._clear_pending()
+            self.session._save()
             self._update_actions(_DEFEAT_ACTIONS)  # just Esc
         else:
             log.write("[yellow]Negotiation failed -- battle is joined![/yellow]")
@@ -243,6 +313,7 @@ class EncounterScreen(Screen):
             log.write("[green]You escape into open water.[/green]")
             self.app.notify("Escaped!", severity="information", timeout=4)
             self._clear_pending()
+            self.session._save()
             self._update_actions(_DEFEAT_ACTIONS)
         else:
             log.write("[yellow]Can't escape -- fight![/yellow]")
@@ -256,6 +327,7 @@ class EncounterScreen(Screen):
 
         msg = begin_fight(enc, ship)
         self._phase = "naval"
+        enc.phase = "naval"
 
         log.write("")
         log.write(f"[bold #264653]{'=' * 40}[/bold #264653]")
@@ -268,6 +340,7 @@ class EncounterScreen(Screen):
         self.query_one("#ship-panels").remove_class("hidden")
         self._refresh_ship_panels()
         self._update_actions(_NAVAL_ACTIONS)
+        self._persist_encounter()
 
     # ------------------------------------------------------------------
     # Naval phase
@@ -285,9 +358,11 @@ class EncounterScreen(Screen):
 
         result = resolve_naval_turn(enc, action, ship, self._rng())
 
-        # Apply damage to player ship
+        # Apply damage to player ship (roster is source of truth)
+        from portlight.app.session import apply_crew_casualties
         ship.hull = max(0, ship.hull + result["player_hull_delta"])
-        ship.crew = max(0, ship.crew + result["player_crew_delta"])
+        crew_lost = max(0, -int(result.get("player_crew_delta", 0) or 0))
+        apply_crew_casualties(ship, crew_lost)
 
         # Log the round
         log.write(f"[bold #264653]-- Naval Turn {result['turn']} --[/bold #264653]")
@@ -303,6 +378,7 @@ class EncounterScreen(Screen):
         log.write("")
 
         self._refresh_ship_panels()
+        self._persist_encounter()
 
         # Check player defeat
         if ship.hull <= 0 or ship.crew <= 0:
@@ -353,7 +429,8 @@ class EncounterScreen(Screen):
         self._transitioning = True
 
         result = resolve_boarding_phase(enc, ship.crew, self._rng())
-        ship.crew = max(1, ship.crew - result["player_crew_lost"])
+        from portlight.app.session import apply_crew_casualties
+        apply_crew_casualties(ship, result["player_crew_lost"], keep_at_least=1)
 
         log.write("")
         log.write(f"[bold #264653]{'=' * 40}[/bold #264653]")
@@ -361,6 +438,11 @@ class EncounterScreen(Screen):
         log.write(f"[bold #264653]{'=' * 40}[/bold #264653]")
         log.write(f"  {result['flavor']}")
         log.write("")
+
+        # Persist as duel so a quit during the pause does not re-run boarding
+        self._phase = "duel"
+        enc.phase = "duel"
+        self._persist_encounter()
 
         # Brief pause then transition to duel
         self.set_timer(1.0, self._begin_duel)
@@ -405,6 +487,7 @@ class EncounterScreen(Screen):
         self._player_combatant.name = captain.name
 
         self._phase = "duel"
+        enc.phase = "duel"
         self._transitioning = False
 
         # Swap panels
@@ -416,8 +499,10 @@ class EncounterScreen(Screen):
         log.write(f"[bold #264653]{'=' * 40}[/bold #264653]")
         log.write("")
 
+        self._restore_combatant_hp()
         self._refresh_combatant_panels()
         self._update_actions(_DUEL_ACTIONS)
+        self._persist_encounter()
 
     # ------------------------------------------------------------------
     # Duel phase
@@ -455,6 +540,7 @@ class EncounterScreen(Screen):
         log.write("")
 
         self._refresh_combatant_panels()
+        self._persist_encounter()
 
         # Check resolution
         if o.hp <= 0 and p.hp > 0:
@@ -501,6 +587,8 @@ class EncounterScreen(Screen):
 
     def _enter_victory(self) -> None:
         self._phase = "victory"
+        self.encounter.phase = "resolved"
+        self._persist_encounter(pending_victory=True)
         log = self.query_one("#encounter-log", RichLog)
         log.write("")
         log.write(f"[bold #264653]{'=' * 40}[/bold #264653]")
@@ -699,6 +787,53 @@ class EncounterScreen(Screen):
 
     def _update_actions(self, text: str) -> None:
         self.query_one("#encounter-actions", Static).update(text)
+
+    def _restore_combatant_hp(self) -> None:
+        """Reapply persisted duel HP/stamina after creating combatants."""
+        estate = self.session.world.pirates.encounter_state or {}
+        p, o = self._player_combatant, self._opponent_combatant
+        if p is not None:
+            if "player_hp" in estate:
+                p.hp = estate["player_hp"]
+            if "player_stamina" in estate:
+                p.stamina = estate["player_stamina"]
+        if o is not None:
+            if "opponent_hp" in estate:
+                o.hp = estate["opponent_hp"]
+            if "opponent_stamina" in estate:
+                o.stamina = estate["opponent_stamina"]
+
+    def _persist_encounter(self, pending_victory: bool = False) -> None:
+        """Write phase, hull, HP, and boarding progress so a mid-fight quit can resume."""
+        if not self.session.world:
+            return
+        pirates = self.session.world.pirates
+        enc = self.encounter
+        phase = self._phase
+        if phase == "victory":
+            pirates.encounter_phase = "resolved"
+            pending_victory = True
+        elif phase in ("defeat", "resolved"):
+            return
+        else:
+            pirates.encounter_phase = phase or enc.phase or "approach"
+        estate = {
+            "boarding_progress": enc.boarding_progress,
+            "boarding_threshold": enc.boarding_threshold,
+            "naval_turns": enc.naval_turns,
+            "duel_turns": enc.duel_turns,
+            "enemy_ship_hull": enc.enemy_ship_hull,
+            "enemy_ship_crew": enc.enemy_ship_crew,
+            "pending_victory": pending_victory,
+        }
+        if self._player_combatant:
+            estate["player_hp"] = self._player_combatant.hp
+            estate["player_stamina"] = self._player_combatant.stamina
+        if self._opponent_combatant:
+            estate["opponent_hp"] = self._opponent_combatant.hp
+            estate["opponent_stamina"] = self._opponent_combatant.stamina
+        pirates.encounter_state = estate
+        self.session._save()
 
     def _clear_pending(self) -> None:
         """Clear encounter from world state so voyage can resume."""
