@@ -298,11 +298,14 @@ async def test_advance_blocked_during_encounter():
 # Detection wiring
 # ---------------------------------------------------------------------------
 
-def test_execute_advance_detects_pirate_event():
-    """execute_advance should detect _pending_duel on voyage events."""
+@pytest.mark.asyncio
+async def test_execute_advance_detects_pirate_event(tmp_path: Path):
+    """execute_advance should push EncounterScreen when a PIRATES event carries _pending_duel."""
+    from portlight.app.tui.screens.encounter import EncounterScreen
+    from portlight.app.tui.screens.routes import execute_advance
     from portlight.engine.voyage import VoyageEvent, EventType
-    from portlight.engine.models import PendingDuel
 
+    s = _make_silver_session(tmp_path / "advance_duel", "advance_duel")
     pd = PendingDuel(
         captain_id="gnaw", captain_name="Gnaw",
         faction_id="iron_wolves", personality="aggressive",
@@ -311,13 +314,17 @@ def test_execute_advance_detects_pirate_event():
     event = VoyageEvent(
         event_type=EventType.PIRATES,
         message="Pirates!",
+        _pending_duel=pd,
     )
-    event._pending_duel = pd
+    s.advance = lambda: [event]
 
-    # Verify the event has the pending_duel attribute
-    assert hasattr(event, "_pending_duel")
-    assert event._pending_duel is pd
-    assert event._pending_duel.captain_id == "gnaw"
+    app = PortlightApp(session=s)
+    async with app.run_test() as pilot:
+        execute_advance(app, s)
+        await pilot.pause()
+        assert isinstance(app.screen, EncounterScreen)
+        assert app.screen.encounter.enemy_captain_id == "gnaw"
+        assert app.screen.encounter.enemy_captain_name == "Gnaw"
 
 
 # ---------------------------------------------------------------------------
