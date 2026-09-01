@@ -2222,11 +2222,12 @@ def fight(
         # Get weapon quality
         melee_q = gear.weapon_quality.get(gear.melee_weapon, "standard") if gear.melee_weapon else "standard"
         ranged_q = gear.weapon_quality.get(gear.firearm, "standard") if gear.firearm else "standard"
+        from portlight.app.session import injury_ids_from
         _player_combatant, _opponent_combatant = create_duel_combatants(
             enc,
             player_crew=s.captain.ship.crew if s.captain.ship else 5,
             player_style=s.captain.active_style,
-            player_injury_ids=[inj.injury_id for inj in s.captain.injuries],
+            player_injury_ids=injury_ids_from(s.captain.injuries),
             player_firearm=gear.firearm,
             player_ammo=gear.firearm_ammo,
             player_throwing=total_throwing,
@@ -2285,12 +2286,15 @@ def fight(
         "style_effect": result.style_effect,
     }))
 
+    from portlight.app.session import injury_ids_from
     from portlight.content.injuries import INJURIES
-    injury_ids = [inj.injury_id for inj in s.captain.injuries]
+    injury_ids = injury_ids_from(s.captain.injuries)
     if result.injury_inflicted and result.injury_inflicted not in injury_ids:
         injury_ids.append(result.injury_inflicted)
     injury_dicts = []
     for iid in injury_ids:
+        if not isinstance(iid, str):
+            continue
         idef = INJURIES.get(iid)
         injury_dicts.append({
             "name": idef.name if idef else str(iid).replace("_", " ").title(),
@@ -2317,7 +2321,8 @@ def fight(
             new_injury = create_injury(result.injury_inflicted, s.world.day)
             s.captain.injuries.append(new_injury)
             from portlight.content.injuries import INJURIES
-            inj_def = INJURIES.get(result.injury_inflicted)
+            inflicted = result.injury_inflicted
+            inj_def = INJURIES.get(inflicted) if isinstance(inflicted, str) else None
             if inj_def:
                 console.print(f"\n[bold red]Injury: {inj_def.name} — {inj_def.description}[/bold red]")
 
@@ -2428,7 +2433,8 @@ def train(
         ))
         return
 
-    injured_parts = get_injured_body_parts([inj.injury_id for inj in s.captain.injuries])
+    from portlight.app.session import injury_ids_from
+    injured_parts = get_injured_body_parts(injury_ids_from(s.captain.injuries))
     error = can_learn_style(
         s.captain.learned_styles, injured_parts,
         s.captain.silver, port.id, style_id,
@@ -2465,9 +2471,10 @@ def equip_style(
         console.print(f"[red]You haven't learned {style_id}. Use [bold]portlight train[/bold] at the right port.[/red]")
         return
 
+    from portlight.app.session import injury_ids_from
     from portlight.content.injuries import get_injured_body_parts
     from portlight.engine.training import check_style_usable
-    injured_parts = get_injured_body_parts([inj.injury_id for inj in s.captain.injuries])
+    injured_parts = get_injured_body_parts(injury_ids_from(s.captain.injuries))
     if not check_style_usable(style_id, injured_parts):
         console.print("[red]Your injuries prevent using this style.[/red]")
         return
@@ -2569,15 +2576,18 @@ def injuries() -> None:
 
     injury_data = []
     for inj in s.captain.injuries:
-        defn = INJURIES.get(inj.injury_id)
+        iid = inj if isinstance(inj, str) else getattr(inj, "injury_id", None)
+        if not isinstance(iid, str):
+            continue
+        defn = INJURIES.get(iid)
         if defn:
             injury_data.append({
                 "name": defn.name,
                 "severity": defn.severity,
                 "body_part": defn.body_part,
                 "description": defn.description,
-                "heal_remaining": inj.heal_remaining,
-                "treated": inj.treated,
+                "heal_remaining": getattr(inj, "heal_remaining", None),
+                "treated": getattr(inj, "treated", False),
             })
     console.print(combat_views.injuries_view(injury_data))
 
