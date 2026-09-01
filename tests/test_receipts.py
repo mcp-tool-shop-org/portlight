@@ -2,7 +2,7 @@
 
 import json
 
-from portlight.receipts.core import export_ledger, hash_receipt
+from portlight.receipts.core import export_ledger, hash_receipt, verify_receipt
 from portlight.receipts.models import ReceiptLedger, TradeAction, TradeReceipt
 
 
@@ -44,6 +44,39 @@ class TestReceiptHashing:
     def test_hash_is_hex_string(self):
         h = hash_receipt(_make_receipt())
         assert all(c in "0123456789abcdef" for c in h)
+
+
+class TestVerifyReceipt:
+    """Integrity check — must fail if verify_receipt reverts to len(id) > 0."""
+
+    def test_true_when_receipt_id_equals_hash(self):
+        r = _make_receipt()
+        r.receipt_id = hash_receipt(r)
+        assert r.receipt_id == hash_receipt(r)
+        assert verify_receipt(r) is True
+
+    def test_true_when_16_char_economy_id_matches_content_hash(self):
+        r = _make_receipt(receipt_id="0123456789abcdef")
+        assert len(r.receipt_id) == 16
+        assert r.content_hash == hash_receipt(r)
+        assert verify_receipt(r) is True
+
+    def test_false_for_empty_id(self):
+        r = _make_receipt(receipt_id="")
+        assert verify_receipt(r) is False
+
+    def test_false_for_tampered_id(self):
+        r = _make_receipt(receipt_id="tampered")
+        assert verify_receipt(r) is False
+
+    def test_false_for_mutated_qty_with_stale_hash(self):
+        r = _make_receipt(quantity=10)
+        stale = hash_receipt(r)
+        r.receipt_id = stale
+        r.content_hash = stale
+        r.quantity = 99
+        assert r.content_hash != hash_receipt(r)
+        assert verify_receipt(r) is False
 
 
 class TestLedger:
