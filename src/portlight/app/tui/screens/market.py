@@ -144,11 +144,17 @@ def execute_buy_flow(app, session: "GameSession") -> None:
             if isinstance(result, str):
                 app.notify(f"\u2717 {result}", severity="error")
             else:
-                app.notify(
-                    f"\u2713 Bought {result.quantity} {good.name} for {result.total_cost:,} silver",
-                    severity="information",
-                    timeout=5,
-                )
+                try:
+                    total = getattr(result, "total_price", getattr(result, "total_cost", 0))
+                    qty_sold = getattr(result, "quantity", qty)
+                    name = good.name if good else good_id
+                    app.notify(
+                        f"\u2713 Bought {qty_sold} {name} for {total:,} silver",
+                        severity="information",
+                        timeout=5,
+                    )
+                except (AttributeError, TypeError):
+                    app.notify("\u2713 Purchase complete.", severity="information", timeout=5)
                 app.refresh_views()
 
         app.push_screen(TradeDialog("buy", good_id, good.name, max_qty, slot.buy_price), on_qty)
@@ -191,21 +197,30 @@ def execute_sell_flow(app, session: "GameSession") -> None:
             if qty_str is None:
                 return
             qty = int(qty_str)
+            pre_qty = cargo_item.quantity if cargo_item else 0
+            pre_basis = cargo_item.cost_basis if cargo_item else 0
             result = session.sell(good_id, qty)
             if isinstance(result, str):
                 app.notify(f"\u2717 {result}", severity="error")
             else:
-                profit = result.total_revenue - result.total_cost
-                profit_str = ""
-                if profit > 0:
-                    profit_str = f" [green](+{profit:,} profit)[/green]"
-                elif profit < 0:
-                    profit_str = f" [red]({profit:,} loss)[/red]"
-                app.notify(
-                    f"\u2713 Sold {result.quantity} {good.name} for {result.total_revenue:,} silver{profit_str}",
-                    severity="information",
-                    timeout=5,
-                )
+                try:
+                    total = getattr(result, "total_price", getattr(result, "total_revenue", 0))
+                    qty_sold = getattr(result, "quantity", qty)
+                    cost_basis = int((pre_basis / pre_qty) * qty) if pre_qty > 0 else 0
+                    profit = total - cost_basis
+                    profit_str = ""
+                    if profit > 0:
+                        profit_str = f" [green](+{profit:,} profit)[/green]"
+                    elif profit < 0:
+                        profit_str = f" [red]({profit:,} loss)[/red]"
+                    name = good.name if good else good_id
+                    app.notify(
+                        f"\u2713 Sold {qty_sold} {name} for {total:,} silver{profit_str}",
+                        severity="information",
+                        timeout=5,
+                    )
+                except (AttributeError, TypeError):
+                    app.notify("\u2713 Sale complete.", severity="information", timeout=5)
                 app.refresh_views()
 
         app.push_screen(TradeDialog("sell", good_id, good.name, cargo_item.quantity, sell_price), on_qty)

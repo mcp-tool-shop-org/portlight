@@ -429,14 +429,15 @@ def sell(good: str, qty: str) -> None:
 
 @app.command()
 def provision(days: int = typer.Argument(10, help="Days of provisions to buy")) -> None:
-    """Buy provisions (2 silver per day)."""
+    """Buy provisions at the current port's rate (modified by standing)."""
     s = _session()
     err = s.provision(days)
     if err:
         console.print(f"[red]{err}[/red]")
         return
     from portlight.app.formatting import provision_status, silver
-    console.print(f"[green]Provisioned for {days} days ({silver(days * 2)})[/green]")
+    paid = s.last_provision_cost
+    console.print(f"[green]Provisioned for {days} days ({silver(paid)})[/green]")
     console.print(f"Provisions: {provision_status(s.captain.provisions)}")
     console.print(f"Silver: {silver(s.captain.silver)}")
 
@@ -516,8 +517,9 @@ def hunt() -> None:
     if result.danger_text:
         console.print(f"  [red]{result.danger_text}[/red]")
     if result.crew_lost > 0 and s.captain.ship:
-        s.captain.ship.crew = max(1, s.captain.ship.crew - result.crew_lost)
-        console.print(f"  [red]Lost {result.crew_lost} crew member{'s' if result.crew_lost > 1 else ''}.[/red]")
+        from portlight.app.session import apply_crew_casualties
+        applied = apply_crew_casualties(s.captain.ship, result.crew_lost, keep_at_least=1)
+        console.print(f"  [red]Lost {applied} crew member{'s' if applied != 1 else ''}.[/red]")
     if result.hull_damage > 0 and s.captain.ship:
         s.captain.ship.hull = max(1, s.captain.ship.hull - result.hull_damage)
         console.print(f"  [red]Hull damage: -{result.hull_damage} HP[/red]")
@@ -927,86 +929,49 @@ def ledger() -> None:
 def inventory() -> None:
     """Show all personal gear: armor, weapons, styles, ranged, injuries, cargo."""
     s = _session()
-    gear = s.captain.combat_gear
-
-    # Build gear data dict for the view
-    from portlight.content.armor import ARMOR
-    from portlight.content.melee_weapons import MELEE_WEAPONS
-    from portlight.content.ranged_weapons import RANGED_WEAPONS
-    from portlight.content.fighting_styles import FIGHTING_STYLES
-
-    armor_def = ARMOR.get(gear.armor) if gear.armor else None
-    melee_def = MELEE_WEAPONS.get(gear.melee_weapon) if gear.melee_weapon else None
-    firearm_def = RANGED_WEAPONS.get(gear.firearm) if gear.firearm else None
-    mechanical_def = RANGED_WEAPONS.get(gear.mechanical_weapon) if gear.mechanical_weapon else None
-    style_def = FIGHTING_STYLES.get(s.captain.active_style) if s.captain.active_style else None
-
-    throwing_summary = []
-    for wid, count in gear.throwing_weapons.items():
-        w = RANGED_WEAPONS.get(wid)
-        throwing_summary.append({"name": w.name if w else wid, "count": count})
-
-    from portlight.content.injuries import INJURIES
-    injuries_data = []
-    for inj in s.captain.injuries:
-        idef = INJURIES.get(inj.injury_id)
-        if idef:
-            if inj.heal_remaining is None:
-                healing = "Permanent"
-            elif inj.heal_remaining <= 0:
-                healing = "Healed"
-            else:
-                healing = f"{inj.heal_remaining} days"
-            injuries_data.append({
-                "name": idef.name,
-                "severity": idef.severity,
-                "healing": healing,
-            })
-
-    ship_upgrades = []
-    if s.captain.ship and hasattr(s.captain.ship, 'upgrades'):
-        from portlight.content.upgrades import UPGRADES
-        for u in s.captain.ship.upgrades:
-            uid = u.upgrade_id if hasattr(u, 'upgrade_id') else u
-            udef = UPGRADES.get(uid)
-            ship_upgrades.append(udef.name if udef else uid)
-
-    cargo_used = sum(c.quantity for c in s.captain.cargo)
-    cargo_cap = s.captain.ship.cargo_capacity if s.captain.ship else 0
-
-    gear_data = {
-        "armor_name": armor_def.name if armor_def else "None",
-        "armor_dr": armor_def.damage_reduction if armor_def else 0,
-        "armor_type": armor_def.armor_type if armor_def else "",
-        "melee_name": melee_def.name if melee_def else "Fists",
-        "melee_bonus": f"+{melee_def.damage_bonus} dmg" if melee_def else "",
-        "active_style": style_def.name if style_def else "None",
-        "style_special": style_def.special_action.name if style_def and style_def.special_action else "",
-        "firearm_name": firearm_def.name if firearm_def else "None",
-        "firearm_ammo": gear.firearm_ammo,
-        "mechanical_name": mechanical_def.name if mechanical_def else "None",
-        "mechanical_ammo": gear.mechanical_ammo,
-        "throwing_summary": throwing_summary,
-        "injuries": injuries_data,
-        "ship_upgrades": ship_upgrades,
-        "cargo_used": cargo_used,
-        "cargo_capacity": cargo_cap,
-        "silver": s.captain.silver,
-    }
     from portlight.app.combat_views import inventory_view as inv_view
-    console.print(inv_view(gear_data))
+    from portlight.app.session import inventory_gear_data
+    console.print(inv_view(inventory_gear_data(s.captain)))
 
 
 # ---------------------------------------------------------------------------
 # Equip (armor + melee weapon)
 # ---------------------------------------------------------------------------
 
+def _owned_gear_ids(gear) -> set[str]:
+    """Item ids the captain currently wears or has previously owned (quality/provenance)."""
+    owned: set[str] = set()
+    for attr in ("armor", "melee_weapon", "firearm", "mechanical_weapon"):
+        val = getattr(gear, attr, None)
+        if val:
+            owned.add(val)
+    throwing = getattr(gear, "throwing_weapons", None) or {}
+    owned.update(throwing.keys())
+    for mapping in (
+        getattr(gear, "weapon_quality", None),
+        getattr(gear, "weapon_provenance", None),
+        getattr(gear, "weapon_upgrades", None),
+    ):
+        if mapping:
+            owned.update(mapping.keys())
+    return owned
+
+
+def _remember_owned_gear(gear, item_id: str) -> None:
+    """Stamp ownership so an unequipped item can be re-equipped later."""
+    if not item_id:
+        return
+    quality = getattr(gear, "weapon_quality", None)
+    if quality is not None and item_id not in quality:
+        quality[item_id] = "standard"
+
+
 @app.command()
 def equip(
     slot: str = typer.Argument(..., help="What to equip: armor, weapon, or 'remove'"),
     item_id: str = typer.Argument(None, help="Item ID to equip, or slot to remove (armor/weapon)"),
 ) -> None:
-    """Equip or unequip armor and melee weapons."""
+    """Equip or unequip armor and melee weapons the captain already owns."""
     s = _session()
     gear = s.captain.combat_gear
 
@@ -1017,6 +982,7 @@ def equip(
                 return
             from portlight.content.armor import ARMOR
             old = ARMOR.get(gear.armor)
+            _remember_owned_gear(gear, gear.armor)
             gear.armor = None
             s._save()
             console.print(f"[yellow]Removed {old.name if old else 'armor'}.[/yellow]")
@@ -1026,6 +992,7 @@ def equip(
                 return
             from portlight.content.melee_weapons import MELEE_WEAPONS
             old = MELEE_WEAPONS.get(gear.melee_weapon)
+            _remember_owned_gear(gear, gear.melee_weapon)
             gear.melee_weapon = None
             s._save()
             console.print(f"[yellow]Stowed {old.name if old else 'weapon'}.[/yellow]")
@@ -1042,6 +1009,12 @@ def equip(
         if armor_def is None:
             console.print(f"[red]Unknown armor: {item_id}[/red]")
             return
+        if item_id not in _owned_gear_ids(gear):
+            console.print(
+                f"[red]You don't own {armor_def.name}.[/red] "
+                "Buy it from a merchant or loot it first."
+            )
+            return
         gear.armor = item_id
         s._save()
         console.print(f"[green]Equipped {armor_def.name} (DR {armor_def.damage_reduction}).[/green]")
@@ -1054,6 +1027,12 @@ def equip(
         weapon_def = MELEE_WEAPONS.get(item_id)
         if weapon_def is None:
             console.print(f"[red]Unknown weapon: {item_id}[/red]")
+            return
+        if item_id not in _owned_gear_ids(gear):
+            console.print(
+                f"[red]You don't own {weapon_def.name}.[/red] "
+                "Buy it from a merchant or loot it first."
+            )
             return
         gear.melee_weapon = item_id
         s._save()
@@ -1202,6 +1181,13 @@ def shipyard(buy_ship: str = typer.Argument(None, help="Ship ID to purchase")) -
             console.print(f"[red]{err}[/red]")
         else:
             console.print("\n[bold green]Ship purchased![/bold green]\n")
+            if s.last_jettison:
+                from portlight.content.goods import GOODS
+                console.print("[yellow]Cargo trimmed to the new hold:[/yellow]")
+                for good_id, qty in s.last_jettison:
+                    good = GOODS.get(good_id)
+                    name = good.name if good else good_id
+                    console.print(f"  [yellow]Jettisoned {qty}x {name}[/yellow]")
             console.print(views.status_view(s.world, s.ledger, s.infra))
     else:
         if not has_shipyard:
@@ -1904,7 +1890,10 @@ def _restore_encounter(s) -> None:
         enc.enemy_region = pd.region
         # Restore persisted phase and combat state
         phase = s.world.pirates.encounter_phase
-        if phase and phase in ("approach", "naval", "boarding", "duel"):
+        if phase and phase in (
+            "approach", "naval", "boarding", "duel",
+            "capture_available", "resolved",
+        ):
             enc.phase = phase
         estate = s.world.pirates.encounter_state
         if estate:
@@ -1914,11 +1903,12 @@ def _restore_encounter(s) -> None:
             enc.duel_turns = estate.get("duel_turns", 0)
             enc.enemy_ship_hull = estate.get("enemy_ship_hull", enc.enemy_ship_hull)
             enc.enemy_ship_crew = estate.get("enemy_ship_crew", enc.enemy_ship_crew)
-        # Restore pending victory flag
+        # Restore pending victory flag (does not override a prize-capture phase)
         global _pending_victory
         if estate and estate.get("pending_victory"):
             _pending_victory = True
-            enc.phase = "resolved"  # victory means encounter is resolved, awaiting spare/take-all
+            if enc.phase != "capture_available":
+                enc.phase = "resolved"  # awaiting spare/take-all
         _active_encounter = enc
 
 
@@ -2083,9 +2073,11 @@ def naval(
     naval_rng = random.Random(s.world.seed + s.world.day * 1000 + enc.naval_turns + 7777)
     result = resolve_naval_turn(enc, action, combat_ship, naval_rng)
 
-    # Apply hull/crew damage to player ship
+    # Apply hull/crew damage to player ship (roster is source of truth)
+    from portlight.app.session import apply_crew_casualties
     s.captain.ship.hull = max(0, s.captain.ship.hull + result["player_hull_delta"])
-    s.captain.ship.crew = max(0, s.captain.ship.crew + result["player_crew_delta"])
+    crew_lost = max(0, -int(result.get("player_crew_delta", 0) or 0))
+    apply_crew_casualties(s.captain.ship, crew_lost)
 
     console.print(combat_views.naval_round_view(result))
 
@@ -2108,7 +2100,7 @@ def naval(
     elif result["boarding_triggered"]:
         console.print("\n[bold yellow]Boarding action![/bold yellow]")
         boarding = resolve_boarding_phase(enc, s.captain.ship.crew, s._rng)
-        s.captain.ship.crew = max(0, s.captain.ship.crew - boarding["player_crew_lost"])
+        apply_crew_casualties(s.captain.ship, boarding["player_crew_lost"])
         console.print(f"\n{boarding['flavor']}")
         console.print("\n[bold]Personal combat begins! Use [cyan]portlight fight <action>[/cyan][/bold]")
     elif s.captain.ship.hull <= 0:
@@ -2118,14 +2110,14 @@ def naval(
     elif s.captain.ship.crew <= 0:
         console.print("\n[bold red]No crew left to sail! Your ship drifts helplessly.[/bold red]")
         console.print("[dim]The pirates board unopposed and take what they want.[/dim]")
-        # Lose some cargo and silver as penalty
-        cargo_loss = sum(c.quantity for c in s.captain.ship.cargo) // 2
+        # Lose some cargo and silver as penalty (cargo lives on the captain)
+        cargo_hold = s.captain.cargo
+        cargo_loss = sum(c.quantity for c in cargo_hold) // 2
         silver_loss = s.captain.silver // 4
         if cargo_loss > 0:
-            # Remove half of each cargo type
-            for item in s.captain.ship.cargo:
+            for item in cargo_hold:
                 item.quantity = max(0, item.quantity - item.quantity // 2)
-            s.captain.ship.cargo = [c for c in s.captain.ship.cargo if c.quantity > 0]
+            s.captain.cargo = [c for c in cargo_hold if c.quantity > 0]
             console.print("[red]Pirates take half your cargo.[/red]")
         if silver_loss > 0:
             s.captain.silver -= silver_loss
@@ -2152,6 +2144,7 @@ def capture(
     """Capture a defeated enemy ship as a prize."""
     global _active_encounter
     s = _session()
+    _restore_encounter(s)
     if _active_encounter is None or _active_encounter.phase != "capture_available":
         console.print("[yellow]No ship available to capture.[/yellow]")
         return
@@ -2275,6 +2268,10 @@ def fight(
     combat_rng = random.Random(s.world.seed + s.world.day * 1000 + enc.duel_turns + enc.naval_turns)
     result = resolve_duel_turn(enc, action, p, o, combat_rng)
 
+    # Persist combat state before rendering so a view crash cannot drop the turn
+    _sync_encounter_phase(s)
+    s._save()
+
     console.print(combat_views.combat_round_view({
         "turn": result.turn,
         "player_action": result.player_action,
@@ -2288,14 +2285,25 @@ def fight(
         "style_effect": result.style_effect,
     }))
 
+    from portlight.content.injuries import INJURIES
+    injury_ids = [inj.injury_id for inj in s.captain.injuries]
+    if result.injury_inflicted and result.injury_inflicted not in injury_ids:
+        injury_ids.append(result.injury_inflicted)
+    injury_dicts = []
+    for iid in injury_ids:
+        idef = INJURIES.get(iid)
+        injury_dicts.append({
+            "name": idef.name if idef else str(iid).replace("_", " ").title(),
+            "severity": idef.severity if idef else "minor",
+            "effect": idef.description if idef else "",
+        })
+
     # Show status
     console.print(combat_views.combat_status_view(
         p.hp, p.hp_max, p.stamina, p.stamina_max,
         o.hp, o.hp_max, enc.enemy_captain_name,
         p.ammo, p.throwing_weapons, s.captain.active_style,
-        [inj.injury_id for inj in s.captain.injuries] + (
-            [result.injury_inflicted] if result.injury_inflicted else []
-        ),
+        injury_dicts,
         get_encounter_combat_actions(p), result.turn,
     ))
 
@@ -2827,18 +2835,21 @@ def _finalize_victory(s, spared: bool) -> None:
             color = RELIC_COLORS.get(tier_change, "white")
             console.print(f"[{color}]Your weapon has reached {label} status — {prov.kills} kills.[/{color}]")
 
-    # Roll loot (take-all gets more)
+    # Roll loot (take-all gets more). Argument order matches TUI / engine:
+    # roll_loot(strength, captain_id, rng); apply_loot(captain, loot).
     try:
         from portlight.engine.loot import apply_loot, roll_loot
-        loot = roll_loot(enc.enemy_captain_id, enc.enemy_strength, s._rng)
+        loot = roll_loot(enc.enemy_strength, enc.enemy_captain_id, s._rng)
         if loot and not spared:
-            apply_loot(loot, s.captain)
+            apply_loot(s.captain, loot)
             console.print(combat_views.loot_view(loot) if hasattr(combat_views, 'loot_view') else f"[green]Loot: {loot}[/green]")
         elif loot and spared:
             # Sparing = no loot
             console.print("[dim]You leave their possessions untouched.[/dim]")
-    except (ImportError, Exception):
-        pass
+    except ImportError:
+        console.print("[dim]Loot tables unavailable.[/dim]")
+    except Exception as exc:
+        console.print(f"[yellow]Could not apply loot: {exc}[/yellow]")
 
     # Companion morale trigger
     try:
