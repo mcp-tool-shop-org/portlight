@@ -218,17 +218,43 @@ def create_player_combatant(
     )
 
 
+# Generic firearm profile (matchlock_pistol). Used when a catalog id is
+# missing: 4–6 damage, 0.65 accuracy, 1-turn reload. Throw already documents
+# a 2–3 / 0.70 fallback; shoot uses this equivalent.
+_GENERIC_FIREARM_DAMAGE_MIN = 4
+_GENERIC_FIREARM_DAMAGE_MAX = 6
+_GENERIC_FIREARM_ACCURACY = 0.65
+_GENERIC_FIREARM_RELOAD = 1
+_DEFAULT_OPPONENT_FIREARM_ID = "matchlock_pistol"
+
+
 def create_opponent_combatant(
     strength: int,
     personality: str,
     active_style: str | None = None,
     ammo: int = 0,
     throwing_weapons: int = 0,
+    firearm_id: str | None = None,
 ) -> CombatantState:
-    """Create opponent combatant from pirate captain attributes."""
+    """Create opponent combatant from pirate captain attributes.
+
+    Ammo is only granted with a catalogued firearm_id (default matchlock
+    pistol). Empty or unknown ids do not receive ammo, so shoot cannot be
+    offered every turn with no reload.
+    """
     hp = BASE_OPPONENT_HP + (strength - 5) * 2
     hp = max(6, hp)
     stamina = 6 + strength // 2
+
+    resolved_firearm = firearm_id if firearm_id in RANGED_WEAPONS else None
+    if ammo > 0 and resolved_firearm is None:
+        resolved_firearm = _DEFAULT_OPPONENT_FIREARM_ID
+        if resolved_firearm not in RANGED_WEAPONS:
+            ammo = 0
+            resolved_firearm = None
+    if ammo <= 0:
+        ammo = 0
+        resolved_firearm = None
 
     return CombatantState(
         hp=hp,
@@ -238,6 +264,7 @@ def create_opponent_combatant(
         ammo=ammo,
         throwing_weapons=throwing_weapons,
         active_style=active_style,
+        firearm_id=resolved_firearm,
     )
 
 
@@ -248,12 +275,22 @@ def create_opponent_combatant(
 def _select_shoot_weapon(state: CombatantState) -> str | None:
     """Weapon that currently makes shoot available.
 
-    Firearm only if ammo>0 and reload_turns<=0; otherwise mechanical if
-    that weapon is ready. Matches get_available_actions.
+    Firearm only if ammo>0, reload_turns<=0, and firearm_id is in
+    RANGED_WEAPONS; otherwise mechanical if that weapon is ready and
+    catalogued. Matches get_available_actions — catalog miss does not
+    offer shoot.
     """
-    if state.ammo > 0 and state.reload_turns <= 0:
+    if (
+        state.ammo > 0
+        and state.reload_turns <= 0
+        and (state.firearm_id or "") in RANGED_WEAPONS
+    ):
         return "firearm"
-    if state.mechanical_ammo > 0 and state.mechanical_reload <= 0:
+    if (
+        state.mechanical_ammo > 0
+        and state.mechanical_reload <= 0
+        and (state.mechanical_weapon_id or "") in RANGED_WEAPONS
+    ):
         return "mechanical"
     return None
 
@@ -268,17 +305,20 @@ def _weapon_id_for_shoot(state: CombatantState) -> str | None:
 
 
 def _consume_shot(state: CombatantState, kind: str | None) -> None:
-    """Spend ammo and start reload on the weapon that actually fired."""
+    """Spend ammo and start reload on the weapon that actually fired.
+
+    Catalog hits use the weapon's reload_turns (0 is legal, e.g. blowgun).
+    Catalog miss still applies a 1-turn reload so shoot cannot remain
+    available every turn after a spent round.
+    """
     if kind == "firearm":
         state.ammo = max(0, state.ammo - 1)
         weapon = RANGED_WEAPONS.get(state.firearm_id or "")
-        if weapon:
-            state.reload_turns = weapon.reload_turns
+        state.reload_turns = weapon.reload_turns if weapon else _GENERIC_FIREARM_RELOAD
     elif kind == "mechanical":
         state.mechanical_ammo = max(0, state.mechanical_ammo - 1)
         weapon = RANGED_WEAPONS.get(state.mechanical_weapon_id or "")
-        if weapon:
-            state.mechanical_reload = weapon.reload_turns
+        state.mechanical_reload = weapon.reload_turns if weapon else _GENERIC_FIREARM_RELOAD
 
 
 def get_available_actions(state: CombatantState) -> list[str]:
@@ -502,11 +542,26 @@ def _roll_player_throw(
     return 0, "Your throw goes wide.", 0
 
 
-def _roll_opponent_shoot(player_action: str, rng: random.Random) -> tuple[int, str]:
-    """Opponent shoot vs a non-dodge player. Returns (damage, flavor)."""
-    # randint before accuracy — preserves seeded melee-vs-ranged sequences
-    opp_dmg = rng.randint(4, 6)
-    accuracy = 0.65
+def _roll_opponent_shoot(
+    player_action: str,
+    rng: random.Random,
+    opponent_state: CombatantState | None = None,
+) -> tuple[int, str]:
+    """Opponent shoot vs a non-dodge player. Returns (damage, flavor).
+
+    Uses the catalogued weapon when firearm_id/mechanical_weapon_id hits;
+    otherwise the documented generic firearm profile (4–6 / 0.65).
+    randint before accuracy — preserves seeded melee-vs-ranged sequences.
+    """
+    weapon_id = _weapon_id_for_shoot(opponent_state) if opponent_state is not None else None
+    weapon = RANGED_WEAPONS.get(weapon_id) if weapon_id else None
+    if weapon is None:
+        dmg_min, dmg_max = _GENERIC_FIREARM_DAMAGE_MIN, _GENERIC_FIREARM_DAMAGE_MAX
+        accuracy = _GENERIC_FIREARM_ACCURACY
+    else:
+        dmg_min, dmg_max = weapon.damage_min, weapon.damage_max
+        accuracy = weapon.accuracy
+    opp_dmg = rng.randint(dmg_min, dmg_max)
     if rng.random() <= accuracy:
         if player_action == "parry":
             flavor = f"You raise your guard but the bullet punches through. {opp_dmg} damage!"
@@ -711,7 +766,9 @@ def resolve_combat_round(
                     p_flavor = f"Your {player_action} connects for {p_dmg}."
 
         if opp_action == "shoot":
-            dmg_to_player, o_flavor = _roll_opponent_shoot(player_action, rng)
+            dmg_to_player, o_flavor = _roll_opponent_shoot(
+                player_action, rng, opponent_state,
+            )
         elif opp_action == "throw":
             dmg_to_player, o_flavor = _roll_opponent_throw(rng)
         elif opp_action in CORE_ACTIONS and player_action in RANGED_ACTIONS:
