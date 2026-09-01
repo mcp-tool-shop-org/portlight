@@ -351,6 +351,7 @@ class Captain:
     breach_records: list[dict] = field(default_factory=list)  # contract breach incidents
     wanted_level: int = 0  # 0=clean, 1=watched, 2=wanted, 3=hunted
     active_bounties: list[str] = field(default_factory=list)  # bounty target captain_ids
+    claimed_bounties: list[str] = field(default_factory=list)  # ids already paid out
 
 
 # ---------------------------------------------------------------------------

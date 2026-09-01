@@ -90,10 +90,21 @@ def generate_bounty_board(
     return rng.sample(available, max_targets)
 
 
+def _claimed_ids(captain: "Captain") -> list[str]:
+    """Paid-out bounty ids. Default empty list on captains that lack the field."""
+    claimed = getattr(captain, "claimed_bounties", None)
+    if claimed is None:
+        captain.claimed_bounties = []
+        return captain.claimed_bounties
+    return claimed
+
+
 def accept_bounty(captain: "Captain", target_id: str) -> str | None:
     """Accept a bounty target. Returns error string or None."""
     if target_id in captain.active_bounties:
         return "Already hunting this target"
+    if target_id in _claimed_ids(captain):
+        return "Bounty already claimed"
     if len(captain.active_bounties) >= 3:
         return "Maximum 3 active bounties"
     captain.active_bounties.append(target_id)
@@ -112,6 +123,10 @@ def claim_bounty(
     if target_id not in captain.active_bounties:
         return "No active bounty for this target"
 
+    claimed = _claimed_ids(captain)
+    if target_id in claimed:
+        return "Bounty already claimed"
+
     mem = pirates.captain_memories.get(target_id)
     if _times_defeated_by_player(mem) <= 0:
         return "Target not yet defeated. Find and defeat them at sea."
@@ -128,4 +143,6 @@ def claim_bounty(
 
     captain.silver += reward
     captain.active_bounties.remove(target_id)
+    if target_id not in claimed:
+        claimed.append(target_id)
     return reward

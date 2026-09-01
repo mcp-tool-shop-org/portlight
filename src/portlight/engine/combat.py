@@ -245,6 +245,42 @@ def create_opponent_combatant(
 # Action validation
 # ---------------------------------------------------------------------------
 
+def _select_shoot_weapon(state: CombatantState) -> str | None:
+    """Weapon that currently makes shoot available.
+
+    Firearm only if ammo>0 and reload_turns<=0; otherwise mechanical if
+    that weapon is ready. Matches get_available_actions.
+    """
+    if state.ammo > 0 and state.reload_turns <= 0:
+        return "firearm"
+    if state.mechanical_ammo > 0 and state.mechanical_reload <= 0:
+        return "mechanical"
+    return None
+
+
+def _weapon_id_for_shoot(state: CombatantState) -> str | None:
+    kind = _select_shoot_weapon(state)
+    if kind == "firearm":
+        return state.firearm_id
+    if kind == "mechanical":
+        return state.mechanical_weapon_id
+    return None
+
+
+def _consume_shot(state: CombatantState, kind: str | None) -> None:
+    """Spend ammo and start reload on the weapon that actually fired."""
+    if kind == "firearm":
+        state.ammo = max(0, state.ammo - 1)
+        weapon = RANGED_WEAPONS.get(state.firearm_id or "")
+        if weapon:
+            state.reload_turns = weapon.reload_turns
+    elif kind == "mechanical":
+        state.mechanical_ammo = max(0, state.mechanical_ammo - 1)
+        weapon = RANGED_WEAPONS.get(state.mechanical_weapon_id or "")
+        if weapon:
+            state.mechanical_reload = weapon.reload_turns
+
+
 def get_available_actions(state: CombatantState) -> list[str]:
     """Get actions available to a combatant this turn."""
     if state.stun_turns > 0:
@@ -256,12 +292,9 @@ def get_available_actions(state: CombatantState) -> list[str]:
     # Core triangle always available
     actions.extend(CORE_ACTIONS)
 
-    # Ranged: shoot requires ammo and no reload cooldown and can_use_firearms
-    if state.ammo > 0 and state.reload_turns <= 0 and effects["can_use_firearms"]:
+    # Ranged: shoot requires a ready firearm or mechanical weapon
+    if effects["can_use_firearms"] and _select_shoot_weapon(state) is not None:
         actions.append("shoot")
-    if state.mechanical_ammo > 0 and state.mechanical_reload <= 0 and effects["can_use_firearms"]:
-        if "shoot" not in actions:
-            actions.append("shoot")
 
     # Throw requires throwing weapons
     if state.throwing_weapons > 0:
@@ -432,9 +465,7 @@ def _roll_player_shoot(
     rng: random.Random,
 ) -> tuple[int, str]:
     """Player shoot vs a non-dodge opponent. Returns (damage, flavor)."""
-    weapon_id = player_state.firearm_id
-    if weapon_id is None or player_state.ammo <= 0:
-        weapon_id = player_state.mechanical_weapon_id
+    weapon_id = _weapon_id_for_shoot(player_state)
 
     accuracy_mod = player_effects.get("ranged_accuracy_mod", 0.0)
     if player_style:
@@ -771,8 +802,8 @@ def pick_opponent_action(
     """Pick opponent combat action based on personality and state."""
     weights = dict(_COMBAT_AI_WEIGHTS.get(personality, _COMBAT_AI_WEIGHTS["balanced"]))
 
-    # Can't shoot without ammo or while reloading
-    if opponent_state.ammo <= 0 or opponent_state.reload_turns > 0:
+    # Can't shoot without a ready weapon (same rule as get_available_actions)
+    if _select_shoot_weapon(opponent_state) is None:
         weights["shoot"] = 0.0
 
     # Can't throw without weapons
@@ -848,26 +879,29 @@ def apply_round_to_states(
     player_state.last_action = round_result.player_action
     opponent_state.last_action = round_result.opponent_action
 
-    # Reload tick (before new reloads are set)
-    if player_state.reload_turns > 0 and round_result.player_action != "shoot":
+    # Reload tick (before new reloads are set). Only skip the weapon that fired.
+    player_shot = (
+        _select_shoot_weapon(player_state)
+        if round_result.player_action == "shoot"
+        else None
+    )
+    opponent_shot = (
+        _select_shoot_weapon(opponent_state)
+        if round_result.opponent_action == "shoot"
+        else None
+    )
+    if player_state.reload_turns > 0 and player_shot != "firearm":
         player_state.reload_turns -= 1
-    if player_state.mechanical_reload > 0 and round_result.player_action != "shoot":
+    if player_state.mechanical_reload > 0 and player_shot != "mechanical":
         player_state.mechanical_reload -= 1
-    if opponent_state.reload_turns > 0 and round_result.opponent_action != "shoot":
+    if opponent_state.reload_turns > 0 and opponent_shot != "firearm":
         opponent_state.reload_turns -= 1
+    if opponent_state.mechanical_reload > 0 and opponent_shot != "mechanical":
+        opponent_state.mechanical_reload -= 1
 
-    # Ammo consumption + new reload
+    # Ammo consumption + new reload on the weapon that made shoot available
     if round_result.player_action == "shoot":
-        if player_state.ammo > 0:
-            player_state.ammo -= 1
-            weapon = RANGED_WEAPONS.get(player_state.firearm_id or "")
-            if weapon:
-                player_state.reload_turns = weapon.reload_turns
-        elif player_state.mechanical_ammo > 0:
-            player_state.mechanical_ammo -= 1
-            weapon = RANGED_WEAPONS.get(player_state.mechanical_weapon_id or "")
-            if weapon:
-                player_state.mechanical_reload = weapon.reload_turns
+        _consume_shot(player_state, player_shot)
 
     if round_result.player_action == "throw":
         player_state.throwing_weapons = max(0, player_state.throwing_weapons - 1)
@@ -875,7 +909,7 @@ def apply_round_to_states(
             player_state.throwing_weapon_ids.pop(0)  # consume the first weapon
 
     if round_result.opponent_action == "shoot":
-        opponent_state.ammo = max(0, opponent_state.ammo - 1)
+        _consume_shot(opponent_state, opponent_shot)
     if round_result.opponent_action == "throw":
         opponent_state.throwing_weapons = max(0, opponent_state.throwing_weapons - 1)
 
