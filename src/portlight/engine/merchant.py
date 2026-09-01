@@ -93,6 +93,8 @@ def buy_from_merchant(
     entry = next((i for i in inventory if i["item_id"] == item_id), None)
     if entry is None:
         return f"{merchant.name} doesn't sell {item_id}"
+    if qty <= 0:
+        return "Quantity must be positive"
 
     total_cost = entry["silver_cost"] * qty
     if total_cost > captain.silver:
