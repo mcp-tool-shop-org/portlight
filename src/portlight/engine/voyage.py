@@ -159,6 +159,7 @@ def _resolve_event(
     """Generate concrete effects for an event type, aware of ship and cargo."""
     from portlight.content.ships import SHIPS
     from portlight.content.upgrades import UPGRADES
+    from portlight.engine.economy import cargo_quantity
     from portlight.engine.ship_stats import resolve_storm_resist
     template = SHIPS.get(ship.template_id)
     if template:
@@ -263,7 +264,7 @@ def _resolve_event(
                     seized_goods = {}
                     contraband_value = 0
                     for item in contraband_items:
-                        seized_goods[item.good_id] = item.quantity
+                        seized_goods[item.good_id] = seized_goods.get(item.good_id, 0) + item.quantity
                         contraband_value += item.quantity * 30  # rough value for fine calc
                     fine = contraband_value * 3
                     fee += fine
@@ -284,7 +285,10 @@ def _resolve_event(
                     legal_cargo = [c for c in captain.cargo if c.good_id not in ("opium", "black_powder", "stolen_cargo")]
                     if legal_cargo:
                         target = rng.choice(legal_cargo)
-                        seized = min(target.quantity, rng.randint(1, 3))
+                        seized = min(
+                            cargo_quantity(captain.cargo, target.good_id),
+                            rng.randint(1, 3),
+                        )
                         seized_goods = {target.good_id: seized}
                         seizure_msg = f" They confiscate {seized} units of {target.good_id}!"
             actual_fee = min(fee, captain.silver)
@@ -314,7 +318,7 @@ def _resolve_event(
                 target = rng.choice(captain.cargo)
                 raw_lost = rng.randint(1, 3)
                 lost = max(1, int(raw_lost * cargo_dmg_mult))
-                lost = min(target.quantity, lost)
+                lost = min(cargo_quantity(captain.cargo, target.good_id), lost)
                 return VoyageEvent(
                     EventType.CARGO_DAMAGED,
                     f"Rough seas damaged {lost} units of {target.good_id} in the hold.",
@@ -776,15 +780,13 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
             dmg = max(1, int(raw_dmg * (1 - sr)))
             owned.ship.hull = max(0, owned.ship.hull - dmg)
 
-    # Apply cargo damage
-    if event.cargo_lost:
-        for good_id, lost in event.cargo_lost.items():
-            for item in captain.cargo:
-                if item.good_id == good_id:
-                    item.quantity = max(0, item.quantity - lost)
-                    if item.quantity == 0:
-                        captain.cargo.remove(item)
-                    break
+    # Apply cargo_lost FIFO across provenance lots (not first-stack-only)
+    from portlight.engine.economy import consume_cargo_fifo
+    for ev in events:
+        if ev.cargo_lost:
+            for good_id, lost in ev.cargo_lost.items():
+                if lost > 0:
+                    consume_cargo_fifo(captain.cargo, good_id, lost)
 
     # Progress (undermanned penalty + captain speed bonus + crew navigator + convoy + seasonal)
     from portlight.content.upgrades import UPGRADES
