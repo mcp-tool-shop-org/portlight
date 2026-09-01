@@ -130,9 +130,13 @@ class TestShipClassRoutes:
         assert "BLOCKED" in warning
 
     def test_sloop_blocked_on_brigantine_route(self):
-        """Sloop is 2 ranks below brigantine — blocked, not warned."""
+        """Sloop is 2 ranks below brigantine — blocked, not warned.
+
+        porto_novo–sun_harbor is now cutter (Stage A F-88440284). Use a
+        remaining brigantine cross-region hop so the rank-gap assertion holds.
+        """
         world = new_game()
-        route = find_route(world, "porto_novo", "sun_harbor")
+        route = find_route(world, "al_manar", "sun_harbor")
         assert route is not None
         assert route.min_ship_class == "brigantine"
         warning = check_route_suitability(route, world.captain.ship)
@@ -151,7 +155,7 @@ class TestShipLadder:
     """Ship upgrades change what routes make sense."""
 
     def test_brigantine_opens_west_africa(self, tmp_path: Path):
-        """With brigantine, Porto Novo -> Sun Harbor is accessible."""
+        """Brigantine still meets the Cotton Crossing (now cutter-min)."""
         s = GameSession(tmp_path)
         s.new()
         s.captain.silver = 1000
