@@ -160,6 +160,58 @@ def injury_ids_from(injuries) -> list[str]:
     return ids
 
 
+def naval_capture_gate(captain, encounter) -> tuple[bool, str]:
+    """Whether a naval sink may become a prize. Same gate as CLI naval."""
+    from portlight.engine.encounter import can_capture_prize
+    from portlight.engine.models import max_fleet_size
+    trust = 0
+    standing = getattr(captain, "standing", None)
+    if standing is not None:
+        trust = getattr(standing, "commercial_trust", 0) or 0
+    return can_capture_prize(captain, encounter, max_fleet_size(trust))
+
+
+def prize_crew_limits(captain, encounter) -> tuple[int, int]:
+    """Minimum crew for the prize and the flagship after a split."""
+    from portlight.engine.encounter import prize_template_id
+    prize_tid = prize_template_id(encounter.enemy_strength)
+    prize_tmpl = SHIPS.get(prize_tid)
+    prize_min = prize_tmpl.crew_min if prize_tmpl else 3
+    current_tmpl = SHIPS.get(captain.ship.template_id)
+    current_min = current_tmpl.crew_min if current_tmpl else 3
+    return prize_min, current_min
+
+
+def assign_prize_ship(session: "GameSession", encounter, crew_to_assign: int):
+    """Validate crew, capture the prize, append to fleet.
+
+    Returns (OwnedShip, None) on success or (None, error) matching CLI capture.
+    """
+    from portlight.engine.encounter import capture_prize
+
+    captain = session.captain
+    can_cap, reason = naval_capture_gate(captain, encounter)
+    if not can_cap:
+        return None, f"Cannot capture: {reason}"
+
+    prize_min, current_min = prize_crew_limits(captain, encounter)
+    if crew_to_assign < prize_min:
+        return None, f"Need at least {prize_min} crew for the prize ship."
+    leftover = captain.ship.crew - crew_to_assign
+    if leftover < current_min:
+        return None, (
+            f"Would leave your flagship with {leftover} crew (need {current_min})."
+        )
+
+    owned = capture_prize(captain, encounter, crew_to_assign)
+    if session.world and session.world.voyage:
+        owned.docked_port_id = session.world.voyage.destination_id
+    else:
+        owned.docked_port_id = session.current_port_id or "porto_novo"
+    captain.fleet.append(owned)
+    return owned, None
+
+
 def inventory_gear_data(captain) -> dict:
     """Map captain combat_gear, injuries, and upgrades into inventory_view keys."""
     gear = captain.combat_gear

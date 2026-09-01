@@ -1,6 +1,7 @@
 """Encounter screen -- continuous multi-phase combat experience.
 
-Flows through: approach -> naval -> boarding -> duel -> victory/defeat.
+Flows through: approach -> naval -> boarding -> duel -> victory/defeat,
+or naval sink -> capture_available (prize crew split, not duel payout).
 A single RichLog persists across all phases as a scrollable encounter journal.
 Panel visibility toggles per phase. Action keys change per phase.
 """
@@ -46,6 +47,11 @@ _VICTORY_ACTIONS = (
     "  [bold #2a9d8f]S[/bold #2a9d8f].Spare  "
     "[bold #e76f51]A[/bold #e76f51].Take All  "
     "[dim]Esc.Leave[/dim]"
+)
+_CAPTURE_ACTIONS = (
+    "  [bold #2a9d8f]C[/bold #2a9d8f].Capture  "
+    "[bold #e9c46a]+/-[/bold #e9c46a].Crew  "
+    "[bold #e76f51]F[/bold #e76f51].Let sink"
 )
 _DEFEAT_ACTIONS = "  [dim]Esc.Leave[/dim]"
 
@@ -103,6 +109,10 @@ class EncounterScreen(Screen):
         Binding("x", "encounter_key('parry')", "Parry", priority=True),
         Binding("o", "encounter_key('shoot')", "Shoot", priority=True),
         Binding("w", "encounter_key('throw')", "Throw", priority=True),
+        Binding("minus", "encounter_key('crew_down')", show=False, priority=True),
+        Binding("plus", "encounter_key('crew_up')", show=False, priority=True),
+        Binding("equals", "encounter_key('crew_up')", show=False, priority=True),
+        Binding("enter", "encounter_key('capture')", show=False, priority=True),
         Binding("escape", "encounter_escape", "Leave", priority=True),
     ]
 
@@ -110,10 +120,13 @@ class EncounterScreen(Screen):
         super().__init__()
         self.session = session
         self.encounter = encounter
-        self._phase = encounter.phase  # approach | naval | boarding | duel | victory | defeat
+        self._phase = encounter.phase  # approach | naval | boarding | duel | victory | defeat | capture_available
         self._player_combatant = None
         self._opponent_combatant = None
         self._transitioning = False
+        self._crew_to_assign = 0
+        self._prize_min = 0
+        self._flagship_min = 0
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -135,9 +148,12 @@ class EncounterScreen(Screen):
             # Boarding is a one-shot transition; persist as duel so we don't re-apply losses.
             self._write_header()
             self._begin_duel()
-        elif phase in ("victory", "capture_available"):
+        elif phase == "victory":
             self._write_header()
             self._enter_victory()
+        elif phase == "capture_available":
+            self._write_header()
+            self._enter_capture()
         elif phase in ("resolved", "defeat"):
             self._write_header()
             self._phase = phase
@@ -153,6 +169,8 @@ class EncounterScreen(Screen):
         """Handle Escape key — exit only if encounter is resolved."""
         if self._phase in ("victory", "defeat", "resolved"):
             self._exit_encounter()
+        elif self._phase == "capture_available":
+            self.app.notify("Capture the prize (C) or let it sink (F) first!", severity="warning")
         else:
             self.app.notify("Resolve the encounter first!", severity="warning")
 
@@ -187,6 +205,17 @@ class EncounterScreen(Screen):
                 self._handle_spare()
             elif key == "take_all":
                 self._handle_take_all()
+            return
+
+        if phase == "capture_available":
+            if key in ("capture", "close"):
+                self._confirm_capture()
+            elif key == "flee":
+                self._decline_capture()
+            elif key == "crew_up":
+                self._adjust_crew(1)
+            elif key == "crew_down":
+                self._adjust_crew(-1)
             return
 
     # ------------------------------------------------------------------
@@ -391,11 +420,11 @@ class EncounterScreen(Screen):
             self._enter_defeat("Your ship is lost!")
             return
 
-        # Check transitions
+        # Check transitions. Naval sink is prize-capture, never duel victory.
         if result["enemy_sunk"]:
             log.write("[bold green]Enemy ship destroyed![/bold green]")
             self.session.world.pirates.naval_victories += 1
-            self._enter_victory()
+            self._offer_prize_or_clear()
         elif result["boarding_triggered"]:
             log.write("[bold yellow]Boarding threshold reached![/bold yellow]")
             self._auto_boarding()
@@ -599,6 +628,102 @@ class EncounterScreen(Screen):
 
         self.query_one("#combatant-player", Static).update(player_text)
         self.query_one("#combatant-enemy", Static).update(enemy_text)
+
+    # ------------------------------------------------------------------
+    # Naval prize capture (not duel spare/take-all)
+    # ------------------------------------------------------------------
+
+    def is_capturing_prize(self) -> bool:
+        return self._phase == "capture_available"
+
+    def _offer_prize_or_clear(self) -> None:
+        """Match CLI naval sink: persist capture_available, or clear. No duel payout."""
+        from portlight.app.session import naval_capture_gate
+        log = self.query_one("#encounter-log", RichLog)
+        can_cap, reason = naval_capture_gate(self.session.captain, self.encounter)
+        if can_cap:
+            self._enter_capture()
+            return
+        log.write(f"[dim]Cannot capture: {reason}[/dim]")
+        log.write("[green]The wreck slips under. Encounter over.[/green]")
+        self._resolve_without_prize()
+        self.app.notify("Naval victory — no prize.", severity="information", timeout=4)
+
+    def _enter_capture(self) -> None:
+        from portlight.app.session import prize_crew_limits
+        enc = self.encounter
+        self._phase = "capture_available"
+        enc.phase = "capture_available"
+        prize_min, flagship_min = prize_crew_limits(self.session.captain, enc)
+        self._prize_min = prize_min
+        self._flagship_min = flagship_min
+        lo, hi = self._crew_assign_range()
+        self._crew_to_assign = lo
+        log = self.query_one("#encounter-log", RichLog)
+        log.write("")
+        log.write(f"[bold #264653]{'=' * 40}[/bold #264653]")
+        log.write("[bold #e9c46a]PRIZE[/bold #e9c46a]")
+        log.write(f"[bold #264653]{'=' * 40}[/bold #264653]")
+        log.write(f"  You can take {enc.enemy_captain_name}'s vessel as a prize.")
+        log.write(f"  Prize needs at least {prize_min} crew; flagship must keep {flagship_min}.")
+        log.write(f"  Crew aboard: {self.session.captain.ship.crew}  (assign {lo}–{hi})")
+        log.write("  [green]C - Capture[/green] with assigned crew   [red]F - Let it sink[/red]")
+        log.write("")
+        self.query_one("#ship-panels").remove_class("hidden")
+        self.query_one("#combatant-panels").add_class("hidden")
+        self._refresh_ship_panels()
+        self._update_actions(_CAPTURE_ACTIONS)
+        self._refresh_capture_actions()
+        self._persist_encounter()
+
+    def _crew_assign_range(self) -> tuple[int, int]:
+        crew = self.session.captain.ship.crew
+        lo = self._prize_min
+        hi = max(lo, crew - self._flagship_min)
+        return lo, hi
+
+    def _adjust_crew(self, delta: int) -> None:
+        lo, hi = self._crew_assign_range()
+        self._crew_to_assign = min(hi, max(lo, self._crew_to_assign + delta))
+        self._refresh_capture_actions()
+
+    def _refresh_capture_actions(self) -> None:
+        n = self._crew_to_assign
+        leftover = self.session.captain.ship.crew - n
+        self._update_actions(
+            f"  [bold #2a9d8f]C[/bold #2a9d8f].Capture ({n} crew, {leftover} remain)  "
+            f"[bold #e9c46a]+/-[/bold #e9c46a].Crew  "
+            f"[bold #e76f51]F[/bold #e76f51].Let sink"
+        )
+
+    def _confirm_capture(self) -> None:
+        from portlight.app.session import assign_prize_ship
+        owned, err = assign_prize_ship(self.session, self.encounter, self._crew_to_assign)
+        log = self.query_one("#encounter-log", RichLog)
+        if err:
+            self.app.notify(err, severity="warning")
+            log.write(f"[red]{err}[/red]")
+            return
+        log.write(f"[bold green]Prize captured![/bold green] {owned.ship.name} added to your fleet.")
+        log.write(
+            f"  Crew split: {self.session.captain.ship.crew} on flagship, "
+            f"{owned.ship.crew} on prize"
+        )
+        self._resolve_without_prize()
+        self.app.notify(f"Prize taken: {owned.ship.name}", severity="information", timeout=4)
+
+    def _decline_capture(self) -> None:
+        log = self.query_one("#encounter-log", RichLog)
+        log.write("[dim]You let the prize go under.[/dim]")
+        self._resolve_without_prize()
+        self.app.notify("Prize declined.", severity="information", timeout=4)
+
+    def _resolve_without_prize(self) -> None:
+        self._phase = "resolved"
+        self.encounter.phase = "resolved"
+        self._clear_pending()
+        self.session._save()
+        self._update_actions(_DEFEAT_ACTIONS)
 
     # ------------------------------------------------------------------
     # Victory

@@ -2094,11 +2094,8 @@ def naval(
     if result["enemy_sunk"]:
         console.print("\n[bold green]Enemy ship sinks beneath the waves![/bold green]")
         s.world.pirates.naval_victories += 1
-        # Check if capture is possible
-        from portlight.engine.encounter import can_capture_prize
-        from portlight.engine.models import max_fleet_size
-        trust = s.captain.standing.commercial_trust
-        can_cap, reason = can_capture_prize(s.captain, enc, max_fleet_size(trust))
+        from portlight.app.session import naval_capture_gate
+        can_cap, reason = naval_capture_gate(s.captain, enc)
         if can_cap:
             enc.phase = "capture_available"
             console.print("\n[bold yellow]You can capture this ship as a prize![/bold yellow]")
@@ -2160,38 +2157,13 @@ def capture(
         return
 
     enc = _active_encounter
-    from portlight.engine.encounter import can_capture_prize, capture_prize, prize_template_id
-    from portlight.engine.models import max_fleet_size
-    from portlight.content.ships import SHIPS
+    from portlight.app.session import assign_prize_ship
 
-    trust = s.captain.standing.commercial_trust
-    can_cap, reason = can_capture_prize(s.captain, enc, max_fleet_size(trust))
-    if not can_cap:
-        console.print(f"[red]Cannot capture: {reason}[/red]")
+    owned, err = assign_prize_ship(s, enc, crew_to_assign)
+    if err:
+        console.print(f"[red]{err}[/red]")
         return
 
-    # Validate crew assignment
-    prize_tid = prize_template_id(enc.enemy_strength)
-    prize_tmpl = SHIPS.get(prize_tid)
-    prize_min = prize_tmpl.crew_min if prize_tmpl else 3
-    current_tmpl = SHIPS.get(s.captain.ship.template_id)
-    current_min = current_tmpl.crew_min if current_tmpl else 3
-
-    if crew_to_assign < prize_min:
-        console.print(f"[red]Need at least {prize_min} crew for the prize ship.[/red]")
-        return
-    if s.captain.ship.crew - crew_to_assign < current_min:
-        console.print(f"[red]Would leave your flagship with {s.captain.ship.crew - crew_to_assign} crew (need {current_min}).[/red]")
-        return
-
-    # Capture the prize
-    owned = capture_prize(s.captain, enc, crew_to_assign)
-    # Set docked port to current voyage destination (or origin if not sailing)
-    if s.world.voyage:
-        owned.docked_port_id = s.world.voyage.destination_id
-    else:
-        owned.docked_port_id = s.current_port_id or "porto_novo"
-    s.captain.fleet.append(owned)
     _clear_encounter(s)
 
     console.print(f"\n[bold green]Prize captured![/bold green] {owned.ship.name} added to your fleet.")
