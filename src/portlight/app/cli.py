@@ -430,6 +430,9 @@ def sell(good: str, qty: str) -> None:
 @app.command()
 def provision(days: int = typer.Argument(10, help="Days of provisions to buy")) -> None:
     """Buy provisions at the current port's rate (modified by standing)."""
+    if days <= 0:
+        console.print("[red]Quantity must be a positive number.[/red]")
+        return
     s = _session()
     err = s.provision(days)
     if err:
@@ -449,6 +452,9 @@ def provision(days: int = typer.Argument(10, help="Days of provisions to buy")) 
 @app.command()
 def repair(amount: int = typer.Argument(None, help="Hull points to repair (default: full)")) -> None:
     """Repair ship hull (3 silver per HP)."""
+    if amount is not None and amount <= 0:
+        console.print("[red]Quantity must be a positive number.[/red]")
+        return
     s = _session()
     result = s.repair(amount)
     if isinstance(result, str):
@@ -1095,6 +1101,10 @@ def merchant(
         # Show merchant's inventory
         inv = get_merchant_inventory(m, port.region)
         console.print(merchant_shop_view(m.name, m.greeting, inv, s.captain.silver))
+        return
+
+    if qty <= 0:
+        console.print("[red]Quantity must be a positive number.[/red]")
         return
 
     # Buy from merchant
@@ -2513,6 +2523,10 @@ def armory(
              "ammo": s.captain.combat_gear.firearm_ammo + s.captain.combat_gear.mechanical_ammo,
              "throwing": s.captain.combat_gear.throwing_weapons},
         ))
+        return
+
+    if qty <= 0:
+        console.print("[red]Quantity must be a positive number.[/red]")
         return
 
     gear = s.captain.combat_gear
