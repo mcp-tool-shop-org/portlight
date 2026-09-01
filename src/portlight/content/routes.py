@@ -2,15 +2,18 @@
 
 Route design creates five archetype tiers:
   Tier 1 (Sloop): Mediterranean and North Atlantic internal. Short, safe, low margins.
-  Tier 2 (Brigantine): Cross-region bridges (Med<->WA, Med<->NA, WA internal).
-    Medium distance, moderate risk. Bulk commodity routes become viable.
-  Tier 3 (Galleon): Long-haul East Indies, South Seas, and cross-region shortcuts.
+  Tier 2 (Cutter): Early Med<->NA and Med<->WA hops. The Swift Cutter's first
+    real cross-region unlock — porto_novo–ironhaven and porto_novo–sun_harbor.
+  Tier 3 (Brigantine): Remaining cross-region bridges and bulk commodity lanes.
+    Medium distance, moderate risk. Opens the rest of NA/WA and WA<->EI hops.
+  Tier 4 (Galleon): Long-haul East Indies, South Seas, and cross-region shortcuts.
     High distance, high danger, but luxury margins justify the investment.
-  Tier 4 (Man-of-War): Dangerous shortcuts and South Seas deep routes.
+  Tier 5 (Man-of-War): Dangerous shortcuts and South Seas deep routes.
 
 Hero's journey progression:
-  Mediterranean -> North Atlantic (early expansion)
-  Mediterranean -> West Africa (mid-game)
+  Mediterranean -> North Atlantic (early expansion — cutter)
+  Mediterranean -> West Africa (early expansion — cutter on the Cotton Crossing)
+  Remaining Med bridges (brigantine)
   West Africa -> East Indies (late mid-game)
   East Indies -> South Seas (endgame exploration)
   Direct long-haul shortcuts reward the bold
@@ -41,16 +44,16 @@ ROUTES: list[Route] = [
           lore_name="The Tea and Tobacco Road", lore="Thornport's warmth heading to Stormwall's cold. The northern comfort trade."),
 
     # =========================================================================
-    # MEDITERRANEAN <-> NORTH ATLANTIC (Brigantine recommended)
+    # MEDITERRANEAN <-> NORTH ATLANTIC (cutter opens the first hop)
     # =========================================================================
-    Route("porto_novo",     "ironhaven",         distance=36,  danger=0.12,  min_ship_class="brigantine"),
+    Route("porto_novo",     "ironhaven",         distance=36,  danger=0.12,  min_ship_class="cutter"),
     Route("silva_bay",      "ironhaven",         distance=32,  danger=0.11,  min_ship_class="brigantine"),
     Route("corsairs_rest",  "stormwall",         distance=40,  danger=0.15,  min_ship_class="brigantine"),
 
     # =========================================================================
-    # MEDITERRANEAN <-> WEST AFRICA (Brigantine recommended)
+    # MEDITERRANEAN <-> WEST AFRICA (cutter opens the Cotton Crossing)
     # =========================================================================
-    Route("porto_novo",     "sun_harbor",        distance=40,  danger=0.12,  min_ship_class="brigantine",
+    Route("porto_novo",     "sun_harbor",        distance=40,  danger=0.12,  min_ship_class="cutter",
           lore_name="The Cotton Crossing", lore="Mediterranean grain south, Gold Coast cotton north. The route that clothed an empire."),
     Route("al_manar",       "sun_harbor",        distance=48,  danger=0.15,  min_ship_class="brigantine"),
     Route("silva_bay",      "palm_cove",         distance=44,  danger=0.13,  min_ship_class="brigantine"),

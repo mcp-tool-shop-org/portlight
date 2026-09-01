@@ -65,19 +65,23 @@ WAREHOUSE_TIERS: dict[WarehouseTier, WarehouseTierSpec] = {
 # Smaller ports cap at regional.
 # Remote ports cap at depot.
 PORT_WAREHOUSE_TIERS: dict[str, list[WarehouseTier]] = {
-    # Mediterranean
+    # Mediterranean (porto_novo, silva_bay = shipyard → commercial)
     "porto_novo":    [WarehouseTier.DEPOT, WarehouseTier.REGIONAL, WarehouseTier.COMMERCIAL],
     "al_manar":      [WarehouseTier.DEPOT, WarehouseTier.REGIONAL, WarehouseTier.COMMERCIAL],
     "silva_bay":     [WarehouseTier.DEPOT, WarehouseTier.REGIONAL, WarehouseTier.COMMERCIAL],
+    # North Atlantic (ironhaven = shipyard → commercial)
+    "ironhaven":     [WarehouseTier.DEPOT, WarehouseTier.REGIONAL, WarehouseTier.COMMERCIAL],
     # West Africa
     "sun_harbor":    [WarehouseTier.DEPOT, WarehouseTier.REGIONAL],
     "palm_cove":     [WarehouseTier.DEPOT],
     "iron_point":    [WarehouseTier.DEPOT, WarehouseTier.REGIONAL],
-    # East Indies
+    # East Indies (monsoon_reach = shipyard → commercial)
     "jade_port":     [WarehouseTier.DEPOT, WarehouseTier.REGIONAL, WarehouseTier.COMMERCIAL],
     "monsoon_reach": [WarehouseTier.DEPOT, WarehouseTier.REGIONAL, WarehouseTier.COMMERCIAL],
     "silk_haven":    [WarehouseTier.DEPOT, WarehouseTier.REGIONAL],
     "crosswind_isle": [WarehouseTier.DEPOT, WarehouseTier.REGIONAL],
+    # South Seas (typhoon_anchorage = shipyard → commercial)
+    "typhoon_anchorage": [WarehouseTier.DEPOT, WarehouseTier.REGIONAL, WarehouseTier.COMMERCIAL],
 }
 
 
