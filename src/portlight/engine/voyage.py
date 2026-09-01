@@ -754,7 +754,11 @@ def advance_day(world: "WorldState", rng: random.Random | None = None) -> list[V
     captain.ship.hull = max(0, captain.ship.hull + event.hull_delta)
     captain.provisions = max(0, captain.provisions + event.provision_delta)
     captain.silver = max(0, captain.silver + event.silver_delta)
-    captain.ship.crew = max(0, captain.ship.crew + event.crew_delta)
+    from portlight.engine.ship_stats import apply_crew_delta
+    for ev in events:
+        if ev.crew_delta:
+            ctx = "storm" if ev.event_type == EventType.STORM else "voyage"
+            apply_crew_delta(captain.ship, ev.crew_delta, ctx, rng)
 
     # Apply storm damage to convoy ships
     convoy_ships = [o for o in captain.fleet if o.docked_port_id == ""]

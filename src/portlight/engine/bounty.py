@@ -31,6 +31,21 @@ class BountyTarget:
     description: str
 
 
+def _times_defeated_by_player(mem: object) -> int:
+    """Defeats on a CaptainMemory or its save-dict form."""
+    if mem is None:
+        return 0
+    if isinstance(mem, dict):
+        value = mem.get("times_defeated_by_player")
+        if value is None:
+            value = mem.get("times_defeated", 0)
+        return int(value or 0)
+    value = getattr(mem, "times_defeated_by_player", None)
+    if value is None:
+        value = getattr(mem, "times_defeated", 0)
+    return int(value or 0)
+
+
 # Known pirate captains and their base bounties
 _PIRATE_BOUNTIES = [
     ("scarlet_ana", "Scarlet Ana", "crimson_tide", "North Atlantic", 150, "moderate",
@@ -53,15 +68,12 @@ def generate_bounty_board(
 ) -> list[BountyTarget]:
     """Generate bounty targets from the pirate pool.
 
-    Filters out already-defeated captains (those with positive times_defeated
-    in captain_memories) and selects a random subset.
+    Filters out already-defeated captains (those with positive
+    times_defeated_by_player in captain_memories) and selects a random subset.
     """
     defeated_ids = set()
     for cid, mem in pirates.captain_memories.items():
-        if isinstance(mem, dict):
-            if mem.get("times_defeated", 0) > 0:
-                defeated_ids.add(cid)
-        elif hasattr(mem, "times_defeated") and mem.times_defeated > 0:
+        if _times_defeated_by_player(mem) > 0:
             defeated_ids.add(cid)
 
     available = [
@@ -100,15 +112,8 @@ def claim_bounty(
     if target_id not in captain.active_bounties:
         return "No active bounty for this target"
 
-    # Check if target was defeated
     mem = pirates.captain_memories.get(target_id)
-    defeated = False
-    if isinstance(mem, dict):
-        defeated = mem.get("times_defeated", 0) > 0
-    elif mem and hasattr(mem, "times_defeated"):
-        defeated = mem.times_defeated > 0
-
-    if not defeated:
+    if _times_defeated_by_player(mem) <= 0:
         return "Target not yet defeated. Find and defeat them at sea."
 
     # Find reward
