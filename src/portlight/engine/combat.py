@@ -424,6 +424,99 @@ def _resolve_style_action(
         return "draw", 0, f"Your {sa.name} meets resistance."
 
 
+def _roll_player_shoot(
+    player_state: CombatantState,
+    player_effects: dict,
+    player_style: FightingStyle | None,
+    opp_action: str,
+    rng: random.Random,
+) -> tuple[int, str]:
+    """Player shoot vs a non-dodge opponent. Returns (damage, flavor)."""
+    weapon_id = player_state.firearm_id
+    if weapon_id is None or player_state.ammo <= 0:
+        weapon_id = player_state.mechanical_weapon_id
+
+    accuracy_mod = player_effects.get("ranged_accuracy_mod", 0.0)
+    if player_style:
+        accuracy_mod += player_style.passive_ranged_accuracy
+
+    dmg, hit = _calc_ranged_damage(weapon_id, rng, accuracy_mod, player_state.ranged_quality)
+    if hit:
+        if opp_action == "parry":
+            flavor = f"They try to parry but a bullet cares nothing for steel. {dmg} damage!"
+        else:
+            flavor = f"Your shot strikes true — {dmg} damage!"
+        return dmg, flavor
+    return 0, "Your shot goes wide. The powder smoke stings your eyes."
+
+
+def _roll_player_throw(
+    player_state: CombatantState,
+    player_effects: dict,
+    player_style: FightingStyle | None,
+    rng: random.Random,
+) -> tuple[int, str, int]:
+    """Player throw vs a non-dodge opponent. Returns (damage, flavor, stun)."""
+    throw_wid = player_state.throwing_weapon_ids[0] if player_state.throwing_weapon_ids else None
+    accuracy_mod = player_effects.get("ranged_accuracy_mod", 0.0)
+    if player_style:
+        accuracy_mod += player_style.passive_ranged_accuracy
+    dmg, hit, stun = _calc_throw_damage(throw_wid, rng, accuracy_mod)
+    if hit:
+        weapon_name = throw_wid.replace("_", " ").title() if throw_wid else "blade"
+        flavor = f"Your {weapon_name} strikes — {dmg} damage!"
+        if stun > 0:
+            flavor += f" They're tangled — stunned for {stun} turn!"
+        return dmg, flavor, stun
+    return 0, "Your throw goes wide.", 0
+
+
+def _roll_opponent_shoot(player_action: str, rng: random.Random) -> tuple[int, str]:
+    """Opponent shoot vs a non-dodge player. Returns (damage, flavor)."""
+    # randint before accuracy — preserves seeded melee-vs-ranged sequences
+    opp_dmg = rng.randint(4, 6)
+    accuracy = 0.65
+    if rng.random() <= accuracy:
+        if player_action == "parry":
+            flavor = f"You raise your guard but the bullet punches through. {opp_dmg} damage!"
+        else:
+            flavor = f"A gunshot cracks — {opp_dmg} damage!"
+        return opp_dmg, flavor
+    return 0, "A gunshot cracks but the ball goes wide."
+
+
+def _roll_opponent_throw(rng: random.Random) -> tuple[int, str]:
+    """Opponent throw vs a non-dodge player. Returns (damage, flavor)."""
+    opp_dmg = rng.randint(2, 3) if rng.random() < 0.70 else 0
+    if opp_dmg > 0:
+        return opp_dmg, f"A thrown blade catches you — {opp_dmg} damage!"
+    return 0, "A thrown weapon clatters past you."
+
+
+def _player_style_outgoing(
+    player_action: str,
+    opp_action: str,
+    player_style: FightingStyle,
+    player_effects: dict,
+    rng: random.Random,
+) -> tuple[int, str, str]:
+    """Style damage to the opponent only. Incoming is resolved separately."""
+    outcome, bonus_dmg, effect_desc = _resolve_style_action(
+        player_action, opp_action, player_style, rng,
+    )
+    if outcome == "win":
+        base = rng.randint(2, 3) + bonus_dmg
+        base += player_effects.get("melee_damage_mod", 0)
+        return max(0, base), effect_desc, effect_desc
+    if outcome == "lose":
+        return 0, effect_desc, effect_desc
+    return 1, effect_desc or "A glancing exchange.", effect_desc
+
+
+def _join_flavor(*parts: str) -> str:
+    return " ".join(p for p in parts if p)
+
+
 # ---------------------------------------------------------------------------
 # Round resolution
 # ---------------------------------------------------------------------------
@@ -485,122 +578,49 @@ def resolve_combat_round(
     o_stamina_delta -= o_cost
 
     # --- Resolve interactions ---
+    # Dodge short-circuits incoming. Melee-vs-melee and style-vs-melee stay
+    # coupled. Everything else resolves each side independently so opponent
+    # shoot/throw still roll when the player already branched shoot/throw/style.
+    player_special = bool(
+        player_style
+        and player_style.special_action
+        and player_action == player_style.special_action.id
+    )
 
-    # Both dodge
     if player_action == "dodge" and opp_action == "dodge":
         flavor = "Both fighters circle warily. Neither commits."
 
-    # Player dodges
     elif player_action == "dodge":
         flavor = "You dive aside, avoiding the attack entirely."
         if player_style and player_style.passive_dodge_counter > 0:
             dmg_to_opponent = player_style.passive_dodge_counter
             flavor += f" Your counterstrike catches them for {dmg_to_opponent} damage."
 
-    # Opponent dodges
     elif opp_action == "dodge":
         flavor = "They dodge your attack with practiced ease."
 
-    # Player shoots
-    elif player_action == "shoot":
-        if opp_action == "dodge":
-            flavor = "Your shot goes wide as they dive aside."
-        else:
-            # Determine which weapon to use
-            weapon_id = player_state.firearm_id
-            if weapon_id is None or player_state.ammo <= 0:
-                weapon_id = player_state.mechanical_weapon_id
+    elif player_action in CORE_ACTIONS and opp_action in CORE_ACTIONS:
+        outcome = _resolve_melee_outcome(player_action, opp_action)
 
-            accuracy_mod = player_effects.get("ranged_accuracy_mod", 0.0)
+        if outcome == "win":
+            dmg_to_opponent = _calc_melee_damage(player_action, outcome, rng, player_style, player_effects, player_state.melee_weapon_id, player_state.melee_quality)
+        elif outcome == "lose":
+            dmg_to_player = rng.randint(2, 3)
+        else:
+            dmg_to_opponent = 0
+            dmg_to_player = 0
+
+        flavor = _MELEE_FLAVOR.get((player_action, outcome), "Blades clash.")
+
+        if player_action == "parry":
+            parry_bonus = PARRY_STAMINA_BONUS
             if player_style:
-                accuracy_mod += player_style.passive_ranged_accuracy
+                parry_bonus += player_style.passive_parry_bonus
+            p_stamina_delta += parry_bonus
+        if opp_action == "parry":
+            o_stamina_delta += PARRY_STAMINA_BONUS
 
-            dmg, hit = _calc_ranged_damage(weapon_id, rng, accuracy_mod, player_state.ranged_quality)
-            if hit:
-                dmg_to_opponent = dmg
-                flavor = f"Your shot strikes true — {dmg} damage!"
-                if opp_action == "parry":
-                    flavor = f"They try to parry but a bullet cares nothing for steel. {dmg} damage!"
-            else:
-                flavor = "Your shot goes wide. The powder smoke stings your eyes."
-
-            # Opponent still gets their action (unless they dodged, handled above)
-            if opp_action in CORE_ACTIONS:
-                opp_dmg = rng.randint(2, 3) if opp_action != "parry" else 0
-                if opp_action == "thrust" or opp_action == "slash":
-                    dmg_to_player = opp_dmg
-                    flavor += f" But their {opp_action} finds you for {opp_dmg}."
-
-    # Opponent shoots
-    elif opp_action == "shoot":
-        if player_action == "dodge":
-            pass  # already handled above
-        else:
-            opp_dmg = rng.randint(4, 6)  # opponent generic ranged
-            accuracy = 0.65
-            if rng.random() <= accuracy:
-                dmg_to_player = opp_dmg
-                flavor = f"A gunshot cracks — {opp_dmg} damage!"
-                if player_action == "parry":
-                    flavor = f"You raise your guard but the bullet punches through. {opp_dmg} damage!"
-            else:
-                flavor = "A gunshot cracks but the ball goes wide."
-
-            # Player still gets melee
-            if player_action in CORE_ACTIONS and player_action != "parry":
-                p_dmg = _calc_melee_damage(player_action, "win", rng, player_style, player_effects, player_state.melee_weapon_id, player_state.melee_quality)
-                dmg_to_opponent = p_dmg
-                if p_dmg > 0:
-                    flavor += f" Your {player_action} connects for {p_dmg}."
-
-    # Player throws
-    elif player_action == "throw":
-        if opp_action == "dodge":
-            flavor = "Your throwing weapon sails past as they dodge."
-        else:
-            # Look up actual thrown weapon type
-            throw_wid = player_state.throwing_weapon_ids[0] if player_state.throwing_weapon_ids else None
-            accuracy_mod = player_effects.get("ranged_accuracy_mod", 0.0)
-            if player_style:
-                accuracy_mod += player_style.passive_ranged_accuracy
-            dmg, hit, stun = _calc_throw_damage(throw_wid, rng, accuracy_mod)
-            if hit:
-                dmg_to_opponent = dmg
-                weapon_name = throw_wid.replace("_", " ").title() if throw_wid else "blade"
-                flavor = f"Your {weapon_name} strikes — {dmg} damage!"
-                # Stun is applied after the round tick so a 1-turn stun lasts
-                # through the opponent's next action.
-                if stun > 0:
-                    stun_to_opponent = max(stun_to_opponent, stun)
-                    flavor += f" They're tangled — stunned for {stun} turn!"
-            else:
-                flavor = "Your throw goes wide."
-
-            if opp_action in CORE_ACTIONS:
-                opp_dmg = rng.randint(2, 3) if opp_action != "parry" else 0
-                if opp_action in ("thrust", "slash"):
-                    dmg_to_player = opp_dmg
-                    if opp_dmg > 0:
-                        flavor += f" Their {opp_action} catches you for {opp_dmg}."
-
-    # Opponent throws
-    elif opp_action == "throw":
-        opp_dmg = rng.randint(2, 3) if rng.random() < 0.70 else 0
-        if opp_dmg > 0:
-            dmg_to_player = opp_dmg
-            flavor = f"A thrown blade catches you — {opp_dmg} damage!"
-        else:
-            flavor = "A thrown weapon clatters past you."
-
-        if player_action in CORE_ACTIONS:
-            outcome = "win"  # melee beats throw
-            p_dmg = _calc_melee_damage(player_action, outcome, rng, player_style, player_effects, player_state.melee_weapon_id, player_state.melee_quality)
-            dmg_to_opponent = p_dmg
-            if p_dmg > 0:
-                flavor += f" Your {player_action} connects for {p_dmg}."
-
-    # Style action vs anything
-    elif player_style and player_style.special_action and player_action == player_style.special_action.id:
+    elif player_special and player_style is not None and opp_action not in RANGED_ACTIONS:
         outcome, bonus_dmg, effect_desc = _resolve_style_action(
             player_action, opp_action, player_style, rng,
         )
@@ -620,33 +640,65 @@ def resolve_combat_round(
             dmg_to_player = 1
             flavor = effect_desc or "A glancing exchange."
 
-    # Both melee (core triangle)
-    elif player_action in CORE_ACTIONS and opp_action in CORE_ACTIONS:
-        outcome = _resolve_melee_outcome(player_action, opp_action)
-
-        if outcome == "win":
-            dmg_to_opponent = _calc_melee_damage(player_action, outcome, rng, player_style, player_effects, player_state.melee_weapon_id, player_state.melee_quality)
-        elif outcome == "lose":
-            dmg_to_player = rng.randint(2, 3)
-        else:
-            # Draw: both chose same stance — no damage exchanged
-            dmg_to_opponent = 0
-            dmg_to_player = 0
-
-        flavor = _MELEE_FLAVOR.get((player_action, outcome), "Blades clash.")
-
-        # Parry stamina bonus
-        if player_action == "parry":
-            parry_bonus = PARRY_STAMINA_BONUS
-            if player_style:
-                parry_bonus += player_style.passive_parry_bonus
-            p_stamina_delta += parry_bonus
-        if opp_action == "parry":
-            o_stamina_delta += PARRY_STAMINA_BONUS
-
-    # Fallback
     else:
-        flavor = "An awkward exchange. Neither fighter gains ground."
+        p_flavor = ""
+        o_flavor = ""
+
+        if player_action == "shoot":
+            dmg_to_opponent, p_flavor = _roll_player_shoot(
+                player_state, player_effects, player_style, opp_action, rng,
+            )
+        elif player_action == "throw":
+            dmg, p_flavor, stun = _roll_player_throw(
+                player_state, player_effects, player_style, rng,
+            )
+            dmg_to_opponent = dmg
+            # Stun is applied after the round tick so a 1-turn stun lasts
+            # through the opponent's next action.
+            if stun > 0:
+                stun_to_opponent = max(stun_to_opponent, stun)
+        elif player_special and player_style is not None:
+            dmg_to_opponent, p_flavor, style_effect = _player_style_outgoing(
+                player_action, opp_action, player_style, player_effects, rng,
+            )
+        elif player_action in CORE_ACTIONS:
+            if opp_action == "shoot" and player_action != "parry":
+                p_dmg = _calc_melee_damage(
+                    player_action, "win", rng, player_style, player_effects,
+                    player_state.melee_weapon_id, player_state.melee_quality,
+                )
+                dmg_to_opponent = p_dmg
+                if p_dmg > 0:
+                    p_flavor = f"Your {player_action} connects for {p_dmg}."
+            elif opp_action == "throw":
+                p_dmg = _calc_melee_damage(
+                    player_action, "win", rng, player_style, player_effects,
+                    player_state.melee_weapon_id, player_state.melee_quality,
+                )
+                dmg_to_opponent = p_dmg
+                if p_dmg > 0:
+                    p_flavor = f"Your {player_action} connects for {p_dmg}."
+
+        if opp_action == "shoot":
+            dmg_to_player, o_flavor = _roll_opponent_shoot(player_action, rng)
+        elif opp_action == "throw":
+            dmg_to_player, o_flavor = _roll_opponent_throw(rng)
+        elif opp_action in CORE_ACTIONS and player_action in RANGED_ACTIONS:
+            opp_dmg = rng.randint(2, 3) if opp_action != "parry" else 0
+            if opp_action in ("thrust", "slash") and opp_dmg > 0:
+                dmg_to_player = opp_dmg
+                if player_action == "shoot":
+                    o_flavor = f"But their {opp_action} finds you for {opp_dmg}."
+                else:
+                    o_flavor = f"Their {opp_action} catches you for {opp_dmg}."
+
+        if player_action in RANGED_ACTIONS or player_special:
+            flavor = _join_flavor(p_flavor, o_flavor)
+        else:
+            flavor = _join_flavor(o_flavor, p_flavor)
+
+        if not flavor:
+            flavor = "An awkward exchange. Neither fighter gains ground."
 
     # --- Stamina regen ---
     p_stamina_delta += STAMINA_REGEN_PER_TURN
