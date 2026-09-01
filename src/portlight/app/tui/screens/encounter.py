@@ -190,7 +190,9 @@ class EncounterScreen(Screen):
             return
 
         if phase == "naval":
-            if key in ("broadside", "close", "evade", "rake", "flee"):
+            if key == "flee":
+                self._handle_naval_flee()
+            elif key in ("broadside", "close", "evade", "rake"):
                 self._handle_naval_action(key)
             return
 
@@ -323,7 +325,7 @@ class EncounterScreen(Screen):
 
     def _handle_flee(self) -> None:
         if self._phase == "naval":
-            self._handle_naval_action("flee")
+            self._handle_naval_flee()
             return
 
         from portlight.engine.encounter import resolve_flee
@@ -379,6 +381,54 @@ class EncounterScreen(Screen):
         from portlight.engine.ship_stats import resolved_ship
         return resolved_ship(self.session.captain.ship, UPGRADES)
 
+    def _handle_naval_flee(self) -> None:
+        """Disengage via attempt_flee. Never pass 'flee' to resolve_naval_turn."""
+        from portlight.engine.models import EnemyShip
+        from portlight.engine.naval import attempt_flee
+
+        enc = self.encounter
+        log = self.query_one("#encounter-log", RichLog)
+        ship = self.session.captain.ship
+        enemy_ship = EnemyShip(
+            name=f"{enc.enemy_captain_name}'s Ship",
+            hull=enc.enemy_ship_hull, hull_max=enc.enemy_ship_hull_max,
+            cannons=enc.enemy_ship_cannons, maneuver=enc.enemy_ship_maneuver,
+            speed=enc.enemy_ship_speed, crew=enc.enemy_ship_crew,
+            crew_max=enc.enemy_ship_crew_max,
+        )
+        flee_rng = random.Random(
+            self.session.world.seed + self.session.world.day * 1000 + enc.naval_turns + 8888
+        )
+        escaped, damage = attempt_flee(self._combat_ship(), enemy_ship, flee_rng)
+        ship.hull = max(0, ship.hull - damage)
+        enc.naval_turns += 1
+
+        log.write(f"[bold #264653]-- Naval Turn {enc.naval_turns} --[/bold #264653]")
+        log.write("  You: [cyan]flee[/cyan]")
+        if damage > 0:
+            log.write(f"  Your hull: [red]-{damage}[/red]")
+
+        if escaped:
+            msg = "You break away!"
+            if damage > 0:
+                msg += f" A parting shot catches your hull for {damage} damage."
+            log.write(f"[bold green]{msg}[/bold green]")
+            log.write("")
+            self._refresh_ship_panels()
+            self._resolve_without_prize()
+            self.app.notify("Escaped!", severity="information", timeout=4)
+            return
+
+        log.write(
+            f"[bold red]Flee failed! Their broadside rakes you for {damage} hull damage.[/bold red]"
+        )
+        log.write("")
+        self._refresh_ship_panels()
+        if ship.hull <= 0 or ship.crew <= 0:
+            self._enter_defeat("Your ship is lost!")
+            return
+        self._persist_encounter()
+
     def _handle_naval_action(self, action: str) -> None:
         from portlight.content.upgrades import UPGRADES
         from portlight.engine.encounter import resolve_naval_turn
@@ -386,6 +436,10 @@ class EncounterScreen(Screen):
         enc = self.encounter
         log = self.query_one("#encounter-log", RichLog)
         ship = self.session.captain.ship
+
+        if action == "flee":
+            self._handle_naval_flee()
+            return
 
         if action == "broadside" and resolve_cannons(ship, UPGRADES) <= 0:
             self.app.notify("No cannons! Use Close to board.", severity="warning")
