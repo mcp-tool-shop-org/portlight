@@ -70,6 +70,20 @@ DEFAULT_SLOT = "default"
 CURRENT_SAVE_VERSION = 12
 
 
+def _try_enum(enum_cls, raw, default=None):
+    """Parse an enum token; return default on unknown/missing values.
+
+    Unknown content tokens must not fail the whole load (officer roles
+    already degrade this way). Callers skip list items when default is None.
+    """
+    if raw is None:
+        return default
+    try:
+        return enum_cls(raw)
+    except (ValueError, KeyError, TypeError):
+        return default
+
+
 class SaveVersionError(ValueError):
     """Save file version is incompatible (newer than code or migration chain broken)."""
 
@@ -284,7 +298,11 @@ def _migrate_v11_to_v12(data: dict) -> dict:
     captain.setdefault("deferred_fees", [])
     captain.setdefault("active_bounties", [])
     captain.setdefault("claimed_bounties", [])
-    pirates = data.get("pirates", {})
+    data["captain"] = captain
+    pirates = data.setdefault("pirate_state", {})
+    if not isinstance(pirates, dict):
+        pirates = {}
+        data["pirate_state"] = pirates
     pirates.setdefault("bounty_board", [])
     data["version"] = 12
     return data
@@ -385,10 +403,7 @@ def _ship_from_dict(d: dict) -> Ship:
     raw_officers = d.pop("officers", [])
     officers = []
     for o in raw_officers:
-        try:
-            role = CrewRole(o.get("role", "sailor"))
-        except ValueError:
-            role = CrewRole.SAILOR
+        role = _try_enum(CrewRole, o.get("role", "sailor"), CrewRole.SAILOR)
         officers.append(Officer(
             name=o.get("name", "Unknown"),
             role=role,
@@ -699,7 +714,11 @@ def _port_from_dict(d: dict) -> Port:
         name=d["name"],
         description=d["description"],
         region=d["region"],
-        features=[PortFeature(f) for f in d.get("features", [])],
+        features=[
+            feat for feat in (
+                _try_enum(PortFeature, f) for f in d.get("features", [])
+            ) if feat is not None
+        ],
         market=[_slot_from_dict(s) for s in d.get("market", [])],
         port_fee=d.get("port_fee", 5),
         provision_cost=d.get("provision_cost", 2),
@@ -729,7 +748,7 @@ def _voyage_from_dict(d: dict) -> VoyageState:
         distance=d["distance"],
         progress=d.get("progress", 0),
         days_elapsed=d.get("days_elapsed", 0),
-        status=VoyageStatus(d["status"]),
+        status=_try_enum(VoyageStatus, d["status"], VoyageStatus.AT_SEA),
         recent_events=d.get("recent_events", []),
     )
 
@@ -751,13 +770,16 @@ def _receipt_to_dict(r: TradeReceipt) -> dict:
     }
 
 
-def _receipt_from_dict(d: dict) -> TradeReceipt:
+def _receipt_from_dict(d: dict) -> TradeReceipt | None:
+    action = _try_enum(TradeAction, d.get("action"))
+    if action is None:
+        return None
     return TradeReceipt(
         receipt_id=d["receipt_id"],
         captain_name=d["captain_name"],
         port_id=d["port_id"],
         good_id=d["good_id"],
-        action=TradeAction(d["action"]),
+        action=action,
         quantity=d["quantity"],
         unit_price=d["unit_price"],
         total_price=d["total_price"],
@@ -795,11 +817,14 @@ def _offer_to_dict(o: ContractOffer) -> dict:
     }
 
 
-def _offer_from_dict(d: dict) -> ContractOffer:
+def _offer_from_dict(d: dict) -> ContractOffer | None:
+    family = _try_enum(ContractFamily, d.get("family"))
+    if family is None:
+        return None
     return ContractOffer(
         id=d["id"],
         template_id=d["template_id"],
-        family=ContractFamily(d["family"]),
+        family=family,
         title=d["title"],
         description=d["description"],
         issuer_port_id=d["issuer_port_id"],
@@ -843,11 +868,14 @@ def _active_contract_to_dict(c: ActiveContract) -> dict:
     }
 
 
-def _active_contract_from_dict(d: dict) -> ActiveContract:
+def _active_contract_from_dict(d: dict) -> ActiveContract | None:
+    family = _try_enum(ContractFamily, d.get("family"), ContractFamily.PROCUREMENT)
+    if family is None:
+        return None
     return ActiveContract(
         offer_id=d["offer_id"],
         template_id=d["template_id"],
-        family=ContractFamily(d["family"]),
+        family=family,
         title=d["title"],
         accepted_day=d["accepted_day"],
         deadline_day=d["deadline_day"],
@@ -860,7 +888,7 @@ def _active_contract_from_dict(d: dict) -> ActiveContract:
         source_region=d.get("source_region"),
         source_port=d.get("source_port"),
         inspection_modifier=d.get("inspection_modifier", 0.0),
-        status=ContractStatus(d.get("status", "accepted")),
+        status=_try_enum(ContractStatus, d.get("status", "accepted"), ContractStatus.ACCEPTED),
     )
 
 
@@ -883,7 +911,7 @@ def _outcome_to_dict(o: ContractOutcome) -> dict:
 def _outcome_from_dict(d: dict) -> ContractOutcome:
     d = dict(d)  # don't mutate caller's dict
     raw_family = d.pop("family", None)
-    family = ContractFamily(raw_family) if raw_family else None
+    family = _try_enum(ContractFamily, raw_family) if raw_family else None
     return ContractOutcome(**d, family=family)
 
 
@@ -899,8 +927,8 @@ def _board_to_dict(board: ContractBoard) -> dict:
 
 def _board_from_dict(d: dict) -> ContractBoard:
     return ContractBoard(
-        offers=[_offer_from_dict(o) for o in d.get("offers", [])],
-        active=[_active_contract_from_dict(c) for c in d.get("active", [])],
+        offers=[o for o in (_offer_from_dict(x) for x in d.get("offers", [])) if o is not None],
+        active=[c for c in (_active_contract_from_dict(x) for x in d.get("active", [])) if c is not None],
         completed=[_outcome_from_dict(o) for o in d.get("completed", [])],
         last_refresh_day=d.get("last_refresh_day", 0),
         max_offers=d.get("max_offers", 5),
@@ -941,7 +969,7 @@ def _warehouse_from_dict(d: dict) -> WarehouseLease:
     return WarehouseLease(
         id=d["id"],
         port_id=d["port_id"],
-        tier=WarehouseTier(d["tier"]),
+        tier=_try_enum(WarehouseTier, d.get("tier"), WarehouseTier.DEPOT),
         capacity=d["capacity"],
         lease_cost=d.get("lease_cost", 0),
         upkeep_per_day=d.get("upkeep_per_day", 1),
@@ -965,7 +993,7 @@ def _broker_to_dict(b: BrokerOffice) -> dict:
 def _broker_from_dict(d: dict) -> BrokerOffice:
     return BrokerOffice(
         region=d["region"],
-        tier=BrokerTier(d.get("tier", "none")),
+        tier=_try_enum(BrokerTier, d.get("tier", "none"), BrokerTier.NONE),
         opened_day=d.get("opened_day", 0),
         upkeep_paid_through=d.get("upkeep_paid_through", 0),
         active=d.get("active", True),
@@ -1009,12 +1037,16 @@ def _policy_to_dict(p: ActivePolicy) -> dict:
     }
 
 
-def _policy_from_dict(d: dict) -> ActivePolicy:
+def _policy_from_dict(d: dict) -> ActivePolicy | None:
+    family = _try_enum(PolicyFamily, d.get("family"))
+    scope = _try_enum(PolicyScope, d.get("scope"))
+    if family is None or scope is None:
+        return None
     return ActivePolicy(
         id=d["id"],
         spec_id=d["spec_id"],
-        family=PolicyFamily(d["family"]),
-        scope=PolicyScope(d["scope"]),
+        family=family,
+        scope=scope,
         purchased_day=d.get("purchased_day", 0),
         coverage_pct=d.get("coverage_pct", 0.5),
         coverage_cap=d.get("coverage_cap", 100),
@@ -1061,7 +1093,7 @@ def _credit_to_dict(c: CreditState) -> dict:
 
 def _credit_from_dict(d: dict) -> CreditState:
     return CreditState(
-        tier=CreditTier(d.get("tier", "none")),
+        tier=_try_enum(CreditTier, d.get("tier", "none"), CreditTier.NONE),
         credit_limit=d.get("credit_limit", 0),
         outstanding=d.get("outstanding", 0),
         interest_accrued=d.get("interest_accrued", 0),
@@ -1093,7 +1125,7 @@ def _infra_from_dict(d: dict) -> InfrastructureState:
         warehouses=[_warehouse_from_dict(w) for w in d.get("warehouses", [])],
         brokers=[_broker_from_dict(b) for b in d.get("brokers", [])],
         licenses=[_license_from_dict(lic) for lic in d.get("licenses", [])],
-        policies=[_policy_from_dict(p) for p in d.get("policies", [])],
+        policies=[p for p in (_policy_from_dict(x) for x in d.get("policies", [])) if p is not None],
         claims=[_claim_from_dict(c) for c in d.get("claims", [])],
         credit=credit,
     )
@@ -1185,6 +1217,7 @@ def _pirate_state_to_dict(state: PirateState) -> dict:
         "naval_defeats": state.naval_defeats,
         "encounter_phase": state.encounter_phase,
         "encounter_state": state.encounter_state,
+        "bounty_board": list(state.bounty_board),
     }
     if state.pending_duel is not None:
         pd = state.pending_duel
@@ -1267,6 +1300,9 @@ def _pirate_state_from_dict(d: dict) -> PirateState:
         captain_memories=captain_memories,
         encounter_phase=d.get("encounter_phase", ""),
         encounter_state=d.get("encounter_state", {}),
+        bounty_board=[
+            item for item in d.get("bounty_board", []) if isinstance(item, dict)
+        ],
     )
 
 
@@ -1317,7 +1353,7 @@ def _ledger_from_dict(d: dict) -> ReceiptLedger:
         total_sells=d.get("total_sells", 0),
         net_profit=d.get("net_profit", 0),
     )
-    ledger.receipts = [_receipt_from_dict(r) for r in d.get("receipts", [])]
+    ledger.receipts = [r for r in (_receipt_from_dict(x) for x in d.get("receipts", [])) if r is not None]
     return ledger
 
 

@@ -6,9 +6,10 @@ advance_day() produces its base events, adding flavor events that make
 every voyage feel unique.
 
 Contract:
-  enrich_voyage_day(world, route, events, rng) -> list[VoyageEvent]
+  enrich_voyage_day(world, route, events, rng, ledger=None, board=None) -> list[VoyageEvent]
     - Takes base events from advance_day()
     - Adds route encounters, NPC sightings, weather, crew mood
+    - History-gated sea consequences fire only when live ledger and board are passed
     - Returns enriched event list
 
   check_superstitions(world, cultural_state) -> list[SeaSuperstition]
@@ -38,7 +39,9 @@ if TYPE_CHECKING:
         RouteEncounter,
         SeaSuperstition,
     )
+    from portlight.engine.contracts import ContractBoard
     from portlight.engine.models import CulturalState, Route, WorldState
+    from portlight.receipts.models import ReceiptLedger
 
 
 # ---------------------------------------------------------------------------
@@ -294,12 +297,19 @@ def enrich_voyage_day(
     route: "Route | None",
     base_events: list[VoyageEvent],
     rng: random.Random,
+    ledger: "ReceiptLedger | None" = None,
+    board: "ContractBoard | None" = None,
 ) -> list[VoyageEvent]:
     """Enrich a day's voyage events with sea culture flavor.
 
     Call this AFTER advance_day() with the events it returned.
     Adds route encounters, NPC sightings, weather flavor, and crew mood
     as additional VoyageEvent entries.
+
+    Pass the live session ledger and contract board so history-gated sea
+    consequences (fair-trader gifts, trade intelligence, broken-contract
+    haunts) can fire. If either is missing, skip that check rather than
+    pretending the player has no history.
 
     Returns the enriched list (original events + new flavor events).
     """
@@ -354,36 +364,26 @@ def enrich_voyage_day(
             flavor="[crew]",
         ))
 
-    # 5. Consequence encounter (~15% chance, reads player history)
-    from portlight.engine.consequences import apply_consequence, check_sea_consequences
-    # Need ledger and board from session — passed via world if available
-    try:
-        # Consequences need ledger/board which aren't on WorldState
-        # We check using a lightweight approach: just pass empty board/ledger
-        # if not available (consequences that need them will simply not fire)
-        from portlight.engine.contracts import ContractBoard
-        from portlight.receipts.models import ReceiptLedger
-        sea_consequences = check_sea_consequences(
-            world, route, ReceiptLedger(), ContractBoard(), rng
-        )
-    except ImportError:
-        sea_consequences = []
-
-    for consequence in sea_consequences:
-        apply_consequence(world, consequence)
-        effect_note = ""
-        if consequence.silver_delta > 0:
-            effect_note = f" (+{consequence.silver_delta} silver)"
-        elif consequence.silver_delta < 0:
-            effect_note = f" ({consequence.silver_delta} silver)"
-        elif consequence.heat_delta > 0:
-            effect_note = f" (+{consequence.heat_delta} heat)"
-        elif consequence.trust_delta < 0:
-            effect_note = f" ({consequence.trust_delta} trust)"
-        enriched.append(VoyageEvent(
-            event_type=EventType.NOTHING,
-            message=f"{consequence.text}{effect_note}",
-            flavor=f"[consequence:{consequence.effect_type}]",
-        ))
+    # 5. Consequence encounter (~15% chance, reads player history).
+    # Only when the caller supplies the live ledger and board — empty
+    # stand-ins would silently suppress trade- and contract-history rewards.
+    if ledger is not None and board is not None:
+        from portlight.engine.consequences import apply_consequence, check_sea_consequences
+        for consequence in check_sea_consequences(world, route, ledger, board, rng):
+            apply_consequence(world, consequence)
+            effect_note = ""
+            if consequence.silver_delta > 0:
+                effect_note = f" (+{consequence.silver_delta} silver)"
+            elif consequence.silver_delta < 0:
+                effect_note = f" ({consequence.silver_delta} silver)"
+            elif consequence.heat_delta > 0:
+                effect_note = f" (+{consequence.heat_delta} heat)"
+            elif consequence.trust_delta < 0:
+                effect_note = f" ({consequence.trust_delta} trust)"
+            enriched.append(VoyageEvent(
+                event_type=EventType.NOTHING,
+                message=f"{consequence.text}{effect_note}",
+                flavor=f"[consequence:{consequence.effect_type}]",
+            ))
 
     return enriched
