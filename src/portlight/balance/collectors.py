@@ -152,21 +152,58 @@ def compute_net_worth(session: "GameSession") -> int:
     return net
 
 
+def _route_metrics(
+    tracker: dict[str, RouteRunMetrics],
+    origin: str,
+    destination: str,
+) -> RouteRunMetrics:
+    key = f"{origin}->{destination}"
+    if key not in tracker:
+        tracker[key] = RouteRunMetrics(route_key=key)
+    return tracker[key]
+
+
 def update_route_tracker(
     tracker: dict[str, RouteRunMetrics],
     origin: str,
     destination: str,
     profit: int,
+    *,
+    count_use: bool = False,
 ) -> None:
-    """Record a completed voyage in the route tracker."""
-    key = f"{origin}->{destination}"
-    if key not in tracker:
-        tracker[key] = RouteRunMetrics(route_key=key)
-    rm = tracker[key]
-    rm.times_used += 1
+    """Record profit against a route. times_used is voyage arrivals, not sells."""
+    rm = _route_metrics(tracker, origin, destination)
     rm.total_profit += profit
     if profit < 0:
         rm.loss_count += 1
+    if count_use:
+        rm.times_used += 1
+
+
+def record_route_sale(
+    tracker: dict[str, RouteRunMetrics],
+    origin: str,
+    destination: str,
+    revenue: int,
+    cost: int,
+) -> None:
+    """Record one sell: profit = revenue - cost_basis. Does not increment uses."""
+    rm = _route_metrics(tracker, origin, destination)
+    profit = revenue - cost
+    rm.total_revenue += revenue
+    rm.total_cost += cost
+    rm.total_profit += profit
+    if profit < 0:
+        rm.loss_count += 1
+
+
+def record_route_arrival(
+    tracker: dict[str, RouteRunMetrics],
+    origin: str,
+    destination: str,
+) -> None:
+    """Count one completed voyage on this route."""
+    _route_metrics(tracker, origin, destination).times_used += 1
 
 
 def update_timing(

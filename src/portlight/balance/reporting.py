@@ -176,8 +176,8 @@ def _add_captain_table(lines: list[str], report: BalanceBatchReport) -> None:
 
 def _add_route_table(lines: list[str], report: BalanceBatchReport) -> None:
     """Add top routes table."""
-    lines.append("| Route | Uses | Total Profit | Avg Profit | Captain Mix |")
-    lines.append("|-------|------|-------------|------------|-------------|")
+    lines.append("| Route | Uses | Total Profit | Avg Profit | Loss Rate | Captain Mix |")
+    lines.append("|-------|------|-------------|------------|-----------|-------------|")
 
     for r in report.route_aggregates[:10]:
         mix = ", ".join(
@@ -186,7 +186,7 @@ def _add_route_table(lines: list[str], report: BalanceBatchReport) -> None:
         lines.append(
             f"| {r.route_key:30s} | {r.total_uses:4d} | "
             f"{r.total_profit:>11,d} | {r.avg_profit_per_use:>10.0f} | "
-            f"{mix} |"
+            f"{r.loss_rate:>9.0%} | {mix} |"
         )
 
     lines.append("")

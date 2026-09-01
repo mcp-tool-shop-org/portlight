@@ -173,16 +173,43 @@ def _check_warehouse_within_capacity(s: "GameSession") -> InvariantResult:
 # ---------------------------------------------------------------------------
 
 def _check_no_overclaimed_policy(s: "GameSession") -> InvariantResult:
-    """Total paid claims should not exceed policy coverage cap."""
+    """Total paid claims should not exceed policy coverage cap.
+
+    Live claims store InsuranceClaim.policy_id = ActivePolicy.id (instance hash),
+    not the catalog spec id. Resolve spec via the matching ActivePolicy.spec_id
+    and compare total_paid_out / payout against the policy's coverage_cap.
+    """
     from portlight.content.infrastructure import POLICY_CATALOG
-    for claim in s.infra.claims:
-        spec = POLICY_CATALOG.get(claim.policy_id)
-        if spec and claim.payout > spec.coverage_cap:
+
+    policies_by_id = {p.id: p for p in s.infra.policies}
+
+    for policy in s.infra.policies:
+        if policy.total_paid_out > policy.coverage_cap:
             return InvariantResult(
                 name="no_overclaimed_policy",
                 subsystem=Subsystem.INSURANCE,
                 passed=False,
-                message=f"Claim {claim.policy_id}: paid {claim.payout} > cap {spec.coverage_cap}",
+                message=(
+                    f"Policy {policy.id} ({policy.spec_id}): "
+                    f"total paid {policy.total_paid_out} > cap {policy.coverage_cap}"
+                ),
+            )
+
+    for claim in s.infra.claims:
+        policy = policies_by_id.get(claim.policy_id)
+        if policy is not None:
+            cap = policy.coverage_cap
+        else:
+            spec = POLICY_CATALOG.get(claim.policy_id)
+            if spec is None:
+                continue
+            cap = spec.coverage_cap
+        if claim.payout > cap:
+            return InvariantResult(
+                name="no_overclaimed_policy",
+                subsystem=Subsystem.INSURANCE,
+                passed=False,
+                message=f"Claim {claim.policy_id}: paid {claim.payout} > cap {cap}",
             )
     return InvariantResult(
         name="no_overclaimed_policy",
