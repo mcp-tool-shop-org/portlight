@@ -103,15 +103,18 @@ def aggregate_by_captain(metrics: list[RunMetrics]) -> list[CaptainAggregate]:
 def aggregate_routes(metrics: list[RunMetrics]) -> list[RouteAggregate]:
     """Aggregate route metrics across all runs."""
     by_route: dict[str, RouteAggregate] = {}
+    loss_by_route: dict[str, int] = {}
 
     for m in metrics:
         captain_type = m.config.captain_type
         for rm in m.route_metrics:
             if rm.route_key not in by_route:
                 by_route[rm.route_key] = RouteAggregate(route_key=rm.route_key)
+                loss_by_route[rm.route_key] = 0
             agg = by_route[rm.route_key]
             agg.total_uses += rm.times_used
             agg.total_profit += rm.total_profit
+            loss_by_route[rm.route_key] += rm.loss_count
             agg.captain_breakdown[captain_type] = (
                 agg.captain_breakdown.get(captain_type, 0) + rm.times_used
             )
@@ -120,41 +123,48 @@ def aggregate_routes(metrics: list[RunMetrics]) -> list[RouteAggregate]:
     for agg in by_route.values():
         if agg.total_uses > 0:
             agg.avg_profit_per_use = agg.total_profit / agg.total_uses
+            agg.loss_rate = loss_by_route[agg.route_key] / agg.total_uses
         results.append(agg)
 
     results.sort(key=lambda r: r.total_uses, reverse=True)
     return results
 
 
+# Canonical engine.campaign path ids (compute_victory_progress emits these).
+_CANONICAL_VICTORY_PATHS = (
+    "lawful_house", "shadow_network", "oceanic_reach", "commercial_empire",
+)
+
+
 def aggregate_victory_paths(metrics: list[RunMetrics]) -> list[VictoryAggregate]:
     """Aggregate victory path health across all runs."""
-    path_ids = [
-        "lawful_trade_house", "shadow_network",
-        "oceanic_reach", "commercial_empire",
-    ]
-    by_path: dict[str, VictoryAggregate] = {}
+    by_path: dict[str, VictoryAggregate] = {
+        pid: VictoryAggregate(path_id=pid) for pid in _CANONICAL_VICTORY_PATHS
+    }
     total_runs = len(metrics)
 
-    for pid in path_ids:
-        by_path[pid] = VictoryAggregate(path_id=pid)
+    def _bucket(pid: str) -> VictoryAggregate:
+        if pid not in by_path:
+            by_path[pid] = VictoryAggregate(path_id=pid)
+        return by_path[pid]
 
     for m in metrics:
         captain = m.config.captain_type
         if m.strongest_victory_path:
             p = m.strongest_victory_path
-            if p in by_path:
-                by_path[p].candidacy_count += 1
-                by_path[p].captain_skew[captain] = (
-                    by_path[p].captain_skew.get(captain, 0) + 1
-                )
+            agg = _bucket(p)
+            agg.candidacy_count += 1
+            agg.captain_skew[captain] = agg.captain_skew.get(captain, 0) + 1
 
         for cp in m.completed_victory_paths:
-            if cp in by_path:
-                by_path[cp].completion_count += 1
+            _bucket(cp).completion_count += 1
 
     for agg in by_path.values():
         if total_runs > 0:
             agg.candidacy_rate = agg.candidacy_count / total_runs
             agg.completion_rate = agg.completion_count / total_runs
 
-    return list(by_path.values())
+    ordered = [by_path[pid] for pid in _CANONICAL_VICTORY_PATHS]
+    extras = [a for pid, a in by_path.items() if pid not in _CANONICAL_VICTORY_PATHS]
+    extras.sort(key=lambda a: a.path_id)
+    return ordered + extras

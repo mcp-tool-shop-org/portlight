@@ -8,29 +8,40 @@ Contract:
 
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import asdict
 
-from portlight.receipts.models import ReceiptLedger, TradeReceipt
+from portlight.receipts.models import ReceiptLedger, TradeReceipt, compute_receipt_hash
+
+_HEX = frozenset("0123456789abcdef")
 
 
 def hash_receipt(receipt: TradeReceipt) -> str:
     """Deterministic hash of a receipt's core trade data (excludes timestamp)."""
-    payload = (
-        f"{receipt.captain_name}:{receipt.port_id}:{receipt.good_id}:"
-        f"{receipt.action.value}:{receipt.quantity}:{receipt.unit_price}:"
-        f"{receipt.day}:{receipt.stock_before}:{receipt.stock_after}"
-    )
-    return hashlib.sha256(payload.encode()).hexdigest()
+    return compute_receipt_hash(receipt)
+
+
+def _is_economy_receipt_id(value: str) -> bool:
+    """Live engine ids are a 16-char sha256 prefix (captain:port:good:day:seq)."""
+    return len(value) == 16 and all(c in _HEX for c in value)
 
 
 def verify_receipt(receipt: TradeReceipt) -> bool:
-    """Check that a receipt's ID is consistent with its data."""
-    # Receipt IDs use a simpler hash (captain+port+good+day+seq)
-    # Full verification uses the content hash
+    """Return whether the stored hash matches a recomputation of the payload.
+
+    Accepts either receipt_id == hash_receipt(receipt) (64-char content hash)
+    or a live 16-char economy id whose content_hash matches. Empty or
+    tampered ids fail. A len()>0 check is not verification.
+    """
+    if not receipt.receipt_id:
+        return False
     expected = hash_receipt(receipt)
-    return len(receipt.receipt_id) > 0 and len(expected) > 0
+    if not expected:
+        return False
+    if receipt.receipt_id == expected:
+        return True
+    stored = receipt.content_hash
+    return stored == expected and _is_economy_receipt_id(receipt.receipt_id)
 
 
 def export_ledger(ledger: ReceiptLedger) -> str:
