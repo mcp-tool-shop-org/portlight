@@ -405,14 +405,17 @@ def capture_prize(
     captain: "Captain",
     encounter: EncounterState,
     crew_to_prize: int,
+    rng: random.Random | None = None,
 ) -> "OwnedShip":
     """Create an OwnedShip from the defeated enemy.
 
-    Splits crew between flagship and prize. Prize starts with no upgrades.
+    Splits crew (and roster members) between flagship and prize.
+    Prize starts with no upgrades.
     Returns the new OwnedShip (caller adds to fleet).
     """
     from portlight.content.ships import SHIPS
     from portlight.engine.models import OwnedShip
+    from portlight.engine.ship_stats import transfer_roster_crew
 
     prize_tid = prize_template_id(encounter.enemy_strength)
     prize_template = SHIPS.get(prize_tid)
@@ -428,14 +431,15 @@ def capture_prize(
         hull_max=hull_max,
         cargo_capacity=prize_template.cargo_capacity if prize_template else 30,
         speed=prize_template.speed if prize_template else 6.0,
-        crew=crew_to_prize,
+        crew=0,
         crew_max=prize_template.crew_max if prize_template else 8,
         cannons=prize_template.cannons if prize_template else 0,
         maneuver=prize_template.maneuver if prize_template else 0.5,
     )
 
-    # Split crew
-    captain.ship.crew -= crew_to_prize
+    transfer_roster_crew(
+        captain.ship, prize_ship, crew_to_prize, rng or random.Random(),
+    )
 
     return OwnedShip(
         ship=prize_ship,

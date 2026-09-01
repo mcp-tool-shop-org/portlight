@@ -136,6 +136,75 @@ def tick_markets(
     return messages
 
 
+def _goods_table(goods_table: dict[str, object] | None = None) -> dict[str, object]:
+    if goods_table is not None:
+        return goods_table
+    from portlight.content.goods import GOODS
+    return GOODS
+
+
+def item_weight(
+    good_id: str,
+    quantity: int,
+    goods_table: dict[str, object] | None = None,
+) -> float:
+    """Hold/warehouse weight for a quantity of one good."""
+    good = _goods_table(goods_table).get(good_id)
+    weight_per = getattr(good, "weight_per_unit", 1.0) if good else 1.0
+    return quantity * float(weight_per)
+
+
+def cargo_weight(
+    items,
+    goods_table: dict[str, object] | None = None,
+) -> float:
+    """Hold weight: sum(quantity * goods[id].weight_per_unit)."""
+    return sum(item_weight(item.good_id, item.quantity, goods_table) for item in items)
+
+
+def cargo_quantity(items, good_id: str) -> int:
+    """Total quantity of good_id across every matching lot."""
+    return sum(item.quantity for item in items if item.good_id == good_id)
+
+
+def consume_cargo_fifo(items: list, good_id: str, qty: int) -> list[CargoItem]:
+    """Remove qty of good_id FIFO across lots. Mutates items; drops empty lots.
+
+    Returns consumed slices with proportional cost_basis and original provenance.
+    """
+    remaining = qty
+    consumed: list[CargoItem] = []
+    i = 0
+    while remaining > 0 and i < len(items):
+        item = items[i]
+        if item.good_id != good_id:
+            i += 1
+            continue
+        take = min(item.quantity, remaining)
+        item_cost = getattr(item, "cost_basis", 0) or 0
+        cost_per = item_cost / item.quantity if item.quantity else 0
+        leftover_qty = item.quantity - take
+        leftover_cost = round(cost_per * leftover_qty) if leftover_qty else 0
+        take_cost = item_cost - leftover_cost
+        consumed.append(CargoItem(
+            good_id=item.good_id,
+            quantity=take,
+            cost_basis=take_cost,
+            acquired_port=getattr(item, "acquired_port", "") or "",
+            acquired_region=getattr(item, "acquired_region", "") or "",
+            acquired_day=getattr(item, "acquired_day", 0) or 0,
+        ))
+        if hasattr(item, "cost_basis"):
+            item.cost_basis = leftover_cost
+        item.quantity = leftover_qty
+        remaining -= take
+        if item.quantity <= 0:
+            items.pop(i)
+        else:
+            i += 1
+    return consumed
+
+
 def _cargo_slot(captain: Captain, good_id: str) -> CargoItem | None:
     for item in captain.cargo:
         if item.good_id == good_id:
@@ -143,8 +212,8 @@ def _cargo_slot(captain: Captain, good_id: str) -> CargoItem | None:
     return None
 
 
-def _cargo_weight(captain: Captain) -> float:
-    return sum(item.quantity for item in captain.cargo)
+def _cargo_weight(captain: Captain, goods_table: dict[str, object] | None = None) -> float:
+    return cargo_weight(captain.cargo, goods_table)
 
 
 def _make_receipt_id(captain_name: str, port_id: str, good_id: str, day: int, seq: int) -> str:
@@ -181,7 +250,7 @@ def execute_buy(
     from portlight.content.upgrades import UPGRADES
     from portlight.engine.ship_stats import resolve_cargo_capacity
     effective_capacity = resolve_cargo_capacity(ship, UPGRADES)
-    current_weight = _cargo_weight(captain)
+    current_weight = _cargo_weight(captain, goods_table)
     good = goods_table.get(good_id)
     weight_per = good.weight_per_unit if good else 1.0  # type: ignore[union-attr]
     if current_weight + qty * weight_per > effective_capacity:
@@ -192,11 +261,17 @@ def execute_buy(
     captain.silver -= total
     slot.stock_current -= qty
 
-    existing = _cargo_slot(captain, good_id)
-    if existing and existing.acquired_port == port.id:
-        # Same good from same port — merge into existing stack
+    existing = next(
+        (c for c in captain.cargo
+         if c.good_id == good_id and c.acquired_port == port.id),
+        None,
+    )
+    if existing:
+        # Same good from same port — merge; refresh acquired_day so a later
+        # buy into an aged lot cannot skip the same-port sellback window.
         existing.cost_basis += total
         existing.quantity += qty
+        existing.acquired_day = max(existing.acquired_day, captain.day)
     else:
         # New provenance lot (different port or first purchase)
         captain.cargo.append(CargoItem(
@@ -222,16 +297,25 @@ def execute_buy(
 
 def execute_sell(
     captain: Captain, port: Port, good_id: str, qty: int,
-    seq: int = 0,
     goods_table: dict[str, object] | None = None,
+    *,
+    seq: int = 0,
 ) -> TradeReceipt | str:
-    """Sell goods to port. Returns TradeReceipt on success, error string on failure."""
-    # Contraband sell restriction — BLACK_MARKET ports only
-    if goods_table:
-        good = goods_table.get(good_id)
-        if good and hasattr(good, "category") and good.category == GoodCategory.CONTRABAND:  # type: ignore[union-attr]
-            if PortFeature.BLACK_MARKET not in port.features:
-                return f"The harbormaster won't touch {good_id}. Try somewhere less official."
+    """Sell goods to port. Returns TradeReceipt on success, error string on failure.
+
+    `seq` is keyword-only so a positional 5th argument is the goods table
+    (or a legacy integer sequence number from older callers).
+    """
+    # Live session used to pass seq positionally as the 5th argument.
+    if isinstance(goods_table, int):
+        seq = goods_table
+        goods_table = None
+
+    table = _goods_table(goods_table)
+    good = table.get(good_id)
+    if good and getattr(good, "category", None) == GoodCategory.CONTRABAND:
+        if PortFeature.BLACK_MARKET not in port.features:
+            return f"The harbormaster won't touch {good_id}. Try somewhere less official."
 
     slot = next((s for s in port.market if s.good_id == good_id), None)
     if slot is None:
@@ -239,45 +323,34 @@ def execute_sell(
     if qty <= 0:
         return "Quantity must be positive"
 
-    existing = _cargo_slot(captain, good_id)
-    if existing is None or existing.quantity < qty:
-        have = existing.quantity if existing else 0
+    have = cargo_quantity(captain.cargo, good_id)
+    if have < qty:
         return f"Only have {have} units of {good_id}"
 
-    # Anti-exploit: when selling goods back to the SAME port within 3 days of
-    # buying, cap the sell price at purchase cost. This prevents buy-drain-sell
-    # loops that exploit self-created scarcity (buy all stock at normal price,
-    # wait 1 day for anti-exploit to expire, sell back at inflated price).
-    same_port_sellback = (
-        existing.acquired_port == port.id
-        and hasattr(existing, 'acquired_day')
-        and (captain.day - existing.acquired_day) <= 3
-    )
-
-    # Execute
+    # Anti-exploit: cap same-port sellback per lot (not just the first stack)
+    # when that lot was acquired at this port within 3 days.
+    slices = consume_cargo_fifo(captain.cargo, good_id, qty)
     stock_before = slot.stock_current
-    unit_price = slot.sell_price
-    if same_port_sellback and existing.quantity > 0:
-        cost_per_unit = existing.cost_basis / existing.quantity
-        # Cap: never profit from instant same-port round-trip
-        if unit_price > cost_per_unit:
-            unit_price = max(1, round(cost_per_unit))
-    total = unit_price * qty
+    total = 0
+    for sl in slices:
+        unit_price = slot.sell_price
+        same_port_sellback = (
+            sl.acquired_port == port.id
+            and (captain.day - sl.acquired_day) <= 3
+        )
+        if same_port_sellback and sl.quantity > 0:
+            cost_per_unit = sl.cost_basis / sl.quantity
+            if unit_price > cost_per_unit:
+                unit_price = max(1, round(cost_per_unit))
+        total += unit_price * sl.quantity
+
     captain.silver += total
     slot.stock_current += qty
 
-    # Increase flood penalty proportional to dump size vs target
     flood_increase = qty / max(slot.stock_target, 1) * 0.3
     slot.flood_penalty = min(1.0, slot.flood_penalty + flood_increase)
 
-    # Update cargo — adjust cost_basis proportionally on partial sell
-    if existing.quantity > qty:
-        cost_per_unit = existing.cost_basis / existing.quantity
-        existing.quantity -= qty
-        existing.cost_basis = round(cost_per_unit * existing.quantity)
-    else:
-        captain.cargo.remove(existing)
-
+    unit_price = round(total / qty) if qty else 0
     return TradeReceipt(
         receipt_id=_make_receipt_id(captain.name, port.id, good_id, captain.day, seq),
         captain_name=captain.name,

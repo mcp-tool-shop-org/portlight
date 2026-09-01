@@ -127,48 +127,42 @@ def transfer_cargo(
     if dst is None:
         return f"Ship '{to_ship_name}' not found at this port"
 
-    src_ship, src_cargo, _ = src
+    _src_ship, src_cargo, _ = src
     dst_ship, dst_cargo, _ = dst
 
-    # Find cargo in source
-    src_item = None
-    for item in src_cargo:
-        if item.good_id == good_id:
-            src_item = item
-            break
-    if src_item is None or src_item.quantity < qty:
-        avail = src_item.quantity if src_item else 0
+    from portlight.engine.economy import cargo_quantity, cargo_weight, consume_cargo_fifo, item_weight
+
+    avail = cargo_quantity(src_cargo, good_id)
+    if avail < qty:
         return f"Only {avail} units of {good_id} on {from_ship_name}"
 
-    # Check destination capacity
-    dst_weight = sum(c.quantity for c in dst_cargo)
+    dst_weight = cargo_weight(dst_cargo)
     dst_cap = resolve_cargo_capacity(dst_ship, UPGRADES)
-    if dst_weight + qty > dst_cap:
+    added = item_weight(good_id, qty)
+    if dst_weight + added > dst_cap:
         space = dst_cap - dst_weight
         return f"Only {space} cargo space on {to_ship_name}"
 
-    # Execute transfer
-    src_item.quantity -= qty
-    if src_item.quantity == 0:
-        src_cargo.remove(src_item)
-
-    # Merge or add to destination
-    dst_item = None
-    for item in dst_cargo:
-        if item.good_id == good_id and item.acquired_port == src_item.acquired_port:
-            dst_item = item
-            break
-    if dst_item:
-        dst_item.quantity += qty
-    else:
-        dst_cargo.append(CargoItem(
-            good_id=good_id,
-            quantity=qty,
-            cost_basis=int(src_item.cost_basis * qty / max(1, src_item.quantity + qty)),
-            acquired_port=src_item.acquired_port,
-            acquired_region=src_item.acquired_region,
-            acquired_day=src_item.acquired_day,
-        ))
+    slices = consume_cargo_fifo(src_cargo, good_id, qty)
+    for sl in slices:
+        dst_item = next(
+            (item for item in dst_cargo
+             if item.good_id == good_id and item.acquired_port == sl.acquired_port),
+            None,
+        )
+        if dst_item:
+            dst_item.quantity += sl.quantity
+            dst_item.cost_basis += sl.cost_basis
+            dst_item.acquired_day = max(dst_item.acquired_day, sl.acquired_day)
+        else:
+            dst_cargo.append(CargoItem(
+                good_id=good_id,
+                quantity=sl.quantity,
+                cost_basis=sl.cost_basis,
+                acquired_port=sl.acquired_port,
+                acquired_region=sl.acquired_region,
+                acquired_day=sl.acquired_day,
+            ))
 
     return None
 

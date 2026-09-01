@@ -268,6 +268,69 @@ def select_casualty(
     return rng.choices(roles, weights=w, k=1)[0]
 
 
+def _align_roster_from_crew(ship: Ship) -> None:
+    """If roster is empty but crew is set, treat crew as sailors."""
+    if ship.roster.total == 0 and ship.crew > 0:
+        ship.roster.sailors = ship.crew
+
+
+def apply_crew_delta(
+    ship: Ship,
+    delta: int,
+    context: str,
+    rng: random.Random,
+) -> int:
+    """Apply a crew change through the roster, then sync ship.crew.
+
+    Negative delta uses select_casualty. Positive delta adds sailors.
+    Returns the actual delta applied.
+    """
+    from portlight.content.crew_roles import get_role_count, set_role_count
+
+    _align_roster_from_crew(ship)
+    if delta == 0:
+        ship.sync_crew()
+        return 0
+    if delta > 0:
+        ship.roster.sailors += delta
+        ship.sync_crew()
+        return delta
+
+    removed = 0
+    for _ in range(-delta):
+        role = select_casualty(ship.roster, context, rng)
+        if role is None:
+            break
+        set_role_count(ship.roster, role, get_role_count(ship.roster, role) - 1)
+        removed += 1
+    ship.sync_crew()
+    return -removed
+
+
+def transfer_roster_crew(
+    src: Ship,
+    dst: Ship,
+    count: int,
+    rng: random.Random,
+    context: str = "prize",
+) -> int:
+    """Move up to `count` roster members from src onto dst. Returns number moved."""
+    from portlight.content.crew_roles import get_role_count, set_role_count
+
+    _align_roster_from_crew(src)
+    moved = 0
+    for _ in range(max(0, count)):
+        role = select_casualty(src.roster, context, rng)
+        if role is None:
+            break
+        set_role_count(src.roster, role, get_role_count(src.roster, role) - 1)
+        set_role_count(dst.roster, role, get_role_count(dst.roster, role) + 1)
+        moved += 1
+    src.sync_crew()
+    dst.sync_crew()
+    return moved
+
+
 # ---------------------------------------------------------------------------
 # Crew morale
 # ---------------------------------------------------------------------------

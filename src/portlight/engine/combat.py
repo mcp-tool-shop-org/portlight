@@ -85,6 +85,8 @@ class CombatRound:
     opponent_injury: str | None = None      # injury_id if opponent took one
     flavor: str = ""
     style_effect: str | None = None
+    stun_to_opponent: int = 0
+    stun_to_player: int = 0
 
 
 @dataclass
@@ -468,6 +470,8 @@ def resolve_combat_round(
     style_effect = None
     player_injury = None
     opponent_injury = None
+    stun_to_opponent = 0
+    stun_to_player = 0
 
     # --- Stamina costs ---
     p_cost = STAMINA_COSTS.get(player_action, 0)
@@ -564,9 +568,10 @@ def resolve_combat_round(
                 dmg_to_opponent = dmg
                 weapon_name = throw_wid.replace("_", " ").title() if throw_wid else "blade"
                 flavor = f"Your {weapon_name} strikes — {dmg} damage!"
-                # Apply stun (bolas)
+                # Stun is applied after the round tick so a 1-turn stun lasts
+                # through the opponent's next action.
                 if stun > 0:
-                    opponent_state.stun_turns = max(opponent_state.stun_turns, stun)
+                    stun_to_opponent = max(stun_to_opponent, stun)
                     flavor += f" They're tangled — stunned for {stun} turn!"
             else:
                 flavor = "Your throw goes wide."
@@ -678,6 +683,8 @@ def resolve_combat_round(
         opponent_injury=opponent_injury,
         flavor=flavor,
         style_effect=style_effect,
+        stun_to_opponent=stun_to_opponent,
+        stun_to_player=stun_to_player,
     )
 
 
@@ -820,26 +827,33 @@ def apply_round_to_states(
     if round_result.opponent_action == "throw":
         opponent_state.throwing_weapons = max(0, opponent_state.throwing_weapons - 1)
 
-    # Style cooldowns
+    # Tick existing cooldowns/stun first, then assign newly applied values so
+    # a cooldown or stun granted this round is not consumed on the same tick.
+    for key in list(player_state.style_cooldowns.keys()):
+        if player_state.style_cooldowns[key] > 0:
+            player_state.style_cooldowns[key] -= 1
+    for key in list(opponent_state.style_cooldowns.keys()):
+        if opponent_state.style_cooldowns[key] > 0:
+            opponent_state.style_cooldowns[key] -= 1
+    if player_state.stun_turns > 0:
+        player_state.stun_turns -= 1
+    if opponent_state.stun_turns > 0:
+        opponent_state.stun_turns -= 1
+
     pa = round_result.player_action
     if player_state.active_style:
         style = FIGHTING_STYLES.get(player_state.active_style)
         if style and style.special_action and pa == style.special_action.id:
             player_state.style_cooldowns[pa] = style.special_action.cooldown
-    # Tick all cooldowns down
-    for key in list(player_state.style_cooldowns.keys()):
-        if player_state.style_cooldowns[key] > 0:
-            player_state.style_cooldowns[key] -= 1
 
-    for key in list(opponent_state.style_cooldowns.keys()):
-        if opponent_state.style_cooldowns[key] > 0:
-            opponent_state.style_cooldowns[key] -= 1
-
-    # Stun tick
-    if player_state.stun_turns > 0:
-        player_state.stun_turns -= 1
-    if opponent_state.stun_turns > 0:
-        opponent_state.stun_turns -= 1
+    if round_result.stun_to_opponent > 0:
+        opponent_state.stun_turns = max(
+            opponent_state.stun_turns, round_result.stun_to_opponent,
+        )
+    if round_result.stun_to_player > 0:
+        player_state.stun_turns = max(
+            player_state.stun_turns, round_result.stun_to_player,
+        )
 
     # Injuries
     if round_result.injury_inflicted:

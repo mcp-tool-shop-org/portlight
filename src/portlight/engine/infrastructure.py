@@ -83,12 +83,13 @@ class WarehouseLease:
     active: bool = True
 
     @property
-    def used_capacity(self) -> int:
-        return sum(lot.quantity for lot in self.inventory)
+    def used_capacity(self) -> float:
+        from portlight.engine.economy import cargo_weight
+        return cargo_weight(self.inventory)
 
     @property
-    def free_capacity(self) -> int:
-        return max(0, self.capacity - self.used_capacity)
+    def free_capacity(self) -> float:
+        return max(0.0, self.capacity - self.used_capacity)
 
 
 # ---------------------------------------------------------------------------
@@ -196,19 +197,25 @@ def lease_warehouse(
         (w for w in state.warehouses if w.port_id == port_id and w.active),
         None,
     )
-    if existing:
-        if existing.tier == tier_spec.tier:
-            return f"Already have a {tier_spec.name} at this port"
-        # Upgrading: close old, open new (keep inventory if it fits)
-        old_inventory = list(existing.inventory)
-        existing.active = False
-    else:
-        old_inventory = []
+    if existing and existing.tier == tier_spec.tier:
+        return f"Already have a {tier_spec.name} at this port"
 
-    # Cost check
     if tier_spec.lease_cost > captain.silver:
         return f"Need {tier_spec.lease_cost} silver to lease {tier_spec.name}, have {captain.silver}"
 
+    old_inventory = list(existing.inventory) if existing else []
+    from portlight.engine.economy import cargo_weight
+    old_total = cargo_weight(old_inventory)
+    if old_total > tier_spec.capacity:
+        return (
+            f"Cannot downgrade: {old_total} units in storage exceeds "
+            f"{tier_spec.name} capacity ({tier_spec.capacity}). "
+            f"Withdraw goods first."
+        )
+
+    # Checks passed — now deactivate the prior lease (if upgrading)
+    if existing:
+        existing.active = False
     captain.silver -= tier_spec.lease_cost
 
     lease = WarehouseLease(
@@ -222,19 +229,6 @@ def lease_warehouse(
         upkeep_paid_through=day,
         active=True,
     )
-
-    # Transfer old inventory — refuse if downgrade would lose goods
-    old_total = sum(lot.quantity for lot in old_inventory)
-    if old_total > lease.capacity:
-        # Undo: reactivate old warehouse, refund
-        if existing:
-            existing.active = True
-        captain.silver += tier_spec.lease_cost
-        return (
-            f"Cannot downgrade: {old_total} units in storage exceeds "
-            f"{tier_spec.name} capacity ({lease.capacity}). "
-            f"Withdraw goods first."
-        )
     for lot in old_inventory:
         lease.inventory.append(lot)
 
@@ -264,46 +258,38 @@ def deposit_cargo(
     if quantity <= 0:
         return "Quantity must be positive"
 
-    # Find cargo in ship hold
-    cargo_item = next(
-        (c for c in captain.cargo if c.good_id == good_id),
-        None,
-    )
-    if cargo_item is None or cargo_item.quantity < quantity:
-        have = cargo_item.quantity if cargo_item else 0
+    from portlight.engine.economy import cargo_quantity, consume_cargo_fifo, item_weight
+
+    have = cargo_quantity(captain.cargo, good_id)
+    if have < quantity:
         return f"Only have {have} units of {good_id} in hold"
 
-    # Check warehouse capacity
-    if quantity > warehouse.free_capacity:
+    added_weight = item_weight(good_id, quantity)
+    if added_weight > warehouse.free_capacity:
         return f"Warehouse only has {warehouse.free_capacity} units of space"
 
-    # Execute transfer: ship -> warehouse (preserve provenance)
-    deposit_qty = quantity
-    cargo_item.quantity -= deposit_qty
-    if cargo_item.quantity == 0:
-        captain.cargo.remove(cargo_item)
+    slices = consume_cargo_fifo(captain.cargo, good_id, quantity)
+    for sl in slices:
+        merged = False
+        for lot in warehouse.inventory:
+            if (lot.good_id == good_id and
+                lot.acquired_port == sl.acquired_port and
+                lot.acquired_region == sl.acquired_region):
+                lot.quantity += sl.quantity
+                lot.acquired_day = max(lot.acquired_day, sl.acquired_day)
+                merged = True
+                break
+        if not merged:
+            warehouse.inventory.append(StoredLot(
+                good_id=good_id,
+                quantity=sl.quantity,
+                acquired_port=sl.acquired_port,
+                acquired_region=sl.acquired_region,
+                acquired_day=sl.acquired_day,
+                deposited_day=day,
+            ))
 
-    # Merge into existing lot with same provenance, or create new
-    merged = False
-    for lot in warehouse.inventory:
-        if (lot.good_id == good_id and
-            lot.acquired_port == cargo_item.acquired_port and
-            lot.acquired_region == cargo_item.acquired_region):
-            lot.quantity += deposit_qty
-            merged = True
-            break
-
-    if not merged:
-        warehouse.inventory.append(StoredLot(
-            good_id=good_id,
-            quantity=deposit_qty,
-            acquired_port=cargo_item.acquired_port,
-            acquired_region=cargo_item.acquired_region,
-            acquired_day=cargo_item.acquired_day,
-            deposited_day=day,
-        ))
-
-    return deposit_qty
+    return quantity
 
 
 # ---------------------------------------------------------------------------
@@ -333,13 +319,16 @@ def withdraw_cargo(
     if quantity <= 0:
         return "Quantity must be positive"
 
-    # Check ship capacity
+    # Check ship capacity (upgrade-resolved, weighted)
     ship = captain.ship
     if ship is None:
         return "No ship"
-    cargo_weight = sum(c.quantity for c in captain.cargo)
-    free_space = ship.cargo_capacity - cargo_weight
-    if quantity > free_space:
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.economy import cargo_weight as hold_weight, item_weight
+    from portlight.engine.ship_stats import resolve_cargo_capacity
+    cap = resolve_cargo_capacity(ship, UPGRADES)
+    free_space = cap - hold_weight(captain.cargo)
+    if item_weight(good_id, quantity) > free_space:
         return f"Ship only has {free_space} units of cargo space"
 
     # Find matching lots in warehouse
