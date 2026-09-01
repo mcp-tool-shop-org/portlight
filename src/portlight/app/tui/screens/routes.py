@@ -164,8 +164,12 @@ def execute_advance(app, session: "GameSession") -> None:
                 else:
                     icon = _EVENT_ICONS.get(etype.value, "\u25cf") if hasattr(etype, "value") else "\u25cf"
 
-            desc = str(ev.description) if hasattr(ev, "description") else str(ev)
-            app.notify(f"{icon} {desc}", severity=severity, timeout=6)
+            desc = getattr(ev, "message", None) or ""
+            flavor = getattr(ev, "flavor", None) or ""
+            if flavor:
+                desc = f"{desc} {flavor}".strip() if desc else flavor
+            if desc:
+                app.notify(f"{icon} {desc}", severity=severity, timeout=6)
     else:
         if session.at_sea:
             app.notify(
@@ -178,11 +182,26 @@ def execute_advance(app, session: "GameSession") -> None:
                 timeout=3,
             )
 
+    # NPC captain agency (ambush / challenge / gifts) — same path as CLI advance
+    if session.at_sea:
+        agency_enc, _ambush, notices = session.tick_sea_captain_agency()
+        for kind, msg in notices:
+            if not msg:
+                continue
+            severity = "error" if kind == "encounter" else "information"
+            icon = "\u2620" if kind == "encounter" else "\u25cf"
+            app.notify(f"{icon} {msg}", severity=severity, timeout=6)
+        if agency_enc:
+            from portlight.app.tui.screens.encounter import EncounterScreen
+            app.push_screen(EncounterScreen(session, agency_enc))
+            return
+
     # Check for pirate encounter
     if events:
         for ev in events:
             if hasattr(ev, "_pending_duel") and ev._pending_duel is not None:
                 from portlight.engine.encounter import create_encounter
+                from portlight.app.session import persist_encounter
                 enc = create_encounter(
                     session.world.ports,
                     session.world.voyage.destination_id if session.world.voyage else "porto_novo",
@@ -196,6 +215,8 @@ def execute_advance(app, session: "GameSession") -> None:
                     enc.enemy_personality = pd.personality
                     enc.enemy_strength = pd.strength
                     enc.enemy_region = pd.region
+                    persist_encounter(session, enc)
+                    session._save()
 
                     from portlight.app.tui.screens.encounter import EncounterScreen
                     app.push_screen(EncounterScreen(session, enc))

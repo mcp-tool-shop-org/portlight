@@ -45,8 +45,7 @@ _DUEL_ACTIONS = (
 )
 _VICTORY_ACTIONS = (
     "  [bold #2a9d8f]S[/bold #2a9d8f].Spare  "
-    "[bold #e76f51]A[/bold #e76f51].Take All  "
-    "[dim]Esc.Leave[/dim]"
+    "[bold #e76f51]A[/bold #e76f51].Take All"
 )
 _CAPTURE_ACTIONS = (
     "  [bold #2a9d8f]C[/bold #2a9d8f].Capture  "
@@ -55,44 +54,11 @@ _CAPTURE_ACTIONS = (
 )
 _DEFEAT_ACTIONS = "  [dim]Esc.Leave[/dim]"
 
-_RESUME_PHASES = frozenset({
-    "approach", "naval", "boarding", "duel",
-    "capture_available", "resolved", "victory", "defeat",
-})
-
 
 def reconstruct_encounter(session: "GameSession"):
-    """Rebuild EncounterState from pending_duel + persisted phase/state."""
-    if not session or not session.world or session.world.pirates.pending_duel is None:
-        return None
-    pd = session.world.pirates.pending_duel
-    from portlight.engine.encounter import create_encounter
-    dest = "porto_novo"
-    if session.world.voyage:
-        dest = session.world.voyage.destination_id
-    enc = create_encounter(session.world.ports, dest, session._rng)
-    if enc is None:
-        return None
-    enc.enemy_captain_id = pd.captain_id
-    enc.enemy_captain_name = pd.captain_name
-    enc.enemy_faction_id = pd.faction_id
-    enc.enemy_personality = pd.personality
-    enc.enemy_strength = pd.strength
-    enc.enemy_region = pd.region
-    phase = session.world.pirates.encounter_phase
-    if phase and phase in _RESUME_PHASES:
-        enc.phase = phase
-    estate = session.world.pirates.encounter_state or {}
-    if estate:
-        enc.boarding_progress = estate.get("boarding_progress", enc.boarding_progress)
-        enc.boarding_threshold = estate.get("boarding_threshold", enc.boarding_threshold)
-        enc.naval_turns = estate.get("naval_turns", enc.naval_turns)
-        enc.duel_turns = estate.get("duel_turns", enc.duel_turns)
-        enc.enemy_ship_hull = estate.get("enemy_ship_hull", enc.enemy_ship_hull)
-        enc.enemy_ship_crew = estate.get("enemy_ship_crew", enc.enemy_ship_crew)
-    if estate.get("pending_victory") and enc.phase != "capture_available":
-        enc.phase = "victory"
-    return enc
+    """Rebuild EncounterState from pending_duel + persisted blob (no re-roll)."""
+    from portlight.app.session import reconstruct_encounter as _reconstruct
+    return _reconstruct(session, victory_phase="victory")
 
 
 class EncounterScreen(Screen):
@@ -167,7 +133,9 @@ class EncounterScreen(Screen):
 
     def action_encounter_escape(self) -> None:
         """Handle Escape key — exit only if encounter is resolved."""
-        if self._phase in ("victory", "defeat", "resolved"):
+        if self._phase == "victory":
+            self.app.notify("Spare (S) or take all (A) first!", severity="warning")
+        elif self._phase in ("defeat", "resolved"):
             self._exit_encounter()
         elif self._phase == "capture_available":
             self.app.notify("Capture the prize (C) or let it sink (F) first!", severity="warning")
@@ -1052,35 +1020,26 @@ class EncounterScreen(Screen):
                 o.stamina = estate["opponent_stamina"]
 
     def _persist_encounter(self, pending_victory: bool = False) -> None:
-        """Write phase, hull, HP, and boarding progress so a mid-fight quit can resume."""
+        """Write phase, full ship stats, HP, and boarding so a mid-fight quit can resume."""
         if not self.session.world:
             return
-        pirates = self.session.world.pirates
         enc = self.encounter
         phase = self._phase
         if phase == "victory":
-            pirates.encounter_phase = "resolved"
+            phase = "resolved"
             pending_victory = True
         elif phase in ("defeat", "resolved"):
             return
         else:
-            pirates.encounter_phase = phase or enc.phase or "approach"
-        estate = {
-            "boarding_progress": enc.boarding_progress,
-            "boarding_threshold": enc.boarding_threshold,
-            "naval_turns": enc.naval_turns,
-            "duel_turns": enc.duel_turns,
-            "enemy_ship_hull": enc.enemy_ship_hull,
-            "enemy_ship_crew": enc.enemy_ship_crew,
-            "pending_victory": pending_victory,
-        }
-        if self._player_combatant:
-            estate["player_hp"] = self._player_combatant.hp
-            estate["player_stamina"] = self._player_combatant.stamina
-        if self._opponent_combatant:
-            estate["opponent_hp"] = self._opponent_combatant.hp
-            estate["opponent_stamina"] = self._opponent_combatant.stamina
-        pirates.encounter_state = estate
+            phase = phase or enc.phase or "approach"
+        from portlight.app.session import persist_encounter
+        persist_encounter(
+            self.session, enc,
+            pending_victory=pending_victory,
+            player=self._player_combatant,
+            opponent=self._opponent_combatant,
+            phase=phase,
+        )
         self.session._save()
 
     def _clear_pending(self) -> None:

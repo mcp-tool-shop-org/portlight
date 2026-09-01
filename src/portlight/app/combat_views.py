@@ -436,11 +436,26 @@ def injuries_view(injuries_list: list[dict]) -> Panel:
 
         severity_str = f"[{color}]{severity}[/{color}]"
 
-        healing_progress = inj.get("healing_progress", 0)
-        healing_max = inj.get("healing_max", 1)
-        if is_permanent:
+        remaining = inj.get("heal_remaining")
+        healing_max = inj.get("healing_max", inj.get("heal_days"))
+        healing_progress = inj.get("healing_progress")
+        if is_permanent or ("heal_remaining" in inj and remaining is None):
             healing_str = "[dim]—[/dim]"
+        elif remaining is not None:
+            if healing_max:
+                try:
+                    hmax = int(healing_max)
+                    left = int(remaining)
+                    healing_str = _hp_bar(max(0, hmax - left), hmax, width=8)
+                except (TypeError, ValueError):
+                    healing_str = f"{remaining}d left"
+            else:
+                healing_str = f"{remaining}d left"
         else:
+            if healing_progress is None:
+                healing_progress = 0
+            if not healing_max:
+                healing_max = 1
             healing_str = _hp_bar(healing_progress, healing_max, width=8)
 
         treated = inj.get("treated", False)
@@ -448,11 +463,13 @@ def injuries_view(injuries_list: list[dict]) -> Panel:
         if is_permanent:
             treated_str = "[dim]—[/dim]"
 
+        effect = inj.get("effect") or inj.get("description") or ""
+
         table.add_row(
             name_str,
             severity_str,
             inj.get("body_part", "?"),
-            inj.get("effect", ""),
+            effect,
             healing_str,
             treated_str,
         )

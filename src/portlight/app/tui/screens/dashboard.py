@@ -623,7 +623,11 @@ class ContentArea(Widget):
         )
         s = self.session
         parts = []
-        parts.append(warehouse_view(s.infra, s.world, s.world.captain))
+        parts.append(warehouse_view(
+            s.infra,
+            s.current_port_id,
+            s.current_port.name if s.current_port else None,
+        ))
         parts.append(offices_view(s.infra))
         if s.world.captain.standing:
             parts.append(licenses_view(s.infra, s.world.captain.standing))
