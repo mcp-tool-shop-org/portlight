@@ -48,16 +48,13 @@ class TestVictoryPathHealth:
             f"Only {len(paths_seen)} paths appeared as candidates: {paths_seen}"
 
     def test_lawful_not_universal_default(self):
-        """Lawful Trade House shouldn't be strongest in >70% of all runs."""
+        """Lawful House shouldn't be strongest in >70% of all runs."""
         metrics = _run_varied_batch()
         vaggs = aggregate_victory_paths(metrics)
 
-        lawful = next(
-            (v for v in vaggs if v.path_id == "lawful_trade_house"), None
-        )
-        if lawful:
-            assert lawful.candidacy_rate < 0.70, \
-                f"Lawful dominates: {lawful.candidacy_rate:.0%} candidacy"
+        lawful = next(v for v in vaggs if v.path_id == "lawful_house")
+        assert lawful.candidacy_rate < 0.70, \
+            f"Lawful dominates: {lawful.candidacy_rate:.0%} candidacy"
 
     def test_shadow_network_appears_for_smuggler(self):
         """Shadow Network should be strongest for smuggler in some runs."""

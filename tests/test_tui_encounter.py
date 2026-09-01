@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 import pytest
 
@@ -16,6 +17,12 @@ from portlight.engine.models import EncounterState, PendingDuel  # noqa: E402
 def _make_session() -> GameSession:
     s = GameSession(slot="tui_encounter_test")
     s.new("Captain Storm", captain_type="privateer")
+    return s
+
+
+def _make_silver_session(base_path: Path, slot: str) -> GameSession:
+    s = GameSession(base_path=base_path, slot=slot)
+    s.new("Captain Storm", captain_type="privateer", seed=42)
     return s
 
 
@@ -203,22 +210,66 @@ async def test_duel_actions():
 # Victory consequences
 # ---------------------------------------------------------------------------
 
-def test_finalize_victory_silver_spare():
-    """Spare gives 20 + strength*3 silver."""
+def _mount_victory_screen(app: PortlightApp, session: GameSession, strength: int):
+    """Push EncounterScreen in victory phase onto a running app."""
     from portlight.app.tui.screens.encounter import EncounterScreen
-    s = _make_session()
-    enc = _make_encounter(strength=5)
-    EncounterScreen(s, enc)
-    expected_gain = 20 + 5 * 3  # = 35
 
-    # We can't call _finalize_victory without the TUI mounted, so test the formula directly
-    assert expected_gain == 35
+    enc = _make_encounter(strength=strength)
+    enc.phase = "victory"
+    screen = EncounterScreen(session, enc)
+    app.push_screen(screen)
+    return screen
 
 
-def test_finalize_victory_silver_take_all():
-    """Take-all gives 20 + strength*7 silver."""
-    expected_gain = 20 + 5 * 7  # = 55
-    assert expected_gain == 55
+@pytest.mark.asyncio
+async def test_finalize_victory_silver_spare(tmp_path: Path):
+    """Spare must pay silver through EncounterScreen._finalize_victory."""
+    s = _make_silver_session(tmp_path / "spare", "spare")
+    strength = 5
+    start_silver = s.captain.silver
+    app = PortlightApp(session=s)
+
+    async with app.run_test() as pilot:
+        screen = _mount_victory_screen(app, s, strength)
+        await pilot.pause()
+        screen._handle_spare()
+        await pilot.pause()
+        spare_gain = s.captain.silver - start_silver
+
+    assert spare_gain > 0, (
+        "spare paid no silver; EncounterScreen._finalize_victory must credit captain.silver"
+    )
+
+
+@pytest.mark.asyncio
+async def test_finalize_victory_silver_take_all(tmp_path: Path):
+    """Take-all must pay more silver than spare through the TUI finalizer."""
+    strength = 5
+    s_spare = _make_silver_session(tmp_path / "spare", "spare")
+    s_take = _make_silver_session(tmp_path / "take", "take")
+    start_silver = s_spare.captain.silver
+    assert s_take.captain.silver == start_silver
+
+    app_spare = PortlightApp(session=s_spare)
+    async with app_spare.run_test() as pilot:
+        screen = _mount_victory_screen(app_spare, s_spare, strength)
+        await pilot.pause()
+        screen._handle_spare()
+        await pilot.pause()
+        spare_gain = s_spare.captain.silver - start_silver
+
+    app_take = PortlightApp(session=s_take)
+    async with app_take.run_test() as pilot:
+        screen = _mount_victory_screen(app_take, s_take, strength)
+        await pilot.pause()
+        screen._handle_take_all()
+        await pilot.pause()
+        take_gain = s_take.captain.silver - start_silver
+
+    assert spare_gain > 0
+    assert take_gain > spare_gain, (
+        f"take-all must pay more silver than spare (spare={spare_gain}, take-all={take_gain})"
+    )
 
 
 # ---------------------------------------------------------------------------
