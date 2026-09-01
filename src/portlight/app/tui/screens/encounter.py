@@ -550,17 +550,26 @@ class EncounterScreen(Screen):
         log.write("")
 
         self._refresh_combatant_panels()
-        self._persist_encounter()
 
-        # Check resolution
-        if o.hp <= 0 and p.hp > 0:
-            log.write("[bold green]Victory! The captain falls![/bold green]")
-            self._enter_victory()
-        elif p.hp <= 0:
-            self._enter_defeat(f"{enc.enemy_captain_name} defeats you.")
-        elif o.hp <= 0 and p.hp <= 0:
-            log.write("[bold yellow]Mutual defeat -- both fall.[/bold yellow]")
-            self._enter_defeat("A draw. Both combatants collapse.")
+        # Fight-over: write injuries + remaining ammo onto the captain before
+        # persist/_clear_pending/_save. Mutual-defeat must be checked before
+        # the lone player-hp<=0 branch or it is unreachable.
+        player_won = o.hp <= 0 and p.hp > 0
+        draw = p.hp <= 0 and o.hp <= 0
+        player_lost = p.hp <= 0 and o.hp > 0
+        if player_won or draw or player_lost:
+            self._apply_duel_fight_over_effects(result.injury_inflicted)
+            self._persist_encounter()
+            if player_won:
+                log.write("[bold green]Victory! The captain falls![/bold green]")
+                self._enter_victory()
+            elif draw:
+                log.write("[bold yellow]Mutual defeat -- both fall.[/bold yellow]")
+                self._enter_defeat("A draw. Both combatants collapse.")
+            else:
+                self._enter_defeat(f"{enc.enemy_captain_name} defeats you.")
+        else:
+            self._persist_encounter()
 
     def _refresh_combatant_panels(self) -> None:
         from portlight.app.tui.theme import render_bar
@@ -596,6 +605,8 @@ class EncounterScreen(Screen):
     # ------------------------------------------------------------------
 
     def _enter_victory(self) -> None:
+        # Snapshot remaining ammo before pending-victory persist (CLI fight-over).
+        self._sync_combatant_ammo_to_gear()
         self._phase = "victory"
         self.encounter.phase = "resolved"
         self._persist_encounter(pending_victory=True)
@@ -741,16 +752,17 @@ class EncounterScreen(Screen):
         choice = "showed mercy" if spared else "took everything"
         log.write(f"[dim]You {choice}. The encounter is over.[/dim]")
 
-        # Weapon degradation
+        # Weapon degradation (firearm tick only when rounds were spent this fight)
         try:
             from portlight.engine.weapon_quality import tick_melee_degradation, tick_firearm_degradation
             if gear.melee_weapon:
                 tick_melee_degradation(gear, gear.melee_weapon)
             if gear.firearm and self._player_combatant and self._player_combatant.ammo < gear.firearm_ammo:
                 tick_firearm_degradation(gear, gear.firearm)
-                gear.firearm_ammo = self._player_combatant.ammo
         except (ImportError, Exception):
             pass
+        # Remaining ammo — firearm, mechanical, and throwing (CLI fight-over)
+        self._sync_combatant_ammo_to_gear()
 
         self._phase = "resolved"
         self._clear_pending()
@@ -772,6 +784,17 @@ class EncounterScreen(Screen):
         log.write(f"  {message}")
         log.write("")
 
+        # Remaining ammo (no-op if combatants were never created, e.g. naval loss)
+        self._sync_combatant_ammo_to_gear()
+
+        # Duel-loss silver penalty — CLI fight() uses 15 + strength*3.
+        # Skip when there is no player combatant (naval ship-loss).
+        if self._player_combatant is not None:
+            silver_loss = 15 + self.encounter.enemy_strength * 3
+            self.session.captain.silver = max(0, self.session.captain.silver - silver_loss)
+            log.write(f"[red]-{silver_loss} silver.[/red]")
+            log.write("")
+
         # Record defeat
         self.session.world.pirates.duels_lost += 1
         try:
@@ -789,6 +812,42 @@ class EncounterScreen(Screen):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _apply_duel_fight_over_effects(self, injury_id: str | None = None) -> None:
+        """Port CLI fight-over: persist injury and remaining ammo onto the captain."""
+        captain = self.session.captain
+        if injury_id:
+            from portlight.app.session import injury_ids_from
+            from portlight.engine.injuries import create_injury
+            if injury_id not in injury_ids_from(captain.injuries):
+                captain.injuries.append(create_injury(injury_id, self.session.world.day))
+        self._sync_combatant_ammo_to_gear()
+
+    def _sync_combatant_ammo_to_gear(self) -> None:
+        """Copy firearm/mechanical ammo and prune spent throwing weapons from gear."""
+        p = self._player_combatant
+        if p is None:
+            return
+        gear = self.session.captain.combat_gear
+        if gear.firearm and p.ammo < gear.firearm_ammo:
+            try:
+                from portlight.engine.weapon_quality import tick_firearm_degradation
+                tick_firearm_degradation(gear, gear.firearm)
+            except (ImportError, Exception):
+                pass
+        gear.firearm_ammo = p.ammo
+        gear.mechanical_ammo = getattr(p, "mechanical_ammo", 0)
+        throwing = getattr(gear, "throwing_weapons", None)
+        if throwing:
+            total_before = sum(throwing.values())
+            spent = total_before - p.throwing_weapons
+            for wid in list(throwing):
+                if spent <= 0:
+                    break
+                can_take = min(spent, throwing[wid])
+                throwing[wid] -= can_take
+                spent -= can_take
+            gear.throwing_weapons = {k: v for k, v in throwing.items() if v > 0}
 
     def _rng(self) -> random.Random:
         seed = self.session.world.seed + self.session.world.day * 1000

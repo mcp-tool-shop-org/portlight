@@ -723,6 +723,8 @@ class GameSession:
         """
         if not self.world:
             return "No active game"
+        if days <= 0:
+            return "Quantity must be a positive number."
         port = self.current_port
         if not port:
             return "Must be docked to provision"
@@ -750,6 +752,8 @@ class GameSession:
         damage = ship.hull_max - ship.hull
         if damage == 0:
             return "Ship is already in perfect condition"
+        if amount is not None and amount <= 0:
+            return "Quantity must be a positive number."
         if amount is None:
             amount = damage
         amount = min(amount, damage)
