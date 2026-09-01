@@ -7,17 +7,70 @@ captain memory, underworld standing, companion morale, and silver reward.
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
+import pytest
+
+from portlight.app import cli
+from portlight.app.session import GameSession
 from portlight.engine.captain_memory import (
     CaptainMemory,
     CaptainRelationship,
     record_encounter,
 )
+from portlight.engine.models import EncounterState, PendingDuel
+from portlight.engine.save import load_game, save_game
 from portlight.engine.underworld import record_duel_outcome
 
 
 def _rng(seed: int = 42) -> random.Random:
     return random.Random(seed)
+
+
+def _make_encounter(strength: int = 7) -> EncounterState:
+    return EncounterState(
+        enemy_captain_id="gnaw",
+        enemy_captain_name="Gnaw",
+        enemy_faction_id="iron_wolves",
+        enemy_personality="aggressive",
+        enemy_strength=strength,
+        enemy_region="Mediterranean",
+        enemy_ship_hull=40,
+        enemy_ship_hull_max=40,
+        enemy_ship_cannons=4,
+        enemy_ship_maneuver=0.5,
+        enemy_ship_speed=6.0,
+        enemy_ship_crew=8,
+        enemy_ship_crew_max=12,
+        phase="resolved",
+        boarding_progress=2,
+        boarding_threshold=2,
+    )
+
+
+def _pending_gnaw(strength: int = 7) -> PendingDuel:
+    return PendingDuel(
+        captain_id="gnaw",
+        captain_name="Gnaw",
+        faction_id="iron_wolves",
+        personality="aggressive",
+        strength=strength,
+        region="Mediterranean",
+    )
+
+
+def _reset_cli_combat() -> None:
+    cli._active_encounter = None
+    cli._player_combatant = None
+    cli._opponent_combatant = None
+    cli._pending_victory = False
+
+
+@pytest.fixture
+def reset_cli_combat():
+    _reset_cli_combat()
+    yield
+    _reset_cli_combat()
 
 
 # ---------------------------------------------------------------------------
@@ -139,12 +192,30 @@ class TestCompanionMorale:
 # ---------------------------------------------------------------------------
 
 class TestSilverReward:
-    def test_take_all_gives_more_silver(self):
-        """Take-all should give more silver than sparing."""
+    def test_take_all_gives_more_silver(self, tmp_path: Path, monkeypatch, reset_cli_combat):
+        """Take-all must pay more silver than spare through the live CLI finalizer."""
         strength = 7
-        spare_silver = 20 + strength * 3  # from _finalize_victory
-        take_silver = 20 + strength * 7
-        assert take_silver > spare_silver
+        s_spare = GameSession(base_path=tmp_path / "spare")
+        s_spare.new("Hawk")
+        s_take = GameSession(base_path=tmp_path / "take")
+        s_take.new("Hawk")
+        start_silver = s_spare.captain.silver
+        assert s_take.captain.silver == start_silver
+
+        monkeypatch.setattr(cli, "_session", lambda: s_spare)
+        cli._active_encounter = _make_encounter(strength)
+        cli._pending_victory = True
+        cli.spare()
+        spare_gain = s_spare.captain.silver - start_silver
+
+        monkeypatch.setattr(cli, "_session", lambda: s_take)
+        cli._active_encounter = _make_encounter(strength)
+        cli._pending_victory = True
+        cli.take_all()
+        take_gain = s_take.captain.silver - start_silver
+
+        assert spare_gain > 0
+        assert take_gain > spare_gain
 
 
 # ---------------------------------------------------------------------------
@@ -154,45 +225,62 @@ class TestSilverReward:
 class TestEncounterPersistence:
     """Verify that victory state survives save/load (bug fix: encounter persistence)."""
 
-    def test_pending_victory_persists_in_encounter_state(self):
-        """When pending_victory is True, it must be written to encounter_state dict."""
-        from portlight.engine.models import PirateState
-        pirates = PirateState()
-        # Simulate what _sync_encounter_phase does after victory
-        estate = {"pending_victory": True, "boarding_progress": 2, "boarding_threshold": 2}
-        pirates.encounter_state = estate
-        pirates.encounter_phase = "resolved"
-        assert pirates.encounter_state["pending_victory"] is True
-        assert pirates.encounter_phase == "resolved"
+    def test_pending_victory_survives_save_load_and_restore(
+        self, tmp_path: Path, reset_cli_combat,
+    ):
+        """pending_victory must survive save_game/load_game and cli._restore_encounter."""
+        s = GameSession(base_path=tmp_path)
+        s.new("Hawk")
+        s.world.pirates.pending_duel = _pending_gnaw(7)
+        cli._active_encounter = _make_encounter(7)
+        cli._pending_victory = True
+        cli._sync_encounter_phase(s)
+        assert s.world.pirates.encounter_state.get("pending_victory") is True
 
-    def test_pending_victory_survives_dict_roundtrip(self):
-        """pending_victory flag must survive serialization to dict and back."""
-        import json
-        estate = {
-            "pending_victory": True,
-            "boarding_progress": 2,
-            "boarding_threshold": 2,
-            "player_hp": 4,
-            "opponent_hp": 0,
-        }
-        serialized = json.dumps(estate)
-        restored = json.loads(serialized)
-        assert restored["pending_victory"] is True
-        assert restored["opponent_hp"] == 0
+        save_game(
+            s.world, s.ledger, s.board, s.infra, s.campaign, s.narrative,
+            base_path=tmp_path, slot=s.slot,
+        )
+        _reset_cli_combat()
 
-    def test_restore_reads_pending_victory(self):
-        """_restore_encounter logic should set _pending_victory from estate."""
-        estate = {"pending_victory": True}
-        # Simulate the restore logic from cli.py _restore_encounter
-        pending_victory = False
-        if estate and estate.get("pending_victory"):
-            pending_victory = True
-        assert pending_victory is True
+        result = load_game(base_path=tmp_path, slot=s.slot)
+        assert result is not None
+        loaded_world, *_ = result
+        assert loaded_world.pirates.encounter_state.get("pending_victory") is True
+        assert loaded_world.pirates.encounter_state.get("boarding_progress") == 2
+        assert loaded_world.pirates.pending_duel is not None
+        assert loaded_world.pirates.pending_duel.captain_id == "gnaw"
 
-    def test_empty_estate_does_not_set_pending_victory(self):
-        """Empty encounter_state should NOT trigger pending_victory."""
-        estate = {}
-        pending_victory = False
-        if estate and estate.get("pending_victory"):
-            pending_victory = True
-        assert pending_victory is False
+        s2 = GameSession(base_path=tmp_path, slot=s.slot)
+        assert s2.load()
+        cli._restore_encounter(s2)
+        assert cli._pending_victory is True
+        assert cli._active_encounter is not None
+        assert cli._active_encounter.phase == "resolved"
+        assert cli._active_encounter.enemy_captain_id == "gnaw"
+        assert cli._active_encounter.enemy_strength == 7
+
+    def test_empty_estate_does_not_set_pending_victory(
+        self, tmp_path: Path, reset_cli_combat,
+    ):
+        """Empty encounter_state after save/load must not arm _pending_victory."""
+        s = GameSession(base_path=tmp_path)
+        s.new("Hawk")
+        s.world.pirates.pending_duel = _pending_gnaw(7)
+        s.world.pirates.encounter_phase = "duel"
+        s.world.pirates.encounter_state = {}
+        save_game(
+            s.world, s.ledger, s.board, s.infra, s.campaign, s.narrative,
+            base_path=tmp_path, slot=s.slot,
+        )
+
+        result = load_game(base_path=tmp_path, slot=s.slot)
+        assert result is not None
+        assert result[0].pirates.encounter_state == {}
+
+        s2 = GameSession(base_path=tmp_path, slot=s.slot)
+        assert s2.load()
+        cli._restore_encounter(s2)
+        assert cli._pending_victory is False
+        assert cli._active_encounter is not None
+        assert cli._active_encounter.phase == "duel"
