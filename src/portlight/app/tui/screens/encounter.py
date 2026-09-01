@@ -302,7 +302,7 @@ class EncounterScreen(Screen):
         log = self.query_one("#encounter-log", RichLog)
         ship = self.session.captain.ship
 
-        escaped, damage, msg = resolve_flee(enc, ship, self._rng())
+        escaped, damage, msg = resolve_flee(enc, self._combat_ship(), self._rng())
         log.write(f"[bold]Flee:[/bold] {msg}")
 
         if damage > 0:
@@ -323,9 +323,8 @@ class EncounterScreen(Screen):
         from portlight.engine.encounter import begin_fight
         enc = self.encounter
         log = self.query_one("#encounter-log", RichLog)
-        ship = self.session.captain.ship
 
-        msg = begin_fight(enc, ship)
+        msg = begin_fight(enc, self._combat_ship())
         self._phase = "naval"
         enc.phase = "naval"
 
@@ -346,17 +345,24 @@ class EncounterScreen(Screen):
     # Naval phase
     # ------------------------------------------------------------------
 
+    def _combat_ship(self):
+        from portlight.content.upgrades import UPGRADES
+        from portlight.engine.ship_stats import resolved_ship
+        return resolved_ship(self.session.captain.ship, UPGRADES)
+
     def _handle_naval_action(self, action: str) -> None:
+        from portlight.content.upgrades import UPGRADES
         from portlight.engine.encounter import resolve_naval_turn
+        from portlight.engine.ship_stats import resolve_cannons
         enc = self.encounter
         log = self.query_one("#encounter-log", RichLog)
         ship = self.session.captain.ship
 
-        if action == "broadside" and ship.cannons <= 0:
+        if action == "broadside" and resolve_cannons(ship, UPGRADES) <= 0:
             self.app.notify("No cannons! Use Close to board.", severity="warning")
             return
 
-        result = resolve_naval_turn(enc, action, ship, self._rng())
+        result = resolve_naval_turn(enc, action, self._combat_ship(), self._rng())
 
         # Apply damage to player ship (roster is source of truth)
         from portlight.app.session import apply_crew_casualties
@@ -396,14 +402,17 @@ class EncounterScreen(Screen):
 
     def _refresh_ship_panels(self) -> None:
         from portlight.app.tui.theme import render_bar
+        from portlight.content.upgrades import UPGRADES
+        from portlight.engine.ship_stats import resolve_cannons
         enc = self.encounter
         ship = self.session.captain.ship
+        guns = resolve_cannons(ship, UPGRADES)
 
         player_text = (
             f"[bold #2a9d8f]Your Ship[/bold #2a9d8f]\n\n"
             f"  Hull  {render_bar(ship.hull, ship.hull_max, 10)} {ship.hull}/{ship.hull_max}\n"
             f"  Crew  [bold]{ship.crew}[/bold]\n"
-            f"  Guns  [bold]{ship.cannons}[/bold]"
+            f"  Guns  [bold]{guns}[/bold]"
         )
         enemy_text = (
             f"[bold #e76f51]{enc.enemy_captain_name}'s Ship[/bold #e76f51]\n\n"
@@ -448,6 +457,7 @@ class EncounterScreen(Screen):
         self.set_timer(1.0, self._begin_duel)
 
     def _begin_duel(self) -> None:
+        from portlight.app.session import injury_ids_from
         from portlight.engine.encounter import create_duel_combatants
         enc = self.encounter
         log = self.query_one("#encounter-log", RichLog)
@@ -460,7 +470,7 @@ class EncounterScreen(Screen):
             enc,
             player_crew=captain.ship.crew,
             player_style=captain.active_style,
-            player_injury_ids=list(captain.injuries) if hasattr(captain, "injuries") and captain.injuries else [],
+            player_injury_ids=injury_ids_from(getattr(captain, "injuries", None)),
             player_firearm=gear.firearm,
             player_ammo=gear.firearm_ammo,
             player_throwing=throwing_count,

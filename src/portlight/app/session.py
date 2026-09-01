@@ -147,6 +147,19 @@ def apply_crew_casualties(ship, lost: int, *, keep_at_least: int = 0) -> int:
     return lost - remaining
 
 
+def injury_ids_from(injuries) -> list[str]:
+    """Return hashable injury id strings. ActiveInjury objects are not dict keys."""
+    ids: list[str] = []
+    for inj in injuries or []:
+        if isinstance(inj, str):
+            ids.append(inj)
+            continue
+        iid = getattr(inj, "injury_id", None)
+        if isinstance(iid, str):
+            ids.append(iid)
+    return ids
+
+
 def inventory_gear_data(captain) -> dict:
     """Map captain combat_gear, injuries, and upgrades into inventory_view keys."""
     gear = captain.combat_gear
@@ -169,8 +182,13 @@ def inventory_gear_data(captain) -> dict:
 
     injuries_data = []
     for inj in captain.injuries or []:
-        iid = getattr(inj, "injury_id", None) or getattr(inj, "id", None)
-        idef = INJURIES.get(iid) if iid else None
+        if isinstance(inj, str):
+            iid = inj
+        else:
+            iid = getattr(inj, "injury_id", None)
+        if not isinstance(iid, str):
+            continue
+        idef = INJURIES.get(iid)
         heal_remaining = getattr(inj, "heal_remaining", None)
         if idef:
             if heal_remaining is None and getattr(idef, "heal_days", None) is None:
