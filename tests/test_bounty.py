@@ -10,10 +10,18 @@ from portlight.engine.bounty import (
     BountyTarget,
 )
 from portlight.engine.captain_identity import CaptainType, CAPTAIN_TEMPLATES
+from portlight.engine.captain_memory import get_or_create_memory, record_encounter
 
 
 def _rng(seed: int = 42) -> random.Random:
     return random.Random(seed)
+
+
+def _record_player_win(world, captain_id: str, region: str = "North Atlantic"):
+    """Seed a live CaptainMemory the same way combat does after a player win."""
+    memory = get_or_create_memory(world.pirates.captain_memories, captain_id)
+    record_encounter(memory, day=world.day, region=region, outcome="player_won")
+    return memory
 
 
 class TestBountyBoard:
@@ -34,9 +42,9 @@ class TestBountyBoard:
     def test_defeated_pirates_excluded(self):
         """Pirates already defeated should not appear on the board."""
         world = new_game()
-        # Mark scarlet_ana as defeated
-        world.pirates.captain_memories["scarlet_ana"] = {"times_defeated": 1}
-        targets = generate_bounty_board(world.pirates, _rng())
+        memory = _record_player_win(world, "scarlet_ana")
+        assert memory.times_defeated_by_player >= 1
+        targets = generate_bounty_board(world.pirates, _rng(), max_targets=10)
         ids = [t.captain_id for t in targets]
         assert "scarlet_ana" not in ids
 
@@ -73,7 +81,10 @@ class TestClaimBounty:
     def test_claim_after_defeat(self):
         world = new_game()
         accept_bounty(world.captain, "scarlet_ana")
-        world.pirates.captain_memories["scarlet_ana"] = {"times_defeated": 1}
+        memory = _record_player_win(world, "scarlet_ana")
+        assert memory.times_defeated_by_player >= 1
+        board_ids = [t.captain_id for t in generate_bounty_board(world.pirates, _rng(), max_targets=10)]
+        assert "scarlet_ana" not in board_ids
         silver_before = world.captain.silver
         result = claim_bounty(world.captain, world.pirates, "scarlet_ana")
         assert isinstance(result, int)
@@ -83,9 +94,16 @@ class TestClaimBounty:
 
     def test_claim_without_accepting(self):
         world = new_game()
-        world.pirates.captain_memories["gnaw"] = {"times_defeated": 1}
+        _record_player_win(world, "gnaw", region="Mediterranean")
         result = claim_bounty(world.captain, world.pirates, "gnaw")
         assert isinstance(result, str)  # error — no active bounty
+
+    def test_save_dict_memory_excludes_from_board(self):
+        """Save-dict memories with times_defeated_by_player still count as defeated."""
+        world = new_game()
+        world.pirates.captain_memories["brass_jack"] = {"times_defeated_by_player": 1}
+        targets = generate_bounty_board(world.pirates, _rng(), max_targets=10)
+        assert "brass_jack" not in [t.captain_id for t in targets]
 
 
 class TestBountyHunterTemplate:
