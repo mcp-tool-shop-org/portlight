@@ -95,7 +95,8 @@ class PortlightApp(App):
         """Switch the content area to a different tab."""
         enc = self._encounter_screen
         if enc:
-            # f→fleet, c→cargo, r→routes, w→infrastructure: remap to encounter actions
+            # f→fleet, c→cargo, r→routes, w→infrastructure: remap to encounter actions.
+            # During capture_available, C (cargo→close) confirms prize, F (fleet→flee) lets it sink.
             _remap = {
                 "fleet": "flee",
                 "cargo": "close",
@@ -114,9 +115,11 @@ class PortlightApp(App):
             dashboard.switch_tab(tab)
 
     def action_buy(self) -> None:
-        """Open buy dialog. During encounter: b=broadside."""
+        """Open buy dialog. During encounter: b=broadside (no-op while capturing a prize)."""
         enc = self._encounter_screen
         if enc:
+            if enc.is_capturing_prize():
+                return
             enc.action_encounter_key("broadside")
             return
         if not self.session.active:
@@ -125,9 +128,11 @@ class PortlightApp(App):
         execute_buy_flow(self, self.session)
 
     def action_sell(self) -> None:
-        """Open sell dialog. During encounter: s=spare."""
+        """Open sell dialog. During encounter: s=spare. Prize capture is not spare."""
         enc = self._encounter_screen
         if enc:
+            if enc.is_capturing_prize():
+                return
             enc.action_encounter_key("spare")
             return
         if not self.session.active:
@@ -136,9 +141,11 @@ class PortlightApp(App):
         execute_sell_flow(self, self.session)
 
     def action_sail(self) -> None:
-        """Open sail dialog. During encounter: g=fight."""
+        """Open sail dialog. During encounter: g=fight (no-op while capturing a prize)."""
         enc = self._encounter_screen
         if enc:
+            if enc.is_capturing_prize():
+                return
             enc.action_encounter_key("fight")
             return
         if not self.session.active:
@@ -147,9 +154,11 @@ class PortlightApp(App):
         execute_sail_flow(self, self.session)
 
     def action_advance(self) -> None:
-        """Advance one day. During encounter: a=take_all."""
+        """Advance one day. During encounter: a=take_all. Prize capture is not take-all."""
         enc = self._encounter_screen
         if enc:
+            if enc.is_capturing_prize():
+                return
             enc.action_encounter_key("take_all")
             return
         if not self.session.active:
