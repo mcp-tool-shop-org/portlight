@@ -283,6 +283,7 @@ def _migrate_v11_to_v12(data: dict) -> dict:
     captain.setdefault("wanted_level", 0)
     captain.setdefault("deferred_fees", [])
     captain.setdefault("active_bounties", [])
+    captain.setdefault("claimed_bounties", [])
     pirates = data.get("pirates", {})
     pirates.setdefault("bounty_board", [])
     data["version"] = 12
@@ -558,6 +559,7 @@ def _captain_to_dict(captain: Captain) -> dict:
         "breach_records": captain.breach_records,
         "wanted_level": captain.wanted_level,
         "active_bounties": captain.active_bounties,
+        "claimed_bounties": list(getattr(captain, "claimed_bounties", []) or []),
     }
 
 
@@ -632,6 +634,7 @@ def _captain_from_dict(d: dict) -> Captain:
         breach_records=d.get("breach_records", []),
         wanted_level=d.get("wanted_level", 0),
         active_bounties=d.get("active_bounties", []),
+        claimed_bounties=list(d.get("claimed_bounties", []) or []),
     )
 
 
