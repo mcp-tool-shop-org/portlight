@@ -451,7 +451,7 @@ def provision(days: int = typer.Argument(10, help="Days of provisions to buy")) 
 
 @app.command()
 def repair(amount: int = typer.Argument(None, help="Hull points to repair (default: full)")) -> None:
-    """Repair ship hull (3 silver per HP)."""
+    """Repair ship hull at the current port's rate (modified by standing)."""
     if amount is not None and amount <= 0:
         console.print("[red]Quantity must be a positive number.[/red]")
         return
@@ -697,6 +697,9 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
             console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge>[/cyan]")
         elif phase == "duel":
             console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge>[/cyan]")
+        elif phase == "capture_available":
+            console.print("  [cyan]portlight capture <crew>[/cyan] to take the prize")
+            console.print("  [cyan]portlight capture 0[/cyan] to let it sink")
         elif phase == "resolved":
             console.print("  [cyan]portlight spare[/cyan] or [cyan]portlight take-all[/cyan]")
         return
@@ -705,45 +708,28 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
         was_at_sea = s.at_sea
         events = s.advance()
 
-        # Tick NPC captain agency (autonomous actions)
+        # Tick NPC captain agency (autonomous actions) — shared with TUI
         if s.world and s.at_sea:
-            from portlight.engine.captain_memory import tick_captain_agency
-            region = s._voyage_region() if hasattr(s, '_voyage_region') else "Mediterranean"
-            captain_actions = tick_captain_agency(
-                s.world.pirates.captain_memories, region,
-                s.captain.silver, s.world.day, s._rng,
-            )
-            for ca in captain_actions:
-                if ca.effect_type == "encounter" and _active_encounter is None:
-                    # Ambush or challenge — create encounter immediately
-                    from portlight.engine.encounter import create_encounter
-                    enc = create_encounter(s.world.ports, s.world.voyage.destination_id if s.world.voyage else "porto_novo", s._rng)
-                    if enc:
-                        enc.enemy_captain_id = ca.captain_id
-                        enc.enemy_captain_name = ca.captain_name
-                        _active_encounter = enc
-                        _player_combatant = None
-                        _opponent_combatant = None
-                        from portlight.app import combat_views
-                        console.print(f"\n[bold red]{ca.message}[/bold red]")
-                        console.print(combat_views.encounter_view(
-                            enc.enemy_captain_name, "", enc.enemy_personality, enc.enemy_strength,
-                            f"{enc.enemy_captain_name}'s Ship", ca.message,
-                        ))
-                        if ca.verb == "ambush":
-                            enc.phase = "naval"  # no negotiate for ambushes
-                            console.print("\n[bold red]No time to negotiate! Use [cyan]portlight naval <action>[/cyan][/bold red]")
-                        else:
-                            console.print("\n[bold]Use [cyan]portlight encounter <negotiate|flee|fight>[/cyan][/bold]")
-                        s._save()
-                        break
-                elif ca.effect_type == "silver":
-                    s.captain.silver += ca.effect_value
-                    console.print(f"\n[dim]{ca.message}[/dim]")
-                elif ca.effect_type == "message":
-                    console.print(f"\n[dim]{ca.message}[/dim]")
-
-            if _active_encounter is not None:
+            enc, ambush, notices = s.tick_sea_captain_agency()
+            for kind, msg in notices:
+                if kind == "encounter":
+                    console.print(f"\n[bold red]{msg}[/bold red]")
+                else:
+                    console.print(f"\n[dim]{msg}[/dim]")
+            if enc and _active_encounter is None:
+                _active_encounter = enc
+                _player_combatant = None
+                _opponent_combatant = None
+                from portlight.app import combat_views
+                console.print(combat_views.encounter_view(
+                    enc.enemy_captain_name, "", enc.enemy_personality, enc.enemy_strength,
+                    f"{enc.enemy_captain_name}'s Ship",
+                    next((m for k, m in notices if k == "encounter"), ""),
+                ))
+                if ambush:
+                    console.print("\n[bold red]No time to negotiate! Use [cyan]portlight naval <action>[/cyan][/bold red]")
+                else:
+                    console.print("\n[bold]Use [cyan]portlight encounter <negotiate|flee|fight>[/cyan][/bold]")
                 break  # stop advancing — handle encounter first
 
         # Check for pirate encounter — intercept and create interactive encounter
@@ -775,7 +761,9 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
                 _player_combatant = None
                 _opponent_combatant = None
                 # Keep pending_duel set so encounter persists across CLI invocations
-                # It will be cleared when the encounter resolves
+                # Persist full ship stats now so restore does not re-roll the enemy.
+                _sync_encounter_phase(s)
+                s._save()
 
                 from portlight.app import combat_views
                 from portlight.content.factions import FACTIONS, PIRATE_CAPTAINS
@@ -1838,27 +1826,15 @@ _pending_victory = False  # True when player won and must choose spare/take-all
 
 
 def _sync_encounter_phase(s) -> None:
-    """Persist the current encounter phase and combat state to save data."""
+    """Persist the current encounter phase and full ship stats to save data."""
+    from portlight.app.session import persist_encounter
     if _active_encounter and s and s.world:
-        enc = _active_encounter
-        s.world.pirates.encounter_phase = enc.phase
-        estate = {
-            "boarding_progress": enc.boarding_progress,
-            "boarding_threshold": enc.boarding_threshold,
-            "naval_turns": enc.naval_turns,
-            "duel_turns": enc.duel_turns,
-            "enemy_ship_hull": enc.enemy_ship_hull,
-            "enemy_ship_crew": enc.enemy_ship_crew,
-        }
-        # Persist combatant HP/stamina for duel phase
-        if _player_combatant:
-            estate["player_hp"] = _player_combatant.hp
-            estate["player_stamina"] = _player_combatant.stamina
-        if _opponent_combatant:
-            estate["opponent_hp"] = _opponent_combatant.hp
-            estate["opponent_stamina"] = _opponent_combatant.stamina
-        estate["pending_victory"] = _pending_victory
-        s.world.pirates.encounter_state = estate
+        persist_encounter(
+            s, _active_encounter,
+            pending_victory=_pending_victory,
+            player=_player_combatant,
+            opponent=_opponent_combatant,
+        )
     elif s and s.world:
         s.world.pirates.encounter_phase = ""
         s.world.pirates.encounter_state = {}
@@ -1879,46 +1855,15 @@ def _clear_encounter(s) -> None:
 
 def _restore_encounter(s) -> None:
     """Restore encounter from pending_duel if module state was lost (new process)."""
-    global _active_encounter
+    global _active_encounter, _pending_victory
     if _active_encounter is not None:
         return  # already have one
-    pd = s.world.pirates.pending_duel
-    if pd is None:
-        return
-    from portlight.engine.encounter import create_encounter
-    enc = create_encounter(
-        s.world.ports,
-        s.world.voyage.destination_id if s.world.voyage else "porto_novo",
-        s._rng,
-    )
+    from portlight.app.session import reconstruct_encounter
+    enc = reconstruct_encounter(s, victory_phase="resolved")
     if enc:
-        enc.enemy_captain_id = pd.captain_id
-        enc.enemy_captain_name = pd.captain_name
-        enc.enemy_faction_id = pd.faction_id
-        enc.enemy_personality = pd.personality
-        enc.enemy_strength = pd.strength
-        enc.enemy_region = pd.region
-        # Restore persisted phase and combat state
-        phase = s.world.pirates.encounter_phase
-        if phase and phase in (
-            "approach", "naval", "boarding", "duel",
-            "capture_available", "resolved",
-        ):
-            enc.phase = phase
-        estate = s.world.pirates.encounter_state
-        if estate:
-            enc.boarding_progress = estate.get("boarding_progress", 0)
-            enc.boarding_threshold = estate.get("boarding_threshold", 3)
-            enc.naval_turns = estate.get("naval_turns", 0)
-            enc.duel_turns = estate.get("duel_turns", 0)
-            enc.enemy_ship_hull = estate.get("enemy_ship_hull", enc.enemy_ship_hull)
-            enc.enemy_ship_crew = estate.get("enemy_ship_crew", enc.enemy_ship_crew)
-        # Restore pending victory flag (does not override a prize-capture phase)
-        global _pending_victory
-        if estate and estate.get("pending_victory"):
+        estate = s.world.pirates.encounter_state or {}
+        if estate.get("pending_victory") and enc.phase != "capture_available":
             _pending_victory = True
-            if enc.phase != "capture_available":
-                enc.phase = "resolved"  # awaiting spare/take-all
         _active_encounter = enc
 
 
@@ -1938,6 +1883,9 @@ def encounter(
     s = _session()
     _restore_encounter(s)
     if _active_encounter is None or _active_encounter.phase != "approach":
+        if _active_encounter is not None and _active_encounter.phase == "capture_available":
+            console.print("[yellow]Prize waiting.[/yellow] Use [cyan]portlight capture <crew>[/cyan] (or [cyan]0[/cyan] to decline).")
+            return
         console.print("[yellow]No active encounter. Encounters happen during pirate events at sea.[/yellow]")
         return
 
@@ -2016,6 +1964,9 @@ def naval(
     s = _session()
     _restore_encounter(s)
     if _active_encounter is None or _active_encounter.phase != "naval":
+        if _active_encounter is not None and _active_encounter.phase == "capture_available":
+            console.print("[yellow]Prize waiting.[/yellow] Use [cyan]portlight capture <crew>[/cyan] (or [cyan]0[/cyan] to decline).")
+            return
         console.print("[yellow]Not in naval combat.[/yellow]")
         return
 
@@ -2146,7 +2097,7 @@ def naval(
 
 @app.command()
 def capture(
-    crew_to_assign: int = typer.Argument(..., help="Number of crew to assign to prize ship"),
+    crew_to_assign: int = typer.Argument(..., help="Crew to assign to the prize (0 to let it sink)"),
 ) -> None:
     """Capture a defeated enemy ship as a prize."""
     global _active_encounter
@@ -2154,6 +2105,12 @@ def capture(
     _restore_encounter(s)
     if _active_encounter is None or _active_encounter.phase != "capture_available":
         console.print("[yellow]No ship available to capture.[/yellow]")
+        return
+
+    if crew_to_assign <= 0:
+        _clear_encounter(s)
+        console.print("[dim]You let the prize go under.[/dim]")
+        s._save()
         return
 
     enc = _active_encounter
@@ -2190,6 +2147,9 @@ def fight(
     _restore_encounter(s)
     enc = _active_encounter
     if enc is None or enc.phase != "duel":
+        if enc is not None and enc.phase == "capture_available":
+            console.print("[yellow]Prize waiting.[/yellow] Use [cyan]portlight capture <crew>[/cyan] (or [cyan]0[/cyan] to decline).")
+            return
         console.print("[yellow]Not in personal combat.[/yellow]")
         return
 
@@ -2572,7 +2532,9 @@ def injuries() -> None:
                 "severity": defn.severity,
                 "body_part": defn.body_part,
                 "description": defn.description,
+                "effect": defn.description,
                 "heal_remaining": getattr(inj, "heal_remaining", None),
+                "heal_days": defn.heal_days,
                 "treated": getattr(inj, "treated", False),
             })
     console.print(combat_views.injuries_view(injury_data))
@@ -2910,6 +2872,9 @@ def spare() -> None:
     s = _session()
     _restore_encounter(s)
     if not _pending_victory or _active_encounter is None:
+        if _active_encounter is not None and _active_encounter.phase == "capture_available":
+            console.print("[yellow]Prize waiting.[/yellow] Use [cyan]portlight capture <crew>[/cyan] (or [cyan]0[/cyan] to decline).")
+            return
         console.print("[yellow]No defeated opponent to spare. Win a duel first.[/yellow]")
         return
 
@@ -2927,6 +2892,9 @@ def take_all() -> None:
     s = _session()
     _restore_encounter(s)
     if not _pending_victory or _active_encounter is None:
+        if _active_encounter is not None and _active_encounter.phase == "capture_available":
+            console.print("[yellow]Prize waiting.[/yellow] Use [cyan]portlight capture <crew>[/cyan] (or [cyan]0[/cyan] to decline).")
+            return
         console.print("[yellow]No defeated opponent. Win a duel first.[/yellow]")
         return
 

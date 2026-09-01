@@ -212,6 +212,105 @@ def assign_prize_ship(session: "GameSession", encounter, crew_to_assign: int):
     return owned, None
 
 
+_ENCOUNTER_RESUME_PHASES = frozenset({
+    "approach", "naval", "boarding", "duel",
+    "capture_available", "resolved", "victory", "defeat",
+})
+
+
+def encounter_persist_blob(enc, *, pending_victory: bool = False, player=None, opponent=None) -> dict:
+    """Serialize EncounterState into the free-form pirates.encounter_state blob."""
+    blob = {
+        "enemy_captain_id": enc.enemy_captain_id,
+        "enemy_captain_name": enc.enemy_captain_name,
+        "enemy_faction_id": enc.enemy_faction_id,
+        "enemy_personality": enc.enemy_personality,
+        "enemy_strength": enc.enemy_strength,
+        "enemy_region": enc.enemy_region,
+        "enemy_ship_hull": enc.enemy_ship_hull,
+        "enemy_ship_hull_max": enc.enemy_ship_hull_max,
+        "enemy_ship_cannons": enc.enemy_ship_cannons,
+        "enemy_ship_maneuver": enc.enemy_ship_maneuver,
+        "enemy_ship_speed": enc.enemy_ship_speed,
+        "enemy_ship_crew": enc.enemy_ship_crew,
+        "enemy_ship_crew_max": enc.enemy_ship_crew_max,
+        "boarding_progress": enc.boarding_progress,
+        "boarding_threshold": enc.boarding_threshold,
+        "naval_turns": enc.naval_turns,
+        "duel_turns": enc.duel_turns,
+        "pending_victory": pending_victory,
+    }
+    if player is not None:
+        blob["player_hp"] = player.hp
+        blob["player_stamina"] = player.stamina
+    if opponent is not None:
+        blob["opponent_hp"] = opponent.hp
+        blob["opponent_stamina"] = opponent.stamina
+    return blob
+
+
+def persist_encounter(
+    session: "GameSession",
+    enc,
+    *,
+    pending_victory: bool = False,
+    player=None,
+    opponent=None,
+    phase: str | None = None,
+) -> None:
+    """Write phase + full ship stats onto pirates.encounter_state (engine round-trips the dict)."""
+    if not session or not session.world:
+        return
+    pirates = session.world.pirates
+    pirates.encounter_phase = phase if phase is not None else (enc.phase or "approach")
+    pirates.encounter_state = encounter_persist_blob(
+        enc, pending_victory=pending_victory, player=player, opponent=opponent,
+    )
+
+
+def reconstruct_encounter(session: "GameSession", *, victory_phase: str = "victory"):
+    """Rebuild EncounterState from pending_duel + persisted blob.
+
+    Does not call create_encounter (that re-rolls cannons/speed/hull_max).
+    Identity comes from pending_duel; ship stats come from encounter_state.
+    ``victory_phase`` is 'victory' for TUI and 'resolved' for CLI spare/take-all.
+    """
+    from portlight.engine.models import EncounterState
+
+    if not session or not session.world or session.world.pirates.pending_duel is None:
+        return None
+    pd = session.world.pirates.pending_duel
+    estate = session.world.pirates.encounter_state or {}
+    hull = int(estate.get("enemy_ship_hull", 0) or 0)
+    crew = int(estate.get("enemy_ship_crew", 0) or 0)
+    enc = EncounterState(
+        enemy_captain_id=estate.get("enemy_captain_id") or pd.captain_id,
+        enemy_captain_name=estate.get("enemy_captain_name") or pd.captain_name,
+        enemy_faction_id=estate.get("enemy_faction_id") or pd.faction_id,
+        enemy_personality=estate.get("enemy_personality") or pd.personality,
+        enemy_strength=int(estate.get("enemy_strength", pd.strength) or pd.strength),
+        enemy_region=estate.get("enemy_region") or pd.region or "",
+        enemy_ship_hull=hull,
+        enemy_ship_hull_max=int(estate.get("enemy_ship_hull_max", hull) or hull),
+        enemy_ship_cannons=int(estate.get("enemy_ship_cannons", 0) or 0),
+        enemy_ship_maneuver=float(estate.get("enemy_ship_maneuver", 0.5)),
+        enemy_ship_speed=float(estate.get("enemy_ship_speed", 6.0)),
+        enemy_ship_crew=crew,
+        enemy_ship_crew_max=int(estate.get("enemy_ship_crew_max", crew) or crew),
+        phase="approach",
+        boarding_progress=int(estate.get("boarding_progress", 0) or 0),
+        boarding_threshold=int(estate.get("boarding_threshold", 3) or 3),
+        naval_turns=int(estate.get("naval_turns", 0) or 0),
+        duel_turns=int(estate.get("duel_turns", 0) or 0),
+    )
+    phase = session.world.pirates.encounter_phase
+    if phase and phase in _ENCOUNTER_RESUME_PHASES:
+        enc.phase = phase
+    if estate.get("pending_victory") and enc.phase != "capture_available":
+        enc.phase = victory_phase
+    return enc
+
+
 def inventory_gear_data(captain) -> dict:
     """Map captain combat_gear, injuries, and upgrades into inventory_view keys."""
     gear = captain.combat_gear
@@ -665,7 +764,10 @@ class GameSession:
         from portlight.engine.voyage import find_route as _find_route
         _voyage = self.world.voyage
         _route = _find_route(self.world, _voyage.origin_id, _voyage.destination_id) if _voyage else None
-        events = enrich_voyage_day(self.world, _route, events, self._rng)
+        events = enrich_voyage_day(
+            self.world, _route, events, self._rng,
+            ledger=self.ledger, board=self.board,
+        )
 
         # Note: markets don't tick while at sea — prices only change when
         # you're in port to observe them. This is intentional: it preserves
@@ -757,6 +859,65 @@ class GameSession:
             if dest:
                 return dest.region
         return "Mediterranean"
+
+    def tick_sea_captain_agency(self):
+        """Tick NPC captain agency while at sea (shared CLI + TUI advance path).
+
+        Silver gifts are applied immediately. An ambush/challenge creates an
+        EncounterState, writes pending_duel + full ship stats onto
+        encounter_state, and returns it so the frontend can present the fight.
+
+        Returns (encounter_or_none, is_ambush, notices) where notices is a list
+        of (effect_type, message) tuples.
+        """
+        if not self.world or not self.at_sea:
+            return None, False, []
+        from portlight.content.factions import PIRATE_CAPTAINS
+        from portlight.engine.captain_memory import tick_captain_agency
+        from portlight.engine.encounter import create_encounter
+        from portlight.engine.models import PendingDuel
+
+        region = self._voyage_region()
+        actions = tick_captain_agency(
+            self.world.pirates.captain_memories, region,
+            self.captain.silver, self.world.day, self._rng,
+        )
+        notices: list[tuple[str, str]] = []
+        encounter = None
+        ambush = False
+        for ca in actions:
+            notices.append((ca.effect_type, ca.message))
+            if ca.effect_type == "silver":
+                self.captain.silver += ca.effect_value
+            elif ca.effect_type == "encounter" and encounter is None:
+                dest = self.world.voyage.destination_id if self.world.voyage else "porto_novo"
+                enc = create_encounter(self.world.ports, dest, self._rng)
+                if enc:
+                    cap = PIRATE_CAPTAINS.get(ca.captain_id)
+                    enc.enemy_captain_id = ca.captain_id
+                    enc.enemy_captain_name = ca.captain_name
+                    if cap:
+                        enc.enemy_faction_id = cap.faction_id
+                        enc.enemy_personality = cap.personality
+                        enc.enemy_strength = cap.strength
+                    enc.enemy_region = region
+                    if ca.verb == "ambush":
+                        enc.phase = "naval"
+                        ambush = True
+                    self.world.pirates.pending_duel = PendingDuel(
+                        captain_id=enc.enemy_captain_id,
+                        captain_name=enc.enemy_captain_name,
+                        faction_id=enc.enemy_faction_id,
+                        personality=enc.enemy_personality,
+                        strength=enc.enemy_strength,
+                        region=enc.enemy_region,
+                    )
+                    persist_encounter(self, enc)
+                    encounter = enc
+                    break
+        if notices or encounter:
+            self._save()
+        return encounter, ambush, notices
 
     # --- Provisioning & Repair ---
 
