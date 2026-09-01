@@ -14,13 +14,23 @@ python -m ruff check src/ tests/
 
 echo ""
 echo "--- Build ---"
-python -m build --wheel --sdist 2>/dev/null || pip wheel --no-deps -w dist . 2>/dev/null || echo "Build check: pip install -e works (hatchling)"
+python -m build --wheel --sdist
 
 echo ""
-echo "--- Smoke test ---"
-python -c "from portlight.app.cli import app; print('CLI entrypoint: OK')"
-python -c "from portlight.stress.invariants import check_all_invariants; print('Stress module: OK')"
-python -c "from portlight.balance.runner import run_balance_simulation; print('Balance module: OK')"
+echo "--- Smoke test (installed wheel) ---"
+shopt -s nullglob
+wheels=(dist/*.whl)
+if (( ${#wheels[@]} != 1 )); then
+  echo "ERROR: expected exactly one wheel in dist/, found ${#wheels[@]}" >&2
+  ls -la dist/ >&2 || true
+  exit 1
+fi
+# Import the built artifact, not an editable install / PYTHONPATH checkout.
+SMOKE_DIR="$(mktemp -d)"
+python -m pip install --no-deps --force-reinstall --target "$SMOKE_DIR" "${wheels[0]}"
+PYTHONPATH="$SMOKE_DIR${PYTHONPATH:+:$PYTHONPATH}" python -c "from portlight.app.cli import app; print('CLI entrypoint: OK')"
+PYTHONPATH="$SMOKE_DIR${PYTHONPATH:+:$PYTHONPATH}" python -c "from portlight.stress.invariants import check_all_invariants; print('Stress module: OK')"
+PYTHONPATH="$SMOKE_DIR${PYTHONPATH:+:$PYTHONPATH}" python -c "from portlight.balance.runner import run_balance_simulation; print('Balance module: OK')"
 
 echo ""
 echo "=== All checks passed ==="
