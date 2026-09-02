@@ -189,34 +189,60 @@ def _resolve_event(
 
         case EventType.PIRATES:
             # Pirates target valuable cargo — chance of named captain duel
-            from portlight.content.factions import FACTIONS, get_captains_for_faction, get_faction_for_region
+            from portlight.content.factions import (
+                FACTIONS, PIRATE_CAPTAINS, get_captains_for_faction, get_faction_for_region,
+            )
             from portlight.engine.models import PendingDuel
 
             # 40% chance a named pirate captain issues a duel challenge
             duel_roll = rng.random()
             if duel_roll < 0.40 and world is not None and voyage is not None:
-                # Pick a faction active in this area
                 dest_port = world.ports.get(voyage.destination_id)
                 region = dest_port.region if dest_port else "Mediterranean"
-                active_factions = get_faction_for_region(region)
-                if not active_factions:
-                    active_factions = list(FACTIONS.values())[:1]
-                faction = rng.choice(active_factions)
-                faction_captains = get_captains_for_faction(faction.id)
-                pirate_captain = rng.choice(faction_captains) if faction_captains else None
+
+                pirate_captain = None
+                faction = None
+
+                # Prefer a live accepted bounty (region match, else any live bounty)
+                # over a random faction roll. Ghost ids never spawn.
+                live_ids = [
+                    cid for cid in (world.captain.active_bounties or [])
+                    if cid in PIRATE_CAPTAINS
+                ]
+                regional_ids = []
+                for cid in live_ids:
+                    pc = PIRATE_CAPTAINS[cid]
+                    fac = FACTIONS.get(pc.faction_id)
+                    if fac and region in fac.territory_regions:
+                        regional_ids.append(cid)
+                preferred_ids = regional_ids or live_ids
+                if preferred_ids:
+                    pick_id = rng.choice(preferred_ids)
+                    pirate_captain = PIRATE_CAPTAINS[pick_id]
+                    faction = FACTIONS.get(pirate_captain.faction_id)
+
+                if pirate_captain is None:
+                    active_factions = get_faction_for_region(region)
+                    if not active_factions:
+                        active_factions = list(FACTIONS.values())[:1]
+                    faction = rng.choice(active_factions)
+                    faction_captains = get_captains_for_faction(faction.id)
+                    pirate_captain = rng.choice(faction_captains) if faction_captains else None
 
                 if pirate_captain is not None:
+                    faction_id = faction.id if faction is not None else pirate_captain.faction_id
+                    faction_name = faction.name if faction is not None else faction_id
                     pending = PendingDuel(
                         captain_id=pirate_captain.id,
                         captain_name=pirate_captain.name,
-                        faction_id=faction.id,
+                        faction_id=faction_id,
                         personality=pirate_captain.personality,
                         strength=pirate_captain.strength,
                         region=region,
                     )
                     return VoyageEvent(
                         EventType.PIRATES,
-                        f"{pirate_captain.name} of the {faction.name} blocks your path and demands a duel! "
+                        f"{pirate_captain.name} of the {faction_name} blocks your path and demands a duel! "
                         f"Use [bold]portlight duel <stance>[/bold] to fight (thrust/slash/parry, 5 rounds).",
                         flavor=f"Strength {pirate_captain.strength}, {pirate_captain.personality} fighter.",
                         _pending_duel=pending,

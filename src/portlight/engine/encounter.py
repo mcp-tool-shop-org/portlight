@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from portlight.engine.models import Captain, OwnedShip
 
-from portlight.content.factions import FACTIONS, get_captains_for_faction, get_faction_for_region
+from portlight.content.factions import FACTIONS, PIRATE_CAPTAINS, get_captains_for_faction, get_faction_for_region
 from portlight.engine.models import (
     EnemyShip,
     EncounterState,
@@ -54,23 +54,37 @@ def create_encounter(
     world_ports: dict,
     voyage_destination_id: str,
     rng: random.Random,
+    target_captain_id: str | None = None,
 ) -> EncounterState | None:
     """Create a pirate encounter for the current voyage region.
 
-    Returns None if no suitable faction/captain found.
+    When target_captain_id is set, lock that PIRATE_CAPTAINS row instead of
+    rolling a random captain. Returns None if no suitable faction/captain found.
     """
     dest_port = world_ports.get(voyage_destination_id)
     region = dest_port.region if dest_port else "Mediterranean"
-    active_factions = get_faction_for_region(region)
-    if not active_factions:
-        active_factions = list(FACTIONS.values())[:1]
 
-    faction = rng.choice(active_factions)
-    faction_captains = get_captains_for_faction(faction.id)
-    if not faction_captains:
-        return None
+    pirate_captain = None
+    faction = None
+    if target_captain_id:
+        pirate_captain = PIRATE_CAPTAINS.get(target_captain_id)
+        if pirate_captain is None:
+            return None
+        faction = FACTIONS.get(pirate_captain.faction_id)
+        if faction is None:
+            return None
+    else:
+        active_factions = get_faction_for_region(region)
+        if not active_factions:
+            active_factions = list(FACTIONS.values())[:1]
 
-    pirate_captain = rng.choice(faction_captains)
+        faction = rng.choice(active_factions)
+        faction_captains = get_captains_for_faction(faction.id)
+        if not faction_captains:
+            return None
+
+        pirate_captain = rng.choice(faction_captains)
+
     enemy_ship = generate_enemy_ship(pirate_captain.name, pirate_captain.strength, rng)
 
     return EncounterState(
