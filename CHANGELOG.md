@@ -27,6 +27,7 @@ Dogfood swarm `swarm-1788294007-e89b` — health A–D, feature pass, Phase 9 gr
 - Unknown save-enum tokens fail-open instead of wiping the slot
 - Voyage toasts use `message`; warehouse tab gets a port id; injuries view reads `heal_remaining`
 - Repair help no longer claims a fake 3 silver/HP
+- `dev` extra pins `pytest-asyncio==1.4.0` so TUI `run_test` cases run in CI (Release was stopping on the first `@pytest.mark.asyncio` test)
 
 ### Changed
 
