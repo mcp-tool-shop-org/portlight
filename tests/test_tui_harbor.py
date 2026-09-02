@@ -105,6 +105,14 @@ async def test_harbor_hire_crew_mutates_state(tmp_path: Path):
     assert session.world.captain.silver < silver_before
 
 
+async def _harbor_select(pilot, app, choice: str) -> None:
+    """Press H and submit HarborSelectDialog. Production flow, no qty."""
+    await pilot.press("h")
+    await pilot.pause()
+    assert isinstance(app.screen, HarborSelectDialog)
+    await _submit_input(app, pilot, "harbor-input", choice)
+
+
 @pytest.mark.asyncio
 async def test_harbor_at_sea_hunts(tmp_path: Path):
     """At-sea H runs hunt and does not open the dock picker."""
@@ -112,6 +120,8 @@ async def test_harbor_at_sea_hunts(tmp_path: Path):
     err = session.sail("al_manar")
     assert err is None
     assert session.at_sea
+    day_before = session.world.day
+    cap_day_before = session.world.captain.day
     app = PortlightApp(session=session)
     notes = _capture_notify(app)
 
@@ -121,3 +131,90 @@ async def test_harbor_at_sea_hunts(tmp_path: Path):
         assert not isinstance(app.screen, HarborSelectDialog)
 
     assert notes, "at-sea H should notify hunt flavor or a hunt error"
+    assert not any("Must be docked" in n for n in notes)
+    assert session.world.day > day_before or session.world.captain.day > cap_day_before
+
+
+@pytest.mark.asyncio
+async def test_harbor_work_no_qty_earns_silver_and_day(tmp_path: Path):
+    """H -> 4 (work) skips QtyDialog and runs GameSession.work."""
+    session = _make_session(tmp_path)
+    silver_before = session.world.captain.silver
+    day_before = session.world.day
+    app = PortlightApp(session=session)
+
+    async with app.run_test() as pilot:
+        await pilot.press("h")
+        await pilot.pause()
+        assert isinstance(app.screen, HarborSelectDialog)
+        sids = [sid for sid, _label in app.screen.options]
+        assert sids[3:6] == ["work", "fire", "hunt"]
+        await _submit_input(app, pilot, "harbor-input", "4")
+        assert not isinstance(app.screen, QtyDialog)
+
+    assert session.world.captain.silver > silver_before
+    assert session.world.day == day_before + 1
+
+
+@pytest.mark.asyncio
+async def test_harbor_fire_qty_drops_crew(tmp_path: Path):
+    """H -> 5 (fire) -> QtyDialog qty 1 runs GameSession.fire_crew."""
+    session = _make_session(tmp_path)
+    crew_before = session.world.captain.ship.crew
+    assert crew_before >= 1
+    app = PortlightApp(session=session)
+
+    async with app.run_test() as pilot:
+        await _harbor_select(pilot, app, "5")
+        assert isinstance(app.screen, QtyDialog)
+        await _submit_input(app, pilot, "qty-input", "1")
+
+    assert session.world.captain.ship.crew == crew_before - 1
+
+
+@pytest.mark.asyncio
+async def test_harbor_hunt_docked_no_qty(tmp_path: Path):
+    """H -> 6 (hunt) skips QtyDialog and runs GameSession.hunt while docked."""
+    session = _make_session(tmp_path)
+    day_before = session.world.day
+    prov_before = session.world.captain.provisions
+    pelts_before = sum(
+        c.quantity for c in session.world.captain.cargo if c.good_id == "pelts"
+    )
+    app = PortlightApp(session=session)
+    notes = _capture_notify(app)
+
+    async with app.run_test() as pilot:
+        await _harbor_select(pilot, app, "6")
+        assert not isinstance(app.screen, QtyDialog)
+
+    pelts_after = sum(
+        c.quantity for c in session.world.captain.cargo if c.good_id == "pelts"
+    )
+    hunted = (
+        session.world.day > day_before
+        or session.world.captain.provisions > prov_before
+        or pelts_after > pelts_before
+        or any(n and "Must be docked" not in n for n in notes)
+    )
+    assert hunted
+    assert session.world.day == day_before + 1
+    assert not any("Must be docked" in n for n in notes)
+
+
+def test_session_work_and_hunt_api(tmp_path: Path):
+    """GameSession.work / hunt mutate state without going through the TUI."""
+    session = _make_session(tmp_path)
+    silver_before = session.world.captain.silver
+    day_before = session.world.day
+    earned = session.work()
+    assert isinstance(earned, int)
+    assert earned >= 3
+    assert session.world.captain.silver == silver_before + earned
+    assert session.world.day == day_before + 1
+
+    result = session.hunt()
+    assert not isinstance(result, str)
+    assert session.world.day == day_before + 2
+    assert hasattr(result, "provisions_gained")
+    assert hasattr(result, "pelts_gained")
