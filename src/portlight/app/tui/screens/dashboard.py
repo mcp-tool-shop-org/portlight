@@ -676,8 +676,12 @@ class ContentArea(Widget):
             s.infra,
             s.current_port_id,
             s.current_port.name if s.current_port else None,
+            action_hint="Press [bold]W[/bold] again to lease, deposit, or withdraw.",
         ))
-        parts.append(offices_view(s.infra))
+        parts.append(offices_view(
+            s.infra,
+            action_hint="Press [bold]W[/bold] again to open or upgrade a broker.",
+        ))
         if s.world.captain.standing:
             parts.append(licenses_view(s.infra, s.world.captain.standing))
             parts.append(credit_view(s.infra, s.world.captain.standing))
@@ -685,6 +689,10 @@ class ContentArea(Widget):
         if s.world.captain.standing:
             heat = max(s.world.captain.standing.customs_heat.values(), default=0)
         parts.append(insurance_view(s.infra, heat))
+        parts.append(Text.from_markup(
+            "\n[dim]Press W again to lease, deposit, withdraw, open a broker, "
+            "buy a license, or open/draw/repay credit.[/dim]"
+        ))
         return Group(*parts)
 
     def _map_view(self):
@@ -716,6 +724,7 @@ class ContentArea(Widget):
             "  [bold #e9c46a]G[/bold #e9c46a] Sail (go)    [bold #e9c46a]A[/bold #e9c46a] Advance day",
             "  [bold #e9c46a]H[/bold #e9c46a] Harbor (provision / repair / hire; work / fire / hunt) -- docked",
             "  [bold #e9c46a]H[/bold #e9c46a] Hunt at sea    [bold #e9c46a]K[/bold #e9c46a] twice: accept / abandon contracts",
+            "  [bold #e9c46a]W[/bold #e9c46a] twice (Infra): lease / deposit / withdraw / broker / license / credit",
             "",
             "[bold #2a9d8f]Combat[/bold #2a9d8f]",
             "  [bold #e76f51]T[/bold #e76f51] Thrust       [bold #e76f51]Z[/bold #e76f51] Slash      [bold #e76f51]X[/bold #e76f51] Parry",
@@ -727,6 +736,7 @@ class ContentArea(Widget):
             "  [dim]Enter[/dim] Confirm selection",
             "",
             "[dim]Hunt / work / fire: press H (docked picker, or hunt at sea)[/dim]",
+            "[dim]Infra actions: press W again on the Infra tab[/dim]",
         ]
         cap = self.session.world.captain if self.session.active else None
         ship = cap.ship if cap else None

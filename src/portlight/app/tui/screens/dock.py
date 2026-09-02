@@ -2,7 +2,7 @@
 
 Reuses the TradeDialog/Input modal pattern from market.py and routes.py.
 HarborSelectDialog is also the numbered picker for saves, captain type,
-and contract accept/abandon.
+contract accept/abandon, and infrastructure lease/broker/license/credit.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ class QtyDialog(ModalScreen[str | None]):
 
 
 class HarborSelectDialog(ModalScreen[str | None]):
-    """Numbered picker -- harbor services, saves, captain type, contracts."""
+    """Numbered picker -- harbor, saves, captain type, contracts, infra."""
 
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -403,6 +403,385 @@ def execute_contracts_flow(app, session: "GameSession") -> None:
             app.refresh_views()
 
     app.push_screen(HarborSelectDialog(options, heading="Contracts"), on_pick)
+
+
+def execute_infra_flow(app, session: "GameSession") -> None:
+    """Numbered picker of warehouse / broker / license / credit actions.
+
+    Insurance is deferred. Warehouse lease/deposit/withdraw require dock.
+    Nested HarborSelectDialog + QtyDialog, same stack as harbor hire.
+    """
+    if not session.active:
+        app.notify("No active game.", severity="warning")
+        return
+
+    options = [
+        ("lease", "Lease warehouse"),
+        ("deposit", "Deposit cargo"),
+        ("withdraw", "Withdraw cargo"),
+        ("broker", "Open/upgrade broker"),
+        ("license", "Buy license"),
+        ("credit_open", "Open credit"),
+        ("credit_draw", "Draw credit"),
+        ("credit_repay", "Repay credit"),
+    ]
+
+    def on_pick(choice: str | None) -> None:
+        if choice is None:
+            return
+        if choice == "lease":
+            _infra_lease(app, session)
+        elif choice == "deposit":
+            _infra_deposit(app, session)
+        elif choice == "withdraw":
+            _infra_withdraw(app, session)
+        elif choice == "broker":
+            _infra_broker(app, session)
+        elif choice == "license":
+            _infra_license(app, session)
+        elif choice == "credit_open":
+            _infra_credit_open(app, session)
+        elif choice == "credit_draw":
+            _infra_credit_draw(app, session)
+        elif choice == "credit_repay":
+            _infra_credit_repay(app, session)
+
+    app.push_screen(HarborSelectDialog(options, heading="Infrastructure"), on_pick)
+
+
+def _require_docked(app, session: "GameSession"):
+    """Return current port, or notify and return None when at sea."""
+    port = session.current_port
+    if not port:
+        app.notify("\u2693 Must be docked.", severity="warning")
+        return None
+    return port
+
+
+def _infra_lease(app, session: "GameSession") -> None:
+    port = _require_docked(app, session)
+    if port is None:
+        return
+    from portlight.content.infrastructure import available_tiers
+
+    tiers = available_tiers(port.id)
+    if not tiers:
+        app.notify("No warehouse facilities at this port.", severity="warning")
+        return
+
+    options = [
+        (
+            spec.tier.value,
+            f"{spec.name}  {spec.capacity} cap  {spec.lease_cost}s  {spec.upkeep_per_day}/day",
+        )
+        for spec in tiers
+    ]
+
+    def on_tier(choice: str | None) -> None:
+        if choice is None:
+            return
+        spec = next((t for t in tiers if t.tier.value == choice), None)
+        if spec is None:
+            app.notify(f"Unknown tier: {choice}", severity="warning")
+            return
+        err = session.lease_warehouse_cmd(spec)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        app.notify(
+            f"\u2713 Leased {spec.name} at {port.name}",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Lease warehouse"), on_tier)
+
+
+def _infra_deposit(app, session: "GameSession") -> None:
+    port = _require_docked(app, session)
+    if port is None:
+        return
+    from portlight.content.goods import GOODS
+    from portlight.engine.infrastructure import get_warehouse
+
+    if get_warehouse(session.infra, port.id) is None:
+        app.notify("No warehouse at this port.", severity="warning")
+        return
+
+    held: dict[str, int] = {}
+    for item in session.world.captain.cargo:
+        if item.quantity > 0:
+            held[item.good_id] = held.get(item.good_id, 0) + item.quantity
+    if not held:
+        app.notify("No cargo to deposit.", severity="warning")
+        return
+
+    options = []
+    for gid, qty in held.items():
+        good = GOODS.get(gid)
+        name = good.name if good else gid
+        options.append((gid, f"{name}  {qty} in hold"))
+
+    def on_good(good_id: str | None) -> None:
+        if good_id is None:
+            return
+        max_qty = held.get(good_id, 0)
+        if max_qty <= 0:
+            app.notify("No cargo to deposit.", severity="warning")
+            return
+        good = GOODS.get(good_id)
+        name = good.name if good else good_id
+
+        def on_qty(qty_str: str | None) -> None:
+            if qty_str is None:
+                return
+            result = session.deposit_cmd(good_id, int(qty_str))
+            if isinstance(result, str):
+                app.notify(f"\u2717 {result}", severity="error")
+                return
+            app.notify(
+                f"\u2713 Deposited {result}x {name} into warehouse",
+                severity="information",
+                timeout=5,
+            )
+            app.refresh_views()
+
+        app.push_screen(QtyDialog(f"Deposit {name}", "per unit", max_qty, 0), on_qty)
+
+    app.push_screen(HarborSelectDialog(options, heading="Deposit cargo"), on_good)
+
+
+def _infra_withdraw(app, session: "GameSession") -> None:
+    port = _require_docked(app, session)
+    if port is None:
+        return
+    from portlight.content.goods import GOODS
+    from portlight.engine.infrastructure import get_warehouse
+
+    warehouse = get_warehouse(session.infra, port.id)
+    if warehouse is None:
+        app.notify("No warehouse at this port.", severity="warning")
+        return
+
+    stored: dict[str, int] = {}
+    for lot in warehouse.inventory:
+        if lot.quantity > 0:
+            stored[lot.good_id] = stored.get(lot.good_id, 0) + lot.quantity
+    if not stored:
+        app.notify("Warehouse is empty.", severity="warning")
+        return
+
+    options = []
+    for gid, qty in stored.items():
+        good = GOODS.get(gid)
+        name = good.name if good else gid
+        options.append((gid, f"{name}  {qty} stored"))
+
+    def on_good(good_id: str | None) -> None:
+        if good_id is None:
+            return
+        max_qty = stored.get(good_id, 0)
+        if max_qty <= 0:
+            app.notify("Warehouse is empty.", severity="warning")
+            return
+        good = GOODS.get(good_id)
+        name = good.name if good else good_id
+
+        def on_qty(qty_str: str | None) -> None:
+            if qty_str is None:
+                return
+            result = session.withdraw_cmd(good_id, int(qty_str))
+            if isinstance(result, str):
+                app.notify(f"\u2717 {result}", severity="error")
+                return
+            app.notify(
+                f"\u2713 Withdrew {result}x {name} from warehouse",
+                severity="information",
+                timeout=5,
+            )
+            app.refresh_views()
+
+        app.push_screen(QtyDialog(f"Withdraw {name}", "per unit", max_qty, 0), on_qty)
+
+    app.push_screen(HarborSelectDialog(options, heading="Withdraw cargo"), on_good)
+
+
+def _infra_broker(app, session: "GameSession") -> None:
+    port = _require_docked(app, session)
+    if port is None:
+        return
+    from portlight.content.infrastructure import available_broker_tiers
+
+    region = port.region
+    tiers = available_broker_tiers(region)
+    if not tiers:
+        app.notify(f"No broker offices available in {region}.", severity="warning")
+        return
+
+    options = [
+        (
+            spec.tier.value,
+            f"{spec.name}  {spec.purchase_cost}s  {spec.upkeep_per_day}/day",
+        )
+        for spec in tiers
+    ]
+
+    def on_tier(choice: str | None) -> None:
+        if choice is None:
+            return
+        spec = next((t for t in tiers if t.tier.value == choice), None)
+        if spec is None:
+            app.notify(f"Unknown broker tier: {choice}", severity="warning")
+            return
+        err = session.open_broker_cmd(region, spec)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        app.notify(
+            f"\u2713 {spec.name} opened in {region}",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Open/upgrade broker"), on_tier)
+
+
+def _infra_license(app, session: "GameSession") -> None:
+    from portlight.content.infrastructure import LICENSE_CATALOG
+
+    specs = sorted(LICENSE_CATALOG.values(), key=lambda s: s.purchase_cost)
+    if not specs:
+        app.notify("No licenses in the catalog.", severity="warning")
+        return
+
+    options = []
+    for spec in specs:
+        region = spec.region_scope or "Global"
+        options.append((
+            spec.id,
+            f"{spec.name}  {region}  {spec.purchase_cost}s",
+        ))
+
+    def on_lic(choice: str | None) -> None:
+        if choice is None:
+            return
+        spec = LICENSE_CATALOG.get(choice)
+        if spec is None:
+            app.notify(f"Unknown license: {choice}", severity="warning")
+            return
+        err = session.purchase_license_cmd(spec)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        app.notify(
+            f"\u2713 License purchased: {spec.name}",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Buy license"), on_lic)
+
+
+def _infra_credit_open(app, session: "GameSession") -> None:
+    from portlight.content.infrastructure import available_credit_tiers
+
+    specs = available_credit_tiers()
+    if not specs:
+        app.notify("No credit tiers available.", severity="warning")
+        return
+
+    options = [
+        (
+            spec.tier.value,
+            f"{spec.name}  limit {spec.credit_limit}s  "
+            f"{int(spec.interest_rate * 100)}%/{spec.interest_period}d",
+        )
+        for spec in specs
+    ]
+
+    def on_tier(choice: str | None) -> None:
+        if choice is None:
+            return
+        spec = next((s for s in specs if s.tier.value == choice), None)
+        if spec is None:
+            app.notify(f"Unknown credit tier: {choice}", severity="warning")
+            return
+        err = session.open_credit_cmd(spec)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        app.notify(
+            f"\u2713 Credit line opened: {spec.name}",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Open credit"), on_tier)
+
+
+def _infra_credit_draw(app, session: "GameSession") -> None:
+    cred = session.infra.credit
+    if cred is None or not cred.active:
+        app.notify("No credit line established.", severity="warning")
+        return
+    available = cred.credit_limit - cred.outstanding
+    if available <= 0:
+        app.notify("No credit available to draw.", severity="warning")
+        return
+
+    def on_qty(qty_str: str | None) -> None:
+        if qty_str is None:
+            return
+        amount = int(qty_str)
+        err = session.draw_credit_cmd(amount)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        app.notify(
+            f"\u2713 Drew {amount:,} silver on credit",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(QtyDialog("Draw credit", "to draw", available, 1), on_qty)
+
+
+def _infra_credit_repay(app, session: "GameSession") -> None:
+    cred = session.infra.credit
+    if cred is None or not cred.active:
+        app.notify("No credit line established.", severity="warning")
+        return
+    total_owed = cred.outstanding + cred.interest_accrued
+    if total_owed <= 0:
+        app.notify("No outstanding debt.", severity="warning")
+        return
+    silver = session.world.captain.silver
+    max_qty = min(total_owed, silver)
+    if max_qty <= 0:
+        app.notify("Can't afford to repay credit.", severity="warning")
+        return
+
+    def on_qty(qty_str: str | None) -> None:
+        if qty_str is None:
+            return
+        amount = int(qty_str)
+        err = session.repay_credit_cmd(amount)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        app.notify(
+            f"\u2713 Repaid {amount:,} silver",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(QtyDialog("Repay credit", "to repay", max_qty, 1), on_qty)
 
 
 def execute_save_picker(app, session: "GameSession") -> None:
