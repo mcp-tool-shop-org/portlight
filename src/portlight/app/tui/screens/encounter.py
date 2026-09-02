@@ -28,13 +28,14 @@ _APPROACH_ACTIONS = (
     "[bold #e76f51]F[/bold #e76f51].Flee  "
     "[bold #e9c46a]G[/bold #e9c46a].Fight"
 )
-_NAVAL_ACTIONS = (
-    "  [bold #2a9d8f]B[/bold #2a9d8f].Broadside  "
-    "[bold #2a9d8f]C[/bold #2a9d8f].Close  "
-    "[bold #2a9d8f]E[/bold #2a9d8f].Evade  "
-    "[bold #2a9d8f]R[/bold #2a9d8f].Rake  "
-    "[bold #e76f51]F[/bold #e76f51].Flee"
-)
+_NAVAL_ACTION_KEYS = {
+    "broadside": ("B", "Broadside", "#2a9d8f"),
+    "close": ("C", "Close", "#2a9d8f"),
+    "evade": ("E", "Evade", "#2a9d8f"),
+    "rake": ("R", "Rake", "#2a9d8f"),
+    "flee": ("F", "Flee", "#e76f51"),
+}
+_DUEL_CORE = ("thrust", "slash", "parry", "dodge", "shoot", "throw")
 _DUEL_ACTIONS = (
     "  [bold #2a9d8f]T[/bold #2a9d8f].Thrust  "
     "[bold #2a9d8f]Z[/bold #2a9d8f].Slash  "
@@ -75,6 +76,7 @@ class EncounterScreen(Screen):
         Binding("x", "encounter_key('parry')", "Parry", priority=True),
         Binding("o", "encounter_key('shoot')", "Shoot", priority=True),
         Binding("w", "encounter_key('throw')", "Throw", priority=True),
+        Binding("y", "encounter_key('special')", "Style", priority=True),
         Binding("minus", "encounter_key('crew_down')", show=False, priority=True),
         Binding("plus", "encounter_key('crew_up')", show=False, priority=True),
         Binding("equals", "encounter_key('crew_up')", show=False, priority=True),
@@ -168,6 +170,8 @@ class EncounterScreen(Screen):
             if key in ("thrust", "slash", "parry", "evade", "shoot", "throw"):
                 action = "dodge" if key == "evade" else key
                 self._handle_duel_action(action)
+            elif key == "special":
+                self._handle_duel_special()
             return
 
         if phase == "victory":
@@ -235,7 +239,7 @@ class EncounterScreen(Screen):
         log.write("")
         self.query_one("#ship-panels").remove_class("hidden")
         self._refresh_ship_panels()
-        self._update_actions(_NAVAL_ACTIONS)
+        self._update_actions(self._naval_actions_bar())
 
     def _check_weapon_recognition(self, log: RichLog) -> None:
         gear = self.session.captain.combat_gear
@@ -337,7 +341,7 @@ class EncounterScreen(Screen):
         # Show ship panels
         self.query_one("#ship-panels").remove_class("hidden")
         self._refresh_ship_panels()
-        self._update_actions(_NAVAL_ACTIONS)
+        self._update_actions(self._naval_actions_bar())
         self._persist_encounter()
 
     # ------------------------------------------------------------------
@@ -399,7 +403,7 @@ class EncounterScreen(Screen):
 
     def _handle_naval_action(self, action: str) -> None:
         from portlight.content.upgrades import UPGRADES
-        from portlight.engine.encounter import resolve_naval_turn
+        from portlight.engine.encounter import get_encounter_naval_actions, resolve_naval_turn
         from portlight.engine.ship_stats import resolve_cannons
         enc = self.encounter
         log = self.query_one("#encounter-log", RichLog)
@@ -409,8 +413,9 @@ class EncounterScreen(Screen):
             self._handle_naval_flee()
             return
 
-        if action == "broadside" and resolve_cannons(ship, UPGRADES) <= 0:
-            self.app.notify("No cannons! Use Close to board.", severity="warning")
+        valid = get_encounter_naval_actions(resolve_cannons(ship, UPGRADES))
+        if action not in valid:
+            self.app.notify(f"Invalid action. Available: {', '.join(valid)}", severity="warning")
             return
 
         result = resolve_naval_turn(enc, action, self._combat_ship(), self._rng())
@@ -562,7 +567,7 @@ class EncounterScreen(Screen):
 
         self._restore_combatant_hp()
         self._refresh_combatant_panels()
-        self._update_actions(_DUEL_ACTIONS)
+        self._update_actions(self._duel_actions_bar())
         self._persist_encounter()
 
     # ------------------------------------------------------------------
@@ -596,6 +601,8 @@ class EncounterScreen(Screen):
             log.write(f"  [bold red]Injury: {result.injury_inflicted}![/bold red]")
         if result.opponent_injury:
             log.write(f"  [bold green]Enemy injured: {result.opponent_injury}![/bold green]")
+        if result.style_effect:
+            log.write(f"  [italic cyan]{result.style_effect}[/italic cyan]")
         if result.flavor:
             log.write(f"  [italic]{result.flavor}[/italic]")
         log.write("")
@@ -620,6 +627,7 @@ class EncounterScreen(Screen):
             else:
                 self._enter_defeat(f"{enc.enemy_captain_name} defeats you.")
         else:
+            self._update_actions(self._duel_actions_bar())
             self._persist_encounter()
 
     def _refresh_combatant_panels(self) -> None:
@@ -1003,6 +1011,54 @@ class EncounterScreen(Screen):
 
     def _update_actions(self, text: str) -> None:
         self.query_one("#encounter-actions", Static).update(text)
+
+    def _naval_actions_bar(self) -> str:
+        """Live naval verbs from get_encounter_naval_actions (drops broadside at 0 guns)."""
+        from portlight.content.upgrades import UPGRADES
+        from portlight.engine.encounter import get_encounter_naval_actions
+        from portlight.engine.ship_stats import resolve_cannons
+        ship = self.session.captain.ship
+        guns = resolve_cannons(ship, UPGRADES) if ship else 0
+        parts = []
+        for action in get_encounter_naval_actions(guns):
+            spec = _NAVAL_ACTION_KEYS.get(action)
+            if spec is None:
+                continue
+            key, name, color = spec
+            parts.append(f"[bold {color}]{key}[/bold {color}].{name}")
+        return "  " + "  ".join(parts) if parts else "  [dim]No actions[/dim]"
+
+    def _live_duel_special_id(self) -> str | None:
+        """Style special_action.id when get_encounter_combat_actions includes it."""
+        from portlight.engine.encounter import get_encounter_combat_actions
+        p = self._player_combatant
+        if p is None:
+            return None
+        for action in get_encounter_combat_actions(p):
+            if action not in _DUEL_CORE:
+                return action
+        return None
+
+    def _duel_actions_bar(self) -> str:
+        text = _DUEL_ACTIONS
+        sid = self._live_duel_special_id()
+        if not sid:
+            return text
+        from portlight.content.fighting_styles import FIGHTING_STYLES
+        label = sid.replace("_", " ").title()
+        p = self._player_combatant
+        style_id = getattr(p, "active_style", "") if p is not None else ""
+        style = FIGHTING_STYLES.get(style_id or "")
+        if style and style.special_action and style.special_action.id == sid:
+            label = style.special_action.name
+        return text + f"  [bold #e9c46a]Y[/bold #e9c46a].{label}"
+
+    def _handle_duel_special(self) -> None:
+        sid = self._live_duel_special_id()
+        if not sid:
+            self.app.notify("Style special not ready.", severity="warning")
+            return
+        self._handle_duel_action(sid)
 
     def _restore_combatant_hp(self) -> None:
         """Reapply persisted duel HP/stamina after creating combatants."""

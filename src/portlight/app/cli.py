@@ -694,9 +694,9 @@ def advance(days: int = typer.Argument(1, help="Days to advance")) -> None:
         elif phase == "naval":
             console.print("  [cyan]portlight naval <broadside|close|evade|rake|flee>[/cyan]")
         elif phase == "boarding":
-            console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge>[/cyan]")
+            console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge|style>[/cyan]")
         elif phase == "duel":
-            console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge>[/cyan]")
+            console.print("  [cyan]portlight fight <thrust|slash|parry|shoot|throw|dodge|style>[/cyan]")
         elif phase == "capture_available":
             console.print("  [cyan]portlight capture <crew>[/cyan] to take the prize")
             console.print("  [cyan]portlight capture 0[/cyan] to let it sink")
@@ -1867,6 +1867,16 @@ def _restore_encounter(s) -> None:
         _active_encounter = enc
 
 
+def _live_naval_actions(s: GameSession) -> tuple[str, ...]:
+    """Engine-valid naval verbs for the current ship (drops broadside/rake at 0 guns)."""
+    from portlight.content.upgrades import UPGRADES
+    from portlight.engine.encounter import get_encounter_naval_actions
+    from portlight.engine.ship_stats import resolve_cannons
+    ship = s.captain.ship
+    cannons = resolve_cannons(ship, UPGRADES) if ship else 0
+    return get_encounter_naval_actions(cannons)
+
+
 @app.command()
 def encounter(
     choice: str = typer.Argument(..., help="negotiate, flee, or fight"),
@@ -1912,6 +1922,7 @@ def encounter(
                 enc.enemy_ship_hull, enc.enemy_ship_hull_max,
                 enc.enemy_ship_crew, enc.enemy_ship_cannons,
                 enc.boarding_progress, enc.boarding_threshold, 0,
+                available_actions=_live_naval_actions(s),
             ))
         else:
             _clear_encounter(s)
@@ -1941,6 +1952,7 @@ def encounter(
             enc.enemy_ship_hull, enc.enemy_ship_hull_max,
             enc.enemy_ship_crew, enc.enemy_ship_cannons,
             enc.boarding_progress, enc.boarding_threshold, 0,
+            available_actions=_live_naval_actions(s),
         ))
         s._save()
 
@@ -1950,7 +1962,7 @@ def encounter(
 
 @app.command()
 def naval(
-    action: str = typer.Argument(..., help="broadside, close, evade, or rake"),
+    action: str = typer.Argument(..., help="broadside, close, evade, rake, or flee"),
 ) -> None:
     """Execute a naval combat action."""
     global _active_encounter
@@ -2023,6 +2035,7 @@ def naval(
                     enc.enemy_ship_hull, enc.enemy_ship_hull_max,
                     enc.enemy_ship_crew, enc.enemy_ship_cannons,
                     enc.boarding_progress, enc.boarding_threshold, enc.naval_turns,
+                    available_actions=_live_naval_actions(s),
                 ))
         _sync_encounter_phase(s)
         s._save()
@@ -2089,6 +2102,7 @@ def naval(
             enc.enemy_ship_hull, enc.enemy_ship_hull_max,
             enc.enemy_ship_crew, enc.enemy_ship_cannons,
             enc.boarding_progress, enc.boarding_threshold, enc.naval_turns,
+            available_actions=_live_naval_actions(s),
         ))
 
     _sync_encounter_phase(s)
