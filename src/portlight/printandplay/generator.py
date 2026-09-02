@@ -17,7 +17,6 @@ from portlight.printandplay.assets import (
     FONT_HEADING,
     INK,
     MARGIN,
-    PAGE_H,
     SHIP_TABLETOP,
     CAPTAIN_TABLETOP,
     tabletop_price,
@@ -61,6 +60,7 @@ def generate(output: Path | None = None) -> Path:
     )
 
     pdf = FPDF(unit="mm", format="Letter")
+    # Flow pages (cover/rules) may auto-break; card sheets use absolute placement.
     pdf.set_auto_page_break(auto=True, margin=MARGIN)
 
     # --- Cover ---
@@ -72,14 +72,21 @@ def generate(output: Path | None = None) -> Path:
     # --- Game Board (landscape) ---
     draw_board(pdf, PORTS, ROUTES)
 
+    # Restore portrait and disable auto-break: cards are placed at absolute (x, y)
+    # against the *current* page height. Leaving landscape + auto-break True
+    # explodes the kit into dozens of near-blank sheets.
+    pdf.set_auto_page_break(auto=False)
+    pdf.add_page(orientation="P")
+
     # --- Captain Cards ---
-    _add_section_header(pdf, "CAPTAIN CARDS")
+    _add_section_header(pdf, "CAPTAIN CARDS", row_h=CARD_H)
     col = 0
+    row_y = _ensure_card_row(pdf, pdf.get_y(), CARD_H)
     for cap_id, cap in CAPTAIN_TABLETOP.items():
+        col, row_y = _next_card_cell(pdf, col, row_y, CARD_H)
         x = MARGIN + col * (CARD_W + CARD_GAP)
-        y = pdf.get_y()
         draw_captain_card(
-            pdf, x, y,
+            pdf, x, row_y,
             name=cap["name"],
             home_port=cap["home_port"],
             silver=cap["silver"],
@@ -89,21 +96,14 @@ def generate(output: Path | None = None) -> Path:
             weakness=cap["weakness"],
         )
         col += 1
-        if col >= CARDS_PER_ROW:
-            col = 0
-            pdf.set_y(y + CARD_H + CARD_GAP)
+    pdf.set_y(row_y + CARD_H + CARD_GAP)
 
     # --- Ship Cards ---
-    _add_section_header(pdf, "SHIP CARDS")
+    _add_section_header(pdf, "SHIP CARDS", row_h=CARD_H)
     col = 0
-    row_y = pdf.get_y()
+    row_y = _ensure_card_row(pdf, pdf.get_y(), CARD_H)
     for ship_id, ship in SHIPS.items():
-        if col >= CARDS_PER_ROW:
-            col = 0
-            row_y += CARD_H + CARD_GAP
-            if row_y + CARD_H > PAGE_H - MARGIN:
-                pdf.add_page()
-                row_y = MARGIN + 10
+        col, row_y = _next_card_cell(pdf, col, row_y, CARD_H)
         x = MARGIN + col * (CARD_W + CARD_GAP)
         stats = SHIP_TABLETOP.get(ship_id, {
             "cargo": 5, "speed": 4, "hull": 6, "crew_cost": 0, "price": 0, "cannons": 0,
@@ -113,19 +113,14 @@ def generate(output: Path | None = None) -> Path:
     pdf.set_y(row_y + CARD_H + CARD_GAP)
 
     # --- Goods Cards (3 copies each) ---
-    _add_section_header(pdf, "GOODS CARDS")
+    _add_section_header(pdf, "GOODS CARDS", row_h=CARD_H)
     col = 0
-    row_y = pdf.get_y()
+    row_y = _ensure_card_row(pdf, pdf.get_y(), CARD_H)
     for good_id, good in GOODS.items():
         if good_id == "pelts":
             continue  # Skip pelts (hunted, not traded as card)
         for _copy in range(3):
-            if col >= CARDS_PER_ROW:
-                col = 0
-                row_y += CARD_H + CARD_GAP
-                if row_y + CARD_H > PAGE_H - MARGIN:
-                    pdf.add_page()
-                    row_y = MARGIN + 2
+            col, row_y = _next_card_cell(pdf, col, row_y, CARD_H)
             x = MARGIN + col * (CARD_W + CARD_GAP)
             draw_goods_card(
                 pdf, x, row_y,
@@ -138,16 +133,11 @@ def generate(output: Path | None = None) -> Path:
     pdf.set_y(row_y + CARD_H + CARD_GAP)
 
     # --- Contract Cards ---
-    _add_section_header(pdf, "CONTRACT CARDS")
+    _add_section_header(pdf, "CONTRACT CARDS", row_h=CARD_H)
     col = 0
-    row_y = pdf.get_y()
+    row_y = _ensure_card_row(pdf, pdf.get_y(), CARD_H)
     for tmpl in TEMPLATES[:24]:  # Cap at 24 contracts
-        if col >= CARDS_PER_ROW:
-            col = 0
-            row_y += CARD_H + CARD_GAP
-            if row_y + CARD_H > PAGE_H - MARGIN:
-                pdf.add_page()
-                row_y = MARGIN + 2
+        col, row_y = _next_card_cell(pdf, col, row_y, CARD_H)
         x = MARGIN + col * (CARD_W + CARD_GAP)
         goods_name = tmpl.goods_pool[0].title() if tmpl.goods_pool else "Mixed"
         qty = f"{tmpl.quantity_min}-{tmpl.quantity_max}"
@@ -168,24 +158,19 @@ def generate(output: Path | None = None) -> Path:
     pdf.set_y(row_y + CARD_H + CARD_GAP)
 
     # --- Event Cards ---
-    _add_section_header(pdf, "EVENT CARDS")
+    _add_section_header(pdf, "EVENT CARDS", row_h=CARD_H)
     events = _build_event_deck()
     col = 0
-    row_y = pdf.get_y()
+    row_y = _ensure_card_row(pdf, pdf.get_y(), CARD_H)
     for evt in events:
-        if col >= CARDS_PER_ROW:
-            col = 0
-            row_y += CARD_H + CARD_GAP
-            if row_y + CARD_H > PAGE_H - MARGIN:
-                pdf.add_page()
-                row_y = MARGIN + 2
+        col, row_y = _next_card_cell(pdf, col, row_y, CARD_H)
         x = MARGIN + col * (CARD_W + CARD_GAP)
         draw_event_card(pdf, x, row_y, **evt)
         col += 1
     pdf.set_y(row_y + CARD_H + CARD_GAP)
 
     # --- Season Cards ---
-    _add_section_header(pdf, "SEASON CARDS")
+    _add_section_header(pdf, "SEASON CARDS", row_h=CARD_H)
     seasons = [
         {"season": "Spring", "rounds": "1-3",
          "effects": ["Mediterranean routes -1 cost (min 1)", "Grain demand +2 silver", "Calm seas: fewer storm events"]},
@@ -197,30 +182,20 @@ def generate(output: Path | None = None) -> Path:
          "effects": ["North Atlantic routes +1 cost (storms)", "Medicines demand +2 silver", "Storm events more frequent"]},
     ]
     col = 0
-    row_y = pdf.get_y()
+    row_y = _ensure_card_row(pdf, pdf.get_y(), CARD_H)
     for s in seasons:
-        if col >= CARDS_PER_ROW:
-            col = 0
-            row_y += CARD_H + CARD_GAP
-            if row_y + CARD_H > PAGE_H - MARGIN:
-                pdf.add_page()
-                row_y = MARGIN + 2
+        col, row_y = _next_card_cell(pdf, col, row_y, CARD_H)
         x = MARGIN + col * (CARD_W + CARD_GAP)
         draw_season_card(pdf, x, row_y, **s)
         col += 1
     pdf.set_y(row_y + CARD_H + CARD_GAP)
 
     # --- Port Reference Cards (compact) ---
-    _add_section_header(pdf, "PORT REFERENCE CARDS")
+    _add_section_header(pdf, "PORT REFERENCE CARDS", row_h=COMPACT_CARD_H)
     col = 0
-    row_y = pdf.get_y()
+    row_y = _ensure_card_row(pdf, pdf.get_y(), COMPACT_CARD_H)
     for pid, port in PORTS.items():
-        if col >= CARDS_PER_ROW:
-            col = 0
-            row_y += COMPACT_CARD_H + CARD_GAP
-            if row_y + COMPACT_CARD_H > PAGE_H - MARGIN:
-                pdf.add_page()
-                row_y = MARGIN + 2
+        col, row_y = _next_card_cell(pdf, col, row_y, COMPACT_CARD_H)
         x = MARGIN + col * (CARD_W + CARD_GAP)
 
         # Determine exports (high affinity) and imports (low affinity)
@@ -243,6 +218,10 @@ def generate(output: Path | None = None) -> Path:
             port_fee=port.port_fee,
         )
         col += 1
+    pdf.set_y(row_y + COMPACT_CARD_H + CARD_GAP)
+
+    # Flow pages again for the player aid and score tracks.
+    pdf.set_auto_page_break(auto=True, margin=MARGIN)
 
     # --- Player Aid ---
     render_player_aid(pdf)
@@ -257,10 +236,29 @@ def generate(output: Path | None = None) -> Path:
     return output
 
 
-def _add_section_header(pdf, title: str) -> None:
-    """Add a section header, starting a new page if needed."""
-    if pdf.get_y() > PAGE_H - MARGIN - 30:
-        pdf.add_page()
+def _ensure_card_row(pdf, row_y: float, card_h: float) -> float:
+    """Return a y that can hold one card row on the current (portrait) page."""
+    if row_y + card_h > pdf.h - MARGIN:
+        pdf.add_page(orientation="P")
+        return MARGIN + 2
+    return row_y
+
+
+def _next_card_cell(pdf, col: int, row_y: float, card_h: float) -> tuple[int, float]:
+    """Advance to the next grid cell, wrapping onto a new portrait page if needed."""
+    if col < CARDS_PER_ROW:
+        return col, row_y
+    return 0, _ensure_card_row(pdf, row_y + card_h + CARD_GAP, card_h)
+
+
+def _add_section_header(pdf, title: str, row_h: float = 0) -> None:
+    """Add a section header, starting a new portrait page if needed.
+
+    `row_h` reserves room so the header is not orphaned above a card row
+    that would immediately wrap to the next sheet.
+    """
+    if pdf.get_y() > pdf.h - MARGIN - 30 - row_h:
+        pdf.add_page(orientation="P")
     else:
         pdf.ln(4)
     pdf.set_font("Helvetica", "B", FONT_HEADING)
