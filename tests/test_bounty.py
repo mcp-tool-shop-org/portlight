@@ -7,6 +7,7 @@ from portlight.engine.bounty import (
     generate_bounty_board,
     accept_bounty,
     claim_bounty,
+    hunt_bounty,
     BountyTarget,
 )
 from portlight.engine.captain_identity import CaptainType, CAPTAIN_TEMPLATES
@@ -66,8 +67,8 @@ class TestAcceptBounty:
         world = new_game()
         accept_bounty(world.captain, "scarlet_ana")
         accept_bounty(world.captain, "gnaw")
-        accept_bounty(world.captain, "shadow_vex")
-        err = accept_bounty(world.captain, "brass_jack")
+        accept_bounty(world.captain, "the_butcher")
+        err = accept_bounty(world.captain, "raj_the_quiet")
         assert err is not None
 
 
@@ -101,9 +102,31 @@ class TestClaimBounty:
     def test_save_dict_memory_excludes_from_board(self):
         """Save-dict memories with times_defeated_by_player still count as defeated."""
         world = new_game()
-        world.pirates.captain_memories["brass_jack"] = {"times_defeated_by_player": 1}
+        world.pirates.captain_memories["gnaw"] = {"times_defeated_by_player": 1}
         targets = generate_bounty_board(world.pirates, _rng(), max_targets=10)
-        assert "brass_jack" not in [t.captain_id for t in targets]
+        assert "gnaw" not in [t.captain_id for t in targets]
+
+
+class TestHuntBounty:
+    def test_hunt_requires_accept(self):
+        world = new_game()
+        result = hunt_bounty(world, world.captain, "scarlet_ana", _rng())
+        assert result == "No active bounty for this target"
+
+    def test_hunt_rejects_ghost_id(self):
+        world = new_game()
+        world.captain.active_bounties.append("shadow_vex")
+        result = hunt_bounty(world, world.captain, "shadow_vex", _rng())
+        assert result == "Unknown captain"
+
+    def test_hunt_locks_accepted_captain(self):
+        world = new_game()
+        err = accept_bounty(world.captain, "scarlet_ana")
+        assert err is None
+        enc = hunt_bounty(world, world.captain, "scarlet_ana", _rng())
+        assert not isinstance(enc, str)
+        assert enc.enemy_captain_id == "scarlet_ana"
+        assert enc.enemy_captain_name == "Scarlet Ana"
 
 
 class TestBountyHunterTemplate:

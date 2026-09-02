@@ -1399,6 +1399,31 @@ class GameSession:
         self._save()
         return earned
 
+    def hunt_bounty_cmd(self, target_id: str):
+        """Spawn a locked encounter against an accepted bounty target.
+
+        Returns EncounterState on success or an error string.
+        """
+        if not self.world:
+            return "No active game"
+        from portlight.engine.bounty import hunt_bounty
+        from portlight.engine.models import PendingDuel
+
+        enc = hunt_bounty(self.world, self.captain, target_id, self._rng)
+        if isinstance(enc, str):
+            return enc
+        self.world.pirates.pending_duel = PendingDuel(
+            captain_id=enc.enemy_captain_id,
+            captain_name=enc.enemy_captain_name,
+            faction_id=enc.enemy_faction_id,
+            personality=enc.enemy_personality,
+            strength=enc.enemy_strength,
+            region=enc.enemy_region,
+        )
+        persist_encounter(self, enc)
+        self._save()
+        return enc
+
     def snapshot(self) -> dict:
         """Stable JSON-safe dict for CLI --json (status/market/cargo/routes/contracts)."""
         if not self.world or not self.captain:

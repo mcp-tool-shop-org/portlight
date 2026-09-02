@@ -2985,10 +2985,10 @@ def take_all() -> None:
 
 @app.command()
 def bounty(
-    action: str = typer.Argument(None, help="list, accept <id>, claim <id>, or omit to view board"),
+    action: str = typer.Argument(None, help="list, accept <id>, hunt <id>, claim <id>, or omit to view board"),
     target_id: str = typer.Argument(None, help="Bounty target captain ID"),
 ) -> None:
-    """View the bounty board, accept targets, or claim rewards."""
+    """View the bounty board, accept targets, hunt them, or claim rewards."""
     from portlight.engine.bounty import generate_bounty_board, accept_bounty, claim_bounty
     s = _session()
 
@@ -3005,7 +3005,7 @@ def bounty(
             console.print(f"    Reward: [green]{t.reward} silver[/green]")
             console.print(f"    {t.description}")
         console.print(f"\n  Active bounties: {len(s.captain.active_bounties)}/3")
-        console.print("  Use [cyan]bounty accept <id>[/cyan] to hunt a target.")
+        console.print("  Use [cyan]bounty accept <id>[/cyan] then [cyan]bounty hunt <id>[/cyan].")
         return
 
     if action == "accept":
@@ -3017,8 +3017,43 @@ def bounty(
             console.print(f"[red]{err}[/red]")
             return
         console.print(f"\n[bold cyan]Bounty accepted![/bold cyan] Hunting [bold]{target_id}[/bold].")
-        console.print("Defeat them at sea, then return to claim your reward.")
+        console.print("Use [cyan]bounty hunt <id>[/cyan] to force the encounter, then claim.")
         s._save()
+        return
+
+    if action == "hunt":
+        if not target_id:
+            console.print("[red]Usage: bounty hunt <captain_id>[/red]")
+            return
+        enc = s.hunt_bounty_cmd(target_id)
+        if isinstance(enc, str):
+            console.print(f"[red]{enc}[/red]")
+            return
+        global _active_encounter, _player_combatant, _opponent_combatant
+        _active_encounter = enc
+        _player_combatant = None
+        _opponent_combatant = None
+        _sync_encounter_phase(s)
+        s._save()
+        from portlight.app import combat_views
+        from portlight.content.factions import FACTIONS, PIRATE_CAPTAINS
+        faction = FACTIONS.get(enc.enemy_faction_id)
+        captain_data = PIRATE_CAPTAINS.get(enc.enemy_captain_id)
+        try:
+            console.print(combat_views.encounter_view(
+                enc.enemy_captain_name,
+                faction.name if faction else "Unknown",
+                enc.enemy_personality, enc.enemy_strength,
+                f"{enc.enemy_captain_name}'s Ship",
+                captain_data.encounter_text if captain_data else "",
+            ))
+        except Exception as e:
+            console.print(
+                f"\n[bold red]Bounty hunt: {enc.enemy_captain_name} "
+                f"({enc.enemy_personality}, str {enc.enemy_strength})[/bold red]"
+            )
+            console.print(f"[dim]View error: {e}[/dim]")
+        console.print("\n[bold]Use [cyan]portlight encounter <negotiate|flee|fight>[/cyan][/bold]")
         return
 
     if action == "claim":
@@ -3035,7 +3070,7 @@ def bounty(
         s._save()
         return
 
-    console.print(f"[red]Unknown bounty action: {action}[/red]. Use: list, accept, claim")
+    console.print(f"[red]Unknown bounty action: {action}[/red]. Use: list, accept, hunt, claim")
 
 
 # ---------------------------------------------------------------------------
