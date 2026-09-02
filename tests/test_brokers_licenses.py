@@ -82,26 +82,32 @@ def rich_rep():
 # ---------------------------------------------------------------------------
 
 class TestBrokerContentLaws:
-    def test_three_regions_have_specs(self):
+    def test_five_regions_have_specs(self):
         regions = {region for region, _ in BROKER_SPECS.keys()}
-        assert regions == {"Mediterranean", "West Africa", "East Indies"}
+        assert regions == {
+            "Mediterranean", "West Africa", "East Indies",
+            "North Atlantic", "South Seas",
+        }
 
     def test_each_region_has_two_tiers(self):
-        for region in ("Mediterranean", "West Africa", "East Indies"):
+        for region in ("Mediterranean", "West Africa", "East Indies",
+                       "North Atlantic", "South Seas"):
             tiers = available_broker_tiers(region)
             assert len(tiers) == 2
             assert tiers[0].tier == BrokerTier.LOCAL
             assert tiers[1].tier == BrokerTier.ESTABLISHED
 
     def test_established_costs_more_than_local(self):
-        for region in ("Mediterranean", "West Africa", "East Indies"):
+        for region in ("Mediterranean", "West Africa", "East Indies",
+                       "North Atlantic", "South Seas"):
             local = get_broker_spec(region, BrokerTier.LOCAL)
             est = get_broker_spec(region, BrokerTier.ESTABLISHED)
             assert est.purchase_cost > local.purchase_cost
             assert est.upkeep_per_day > local.upkeep_per_day
 
     def test_established_has_better_quality_bonus(self):
-        for region in ("Mediterranean", "West Africa", "East Indies"):
+        for region in ("Mediterranean", "West Africa", "East Indies",
+                       "North Atlantic", "South Seas"):
             local = get_broker_spec(region, BrokerTier.LOCAL)
             est = get_broker_spec(region, BrokerTier.ESTABLISHED)
             assert est.board_quality_bonus > local.board_quality_bonus
@@ -122,8 +128,8 @@ class TestBrokerContentLaws:
 # ---------------------------------------------------------------------------
 
 class TestLicenseContentLaws:
-    def test_five_licenses_exist(self):
-        assert len(LICENSE_CATALOG) == 5
+    def test_seven_licenses_exist(self):
+        assert len(LICENSE_CATALOG) == 7
 
     def test_all_have_purchase_cost(self):
         for spec in LICENSE_CATALOG.values():
@@ -132,7 +138,7 @@ class TestLicenseContentLaws:
 
     def test_regional_licenses_have_scope(self):
         regional = [s for s in LICENSE_CATALOG.values() if s.region_scope is not None]
-        assert len(regional) == 3  # med, wa, ei charters
+        assert len(regional) == 5  # med, wa, ei, na, ss charters
 
     def test_global_licenses_have_no_scope(self):
         global_lics = [s for s in LICENSE_CATALOG.values() if s.region_scope is None]

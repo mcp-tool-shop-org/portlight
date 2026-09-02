@@ -8,6 +8,7 @@ from io import StringIO
 from pathlib import Path
 
 from rich.console import Console
+from rich.text import Text
 
 from portlight.app import views
 from portlight.app.session import GameSession
@@ -246,3 +247,69 @@ class TestGuideCommand:
         assert "Infrastructure" in output
         assert "Finance" in output
         assert "Career" in output
+
+
+# ---------------------------------------------------------------------------
+# World map pane-width contract
+# ---------------------------------------------------------------------------
+
+def _clamp(n: int, lo: int, hi: int) -> int:
+    return max(lo, min(hi, n))
+
+
+def _map_grid_rows(panel) -> list[str]:
+    """Visible map grid rows (plain text), stopping at the legend."""
+    rows: list[str] = []
+    for line in str(panel.renderable).split("\n"):
+        if not line.strip():
+            break
+        plain = Text.from_markup(line).plain
+        if plain.startswith("Legend"):
+            break
+        rows.append(plain)
+    return rows
+
+
+def _star_cell(rows: list[str]) -> tuple[int, int] | None:
+    for y, row in enumerate(rows):
+        x = row.find("*")
+        if x >= 0:
+            return (x, y)
+    return None
+
+
+class TestWorldMapView:
+    def test_pane_width_lock_and_markers(self, tmp_path: Path):
+        s = _fresh_session(tmp_path)
+        world = s.world
+        here = s.current_port_id
+        assert here is not None
+
+        for width in (50, 80):
+            map_w = _clamp(width - 6, 36, 100)
+            panel = views.world_map_view(world, player_port_id=here, width=width)
+            rows = _map_grid_rows(panel)
+            assert rows
+            for row in rows:
+                assert len(row) == map_w
+                assert "[S]" not in row
+            assert _star_cell(rows) is not None
+
+        rows_here = _map_grid_rows(
+            views.world_map_view(world, player_port_id=here, width=50)
+        )
+        rows_none = _map_grid_rows(
+            views.world_map_view(world, player_port_id=None, width=50)
+        )
+        pos = _star_cell(rows_here)
+        assert pos is not None
+        col, row_i = pos
+        assert rows_none[row_i][col] != "*"
+
+        other = "al_manar" if here != "al_manar" else "silva_bay"
+        rows_other = _map_grid_rows(
+            views.world_map_view(world, player_port_id=other, width=50)
+        )
+        pos_other = _star_cell(rows_other)
+        assert pos_other is not None
+        assert pos_other != pos

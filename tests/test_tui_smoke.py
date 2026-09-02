@@ -42,6 +42,18 @@ def test_routes_dialogs_import():
     assert SailDialog is not None
 
 
+def test_dock_dialogs_import():
+    """Harbor dock dialogs and flow can be imported."""
+    from portlight.app.tui.screens.dock import (
+        HarborSelectDialog,
+        QtyDialog,
+        execute_harbor_flow,
+    )
+    assert HarborSelectDialog is not None
+    assert QtyDialog is not None
+    assert execute_harbor_flow is not None
+
+
 def test_combat_screen_import():
     """CombatScreen can be imported."""
     from portlight.app.tui.screens.combat import CombatScreen
@@ -138,7 +150,7 @@ def test_dashboard_content_tabs():
     expected_tabs = [
         "dashboard", "market", "cargo", "routes", "port",
         "fleet", "inventory", "contracts", "ledger",
-        "infrastructure", "help",
+        "infrastructure", "map", "help",
     ]
     for tab in expected_tabs:
         content._current_tab = tab
@@ -151,10 +163,10 @@ def test_app_bindings():
     app = PortlightApp()
     binding_keys = {b.key for b in app.BINDINGS}
     # Navigation keys
-    nav_keys = {"d", "m", "r", "c", "i", "f", "k", "p", "l", "w"}
+    nav_keys = {"d", "m", "r", "c", "i", "f", "k", "p", "l", "w", "v"}
     assert nav_keys.issubset(binding_keys)
     # Action keys
-    action_keys = {"b", "s", "g", "a"}
+    action_keys = {"b", "s", "g", "a", "h"}
     assert action_keys.issubset(binding_keys)
     # Quit
     assert "q" in binding_keys
@@ -185,6 +197,7 @@ def test_tabbar():
     assert "Market" in labels
     assert "Routes" in labels
     assert "Fleet" in labels
+    assert "Map" in labels
     assert "Help" in labels
 
 
