@@ -267,7 +267,7 @@ def render_score_tracks(pdf: FPDF) -> None:
         pdf.ln(1)
 
         y = pdf.get_y()
-        _draw_track(pdf, MARGIN, y, "Silver", 20, step=5)
+        _draw_track(pdf, MARGIN, y, "Silver", 100, step=5)
         _draw_track(pdf, MARGIN, y + 10, "Reputation", 20)
         _draw_track(pdf, MARGIN, y + 20, "Heat", 20)
         _draw_track(pdf, MARGIN, y + 30, "Trust", 5,
@@ -290,7 +290,8 @@ def _draw_track(
     pdf.set_xy(x, y)
     pdf.cell(22, 8, label)
 
-    box_w = min(8, (PAGE_W - 2 * MARGIN - 24) / (max_val + 1))
+    n_boxes = len(labels) if labels else (max_val // step + 1)
+    box_w = min(8, (PAGE_W - 2 * MARGIN - 24) / n_boxes)
     bx = x + 24
 
     if labels:
