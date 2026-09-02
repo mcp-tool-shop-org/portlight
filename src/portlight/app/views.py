@@ -1895,7 +1895,7 @@ _REGION_COLORS: dict[str, str] = {
     "South Seas": "green",
 }
 
-# Feature markers — single cells, no '[' (would nest inside [{style}]…[/]).
+# Feature markers -- single cells, no '[' (would nest inside [{style}]...[/]).
 _FEATURE_ICON: dict[str, str] = {
     "shipyard": "S",
     "black_market": "B",
@@ -2099,7 +2099,7 @@ def world_map_view(
         line_parts: list[str] = []
         for ch, style in row:
             # One grid cell = one visible column; escape '[' so it cannot
-            # nest a Rich tag inside [{style}]…[/].
+            # nest a Rich tag inside [{style}]...[/].
             cell = (ch or " ")[0]
             safe = r"\[" if cell == "[" else cell
             line_parts.append(f"[{style}]{safe}[/{style}]")
