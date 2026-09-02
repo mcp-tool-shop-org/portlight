@@ -6,7 +6,11 @@ Defeating a target lets the player claim the reward.
 Contract:
   - generate_bounty_board(pirates, rng) -> list[BountyTarget]
   - accept_bounty(captain, target_id) -> str | None
+  - hunt_bounty(world, captain, target_id, rng) -> EncounterState | str
   - claim_bounty(captain, pirates, target_id) -> int | str
+
+Board, accept, and hunt only use ids that exist in
+portlight.content.factions.PIRATE_CAPTAINS. Ghost ids never list or spawn.
 """
 
 from __future__ import annotations
@@ -15,8 +19,10 @@ import random
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from portlight.content.factions import PIRATE_CAPTAINS
+
 if TYPE_CHECKING:
-    from portlight.engine.models import Captain, PirateState
+    from portlight.engine.models import Captain, EncounterState, PirateState, WorldState
 
 
 @dataclass
@@ -46,19 +52,31 @@ def _times_defeated_by_player(mem: object) -> int:
     return int(value or 0)
 
 
-# Known pirate captains and their base bounties
+# Live PIRATE_CAPTAINS only — regional spread across the Known World.
+# Ghost ids (shadow_vex, brass_jack, the_drowned_king) must never appear here.
 _PIRATE_BOUNTIES = [
     ("scarlet_ana", "Scarlet Ana", "crimson_tide", "North Atlantic", 150, "moderate",
-     "Commander of The Crimson Tide. Raids merchant convoys in the North Atlantic."),
-    ("gnaw", "Gnaw", "iron_wolves", "Mediterranean", 200, "hard",
-     "Iron Wolves enforcer. Brutal boarding tactics. High kill count."),
-    ("shadow_vex", "Shadow Vex", "shadow_fleet", "East Indies", 180, "moderate",
-     "Ghost of the East Indies. Smuggling network mastermind."),
-    ("brass_jack", "Brass Jack", "crimson_tide", "West Africa", 120, "easy",
-     "Small-time raider operating off the West African coast."),
-    ("the_drowned_king", "The Drowned King", "iron_wolves", "South Seas", 300, "deadly",
-     "Fleet commander. Controls the southern shipping lanes."),
+     "Captain of the Crimson Tide's diplomatic fleet. Deals first, fights well."),
+    ("the_butcher", "The Butcher", "crimson_tide", "Mediterranean", 220, "hard",
+     "Crimson Tide enforcer. No diplomacy. Takes what he wants."),
+    ("raj_the_quiet", "Raj the Quiet", "monsoon_syndicate", "East Indies", 120, "easy",
+     "Syndicate spymaster. Knows your hold before you open it."),
+    ("typhoon_mei", "Typhoon Mei", "monsoon_syndicate", "East Indies", 200, "hard",
+     "The monsoon in human form. Controls the eastern sea lanes with chaos."),
+    ("old_coral", "Old Coral", "deep_reef", "South Seas", 160, "moderate",
+     "Brotherhood elder. Fifty years on the reef. Respects courage."),
+    ("the_diver", "The Diver", "deep_reef", "West Africa", 180, "hard",
+     "Boards from the waterline and is gone before steel is drawn."),
+    ("sergeant_kruze", "Sergeant Kruze", "iron_wolves", "North Atlantic", 200, "hard",
+     "Former garrison sergeant. Runs piracy like a military operation."),
+    ("gnaw", "Gnaw", "iron_wolves", "North Atlantic", 200, "hard",
+     "Most feared pirate in the North Atlantic. Destroys what he cannot take."),
 ]
+
+
+def _is_live_captain(target_id: str) -> bool:
+    """True when target_id is a real PIRATE_CAPTAINS row."""
+    return target_id in PIRATE_CAPTAINS
 
 
 def generate_bounty_board(
@@ -82,7 +100,7 @@ def generate_bounty_board(
             region=region, reward=reward, difficulty=diff, description=desc,
         )
         for cid, name, fid, region, reward, diff, desc in _PIRATE_BOUNTIES
-        if cid not in defeated_ids
+        if cid not in defeated_ids and _is_live_captain(cid)
     ]
 
     if len(available) <= max_targets:
@@ -101,6 +119,8 @@ def _claimed_ids(captain: "Captain") -> list[str]:
 
 def accept_bounty(captain: "Captain", target_id: str) -> str | None:
     """Accept a bounty target. Returns error string or None."""
+    if not _is_live_captain(target_id):
+        return "Unknown captain"
     if target_id in captain.active_bounties:
         return "Already hunting this target"
     if target_id in _claimed_ids(captain):
@@ -109,6 +129,37 @@ def accept_bounty(captain: "Captain", target_id: str) -> str | None:
         return "Maximum 3 active bounties"
     captain.active_bounties.append(target_id)
     return None
+
+
+def hunt_bounty(
+    world: "WorldState",
+    captain: "Captain",
+    target_id: str,
+    rng: random.Random,
+) -> "EncounterState | str":
+    """Spawn an encounter against an accepted, living bounty target.
+
+    Requires target_id in captain.active_bounties and in PIRATE_CAPTAINS.
+    Builds EncounterState the way create_encounter does, with that captain locked.
+    Returns EncounterState on success, or an error string.
+    """
+    if not _is_live_captain(target_id):
+        return "Unknown captain"
+    if target_id in _claimed_ids(captain):
+        return "Bounty already claimed"
+    if target_id not in captain.active_bounties:
+        return "No active bounty for this target"
+
+    from portlight.engine.encounter import create_encounter
+
+    voyage = getattr(world, "voyage", None)
+    dest_id = voyage.destination_id if voyage is not None else "porto_novo"
+    enc = create_encounter(
+        world.ports, dest_id, rng, target_captain_id=target_id,
+    )
+    if enc is None:
+        return "Unknown captain"
+    return enc
 
 
 def claim_bounty(
