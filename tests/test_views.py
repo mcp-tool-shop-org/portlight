@@ -250,6 +250,81 @@ class TestGuideCommand:
 
 
 # ---------------------------------------------------------------------------
+# CLI --json machine surface (GameSession.snapshot)
+# ---------------------------------------------------------------------------
+
+_SNAPSHOT_KEYS = ("captain", "port", "cargo", "market", "routes", "board")
+
+
+class TestCliJson:
+    def test_status_json_dumps_snapshot_without_ansi(self, tmp_path: Path, monkeypatch):
+        import json
+
+        from typer.testing import CliRunner
+
+        from portlight.app import cli as cli_mod
+        from portlight.app.cli import app
+
+        monkeypatch.chdir(tmp_path)
+        cli_mod._json_mode = False
+        slot = "json_status"
+        session = GameSession(slot=slot)
+        session.new("JsonCap", captain_type="merchant", seed=42)
+
+        snap = session.snapshot()
+        for key in _SNAPSHOT_KEYS:
+            assert key in snap
+        assert isinstance(snap["captain"], dict)
+        assert snap["captain"]["name"] == "JsonCap"
+        assert isinstance(snap["board"], dict)
+        assert "offers" in snap["board"]
+        assert "active" in snap["board"]
+        assert isinstance(snap["cargo"], list)
+        assert isinstance(snap["market"], list)
+        assert isinstance(snap["routes"], list)
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["--save", slot, "--json", "status"])
+        cli_mod._json_mode = False
+        assert result.exit_code == 0, result.output
+        stdout = result.stdout or result.output
+        assert "\x1b[" not in stdout
+        payload = json.loads(stdout)
+        for key in _SNAPSHOT_KEYS:
+            assert key in payload
+        assert payload["captain"]["name"] == "JsonCap"
+        assert isinstance(payload["board"], dict)
+        assert "offers" in payload["board"]
+        assert "active" in payload["board"]
+
+    def test_saves_json_lists_slots(self, tmp_path: Path, monkeypatch):
+        import json
+
+        from typer.testing import CliRunner
+
+        from portlight.app import cli as cli_mod
+        from portlight.app.cli import app
+
+        monkeypatch.chdir(tmp_path)
+        cli_mod._json_mode = False
+        slot = "json_saves"
+        session = GameSession(slot=slot)
+        session.new("SaveCap", captain_type="merchant", seed=42)
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["--save", slot, "saves", "--json"])
+        cli_mod._json_mode = False
+        assert result.exit_code == 0, result.output
+        stdout = result.stdout or result.output
+        assert "\x1b[" not in stdout
+        payload = json.loads(stdout)
+        assert "saves" in payload
+        assert isinstance(payload["saves"], list)
+        assert any(row.get("slot") == slot for row in payload["saves"])
+        assert any(row.get("captain") == "SaveCap" for row in payload["saves"])
+
+
+# ---------------------------------------------------------------------------
 # World map pane-width contract
 # ---------------------------------------------------------------------------
 

@@ -144,6 +144,29 @@ class TestSessionProvisionRepair:
         assert s.captain.ship.crew == initial_crew + 2
 
 
+class TestSessionWorkHunt:
+    def test_work_earns_silver_and_advances_day(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new("Worker", captain_type="merchant", seed=42)
+        silver_before = s.captain.silver
+        day_before = s.world.day
+        earned = s.work()
+        assert isinstance(earned, int)
+        assert earned >= 3
+        assert s.captain.silver == silver_before + earned
+        assert s.world.day == day_before + 1
+
+    def test_hunt_returns_result_and_advances_day(self, tmp_path: Path):
+        s = GameSession(tmp_path)
+        s.new("Hunter", captain_type="merchant", seed=42)
+        day_before = s.world.day
+        result = s.hunt()
+        assert not isinstance(result, str)
+        assert s.world.day == day_before + 1
+        assert hasattr(result, "provisions_gained")
+        assert hasattr(result, "pelts_gained")
+
+
 class TestSessionShipyard:
     def test_buy_ship_at_shipyard(self, tmp_path: Path):
         s = GameSession(tmp_path)
