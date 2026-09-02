@@ -14,9 +14,9 @@ from portlight.app.session import GameSession  # noqa: E402
 from portlight.app.tui.app import PortlightApp  # noqa: E402
 
 
-def _make_session() -> GameSession:
+def _make_session(seed: int = 42) -> GameSession:
     s = GameSession(slot="tui_voyage_test")
-    s.new("Captain Blackwood", captain_type="merchant")
+    s.new("Captain Blackwood", captain_type="merchant", seed=seed)
     # Voyage loops call session.advance() with no encounter UI. A pirate
     # challenge sets pending_duel and advance_day then no-ops, so a 30-day
     # sail never arrives. Bots/tests that cannot answer the prompt use this.
@@ -266,20 +266,25 @@ async def test_provision_consumption():
     async with app.run_test() as _pilot:
         prov_start = session.world.captain.provisions
 
-        # Sail somewhere
+        # Longest hop so a 1–2 day short run cannot dock before burn lands.
+        # Flotsam can add 1–4; merchant burn is not every day. Need enough
+        # at-sea days that net consumption wins (Release 33591473518:
+        # unseeded 5-day short hop went 30 → 31).
         port = session.current_port
         routes = [r for r in session.world.routes
                   if r.port_a == port.id or r.port_b == port.id]
-        route = routes[0]
+        route = max(routes, key=lambda r: r.distance)
         dest_id = route.port_b if route.port_a == port.id else route.port_a
         session.sail(dest_id)
 
-        # Advance several days at sea — provision consumption should outweigh any single favorable event
-        for _ in range(5):
-            if session.at_sea:
-                session.advance()
+        days_at_sea = 0
+        for _ in range(16):
+            if not session.at_sea:
+                break
+            session.advance()
+            days_at_sea += 1
 
-        # Over 5 days, net provisions should decrease (daily burn outweighs rare bonuses)
+        assert days_at_sea >= 4, f"too few at-sea days ({days_at_sea}) to measure burn"
         assert session.world.captain.provisions < prov_start
 
 

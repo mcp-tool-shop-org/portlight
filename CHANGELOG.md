@@ -29,6 +29,7 @@ Dogfood swarm `swarm-1788294007-e89b` — health A–D, feature pass, Phase 9 gr
 - Repair help no longer claims a fake 3 silver/HP
 - `dev` extra pins `pytest-asyncio==1.4.0` so TUI `run_test` cases run in CI (Release was stopping on the first `@pytest.mark.asyncio` test)
 - Release npm job uses Node 24 so the launcher publishes via Trusted Publishing (Node 22's npm 10.9 signs provenance then PUT E404)
+- TUI voyage provision test pins seed 42 and a long hop (unseeded 5-day short run could net +1 from flotsam)
 
 ### Changed
 
