@@ -5,18 +5,17 @@ This is a 10-minute guide to your first Portlight session. By the end, you'll ha
 ## Install and start
 
 ```bash
-pip install -e ".[dev]"
+pip install "portlight[tui]"
+portlight tui
+```
+
+Pick **New**, then **merchant**. The TUI is a full play path (harbor H, contracts K twice, infra W twice). Same save as the CLI:
+
+```bash
 portlight new "Your Name" --type merchant
 ```
 
-The welcome screen shows your captain identity, the port you're docked at, what's cheap and expensive locally, and suggested first moves.
-
-Three captain types are available:
-- `merchant` — best prices, lowest inspection risk, trust grows fast
-- `smuggler` — black market access, luxury margins, but higher heat
-- `navigator` — faster ships, longer range, early East Indies access
-
-Start with `merchant` for your first run. The other types reward experience.
+Nine captain types are available. Start with `merchant` for your first run — best prices, trust grows fast, heat penalties doubled. The roster is in the README.
 
 ## Your first trade
 

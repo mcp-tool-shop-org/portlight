@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev,tui]" ruff build
+
+      - name: Lint
+        run: ruff check src/ tests/
+
+      - name: Test
+        run: |
+          python -c "import textual; print('textual', textual.__version__)"
+          pytest tests/ -x -q -rs --tb=short -o junit_family=xunit2 --junitxml=junit.xml
+          python <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          skipped = []
+          for case in ET.parse("junit.xml").iter("testcase"):
+              label = (case.get("classname") or "") + "." + (case.get("name") or "")
+              if "tui" in label.lower() and case.find("skipped") is not None:
+                  skipped.append(label)
+          if skipped:
+              print("ERROR: TUI tests were skipped; textual extra must be installed", file=sys.stderr)
+              for name in skipped:
+                  print("  " + name, file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Build package
+        run: python -m build
+
+      - name: Smoke-import the built wheel
+        run: |
+          SMOKE_DIR="$(mktemp -d)"
+          python -m pip install --no-deps --force-reinstall --target "$SMOKE_DIR" dist/*.whl
+          PYTHONPATH="$SMOKE_DIR" python -c "from portlight.app.cli import app; print('CLI entrypoint: OK')"
+          PYTHONPATH="$SMOKE_DIR" python -c "from portlight.stress.invariants import check_all_invariants; print('Stress module: OK')"
+          PYTHONPATH="$SMOKE_DIR" python -c "from portlight.balance.runner import run_balance_simulation; print('Balance module: OK')"
+
+  pypi:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  npm:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish npm launcher with provenance
+        run: npm publish --provenance --access public

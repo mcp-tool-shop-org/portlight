@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-09-02
+
+Dogfood swarm `swarm-1788294007-e89b` — health A–D, feature pass, Phase 9 green.
+
+### Added
+
+- TUI is a full play path: save/new picker, harbor (provision / repair / hire / work / fire / hunt), contracts accept/abandon (K twice), infra lease/broker/license/credit (W twice), shipyard (P twice), fleet board/dock/transfer/sell (F twice), campaign panel on Dashboard with beat toasts
+- At-sea H hunts; fighting-style special binds to Y; live naval action list includes flee
+- CLI `--json` on status/market/cargo/routes/contracts and `portlight saves`
+- `portlight bounty hunt <id>` — spawn a locked encounter against an accepted live captain
+- North Atlantic and South Seas broker offices and regional licenses (`na_iron_charter`, `ss_reef_charter`)
+- Print-and-play kit stays tabletop-sized (portrait restored after the landscape board; silver track 0–100)
+
+### Fixed
+
+- Mid-fight restore no longer re-rolls the enemy ship
+- TUI naval sink goes through prize capture instead of a fake duel victory
+- TUI Flee calls `attempt_flee` instead of fighting
+- Bounty board round-trips; ghost captain ids never list or accept
+- Unknown save-enum tokens fail-open instead of wiping the slot
+- Voyage toasts use `message`; warehouse tab gets a port id; injuries view reads `heal_remaining`
+- Repair help no longer claims a fake 3 silver/HP
+
+### Changed
+
+- 1,853 tests. Brokers cover all five live regions. License catalog is seven rows.
+
 ## [2.0.1] - 2026-03-25
 
 ### Added

@@ -26,8 +26,8 @@ src/portlight/
                   melee weapons (8), ranged weapons (8), fighting styles (5),
                   ship upgrades (18), armor, seasons, cultures,
                   port institutions (134 NPCs)
-  app/          — Typer CLI (50+ commands), Rich views, TUI screens,
-                  session manager, captain selection
+  app/          — Typer CLI, Rich views, Textual TUI (harbor/infra/shipyard/fleet
+                  dialogs, save picker), session manager, captain selection
   balance/      — balance harness: 7 policy bots, 7 scenarios, reporting
   stress/       — stress testing: 14 invariants, 9 compound scenarios
   receipts/     — trade receipt schema and hashing
@@ -66,7 +66,7 @@ Compound state tuple:
 
 ## Testing
 
-- **1,836 tests** across 72+ files
+- **1,853 tests**
 - **Balance harness** — 7 policy bots, 7 scenario packs, deterministic seeds
 - **Stress testing** — 14 cross-system invariants, 9 compound scenarios
 - **Invariant enforcement** — checked after every tick in stress runs

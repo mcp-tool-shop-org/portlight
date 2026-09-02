@@ -3,160 +3,184 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/mcp-tool-shop-org/brand/main/logos/portlight/readme.png" width="600" alt="Portlight">
+  <img src="https://raw.githubusercontent.com/mcp-tool-shop-org/brand/main/logos/portlight/readme.png" width="400" alt="Portlight">
 </p>
 
 <p align="center">
-  <a href="https://github.com/mcp-tool-shop-org/portlight/actions"><img src="https://github.com/mcp-tool-shop-org/portlight/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/mcp-tool-shop-org/portlight/actions/workflows/ci.yml"><img src="https://github.com/mcp-tool-shop-org/portlight/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/portlight/"><img src="https://img.shields.io/pypi/v/portlight" alt="PyPI"></a>
+  <a href="https://www.npmjs.com/package/@mcptoolshop/portlight"><img src="https://img.shields.io/npm/v/@mcptoolshop/portlight" alt="npm"></a>
   <a href="https://github.com/mcp-tool-shop-org/portlight/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <a href="https://mcp-tool-shop-org.github.io/portlight/"><img src="https://img.shields.io/badge/docs-handbook-blue" alt="Handbook"></a>
+  <a href="https://mcp-tool-shop-org.github.io/portlight/"><img src="https://img.shields.io/badge/landing-page-blue" alt="Landing Page"></a>
+  <a href="https://mcp-tool-shop-org.github.io/portlight/handbook/"><img src="https://img.shields.io/badge/docs-handbook-blue" alt="Handbook"></a>
 </p>
 
-Juego de estrategia marítima centrado en el comercio. Construye una carrera como comerciante en cinco regiones a través de la optimización de rutas, contratos, infraestructura, finanzas y reputación, todo desde la terminal.
+Portlight es un juego de estrategia marítima centrado en el comercio para jugar en la terminal. Controlas a un capitán, una bodega y una reputación en veinte puertos. Los precios cambian cuando vendes. Los contratos requieren pruebas de origen. Los corredores y los almacenes modifican el valor de un viaje. Cuatro caminos hacia la victoria evalúan la carrera que realmente construiste, no la que elegiste el primer día.
+
+Juega en la **TUI** (`portlight tui`) o en la **CLI**. El mismo archivo de guardado. El mismo mundo.
 
 ## Instalación
 
 ```bash
-pip install portlight
+pip install "portlight[tui]"
 ```
 
-¿No tienes Python? Utiliza el envoltorio npm en su lugar:
+Python 3.11 o superior. El paquete adicional `tui` incluye Textual. Solo para CLI: `pip install portlight`.
+
+¿No tienes Python? El lanzador de npm descarga el binario de la versión de GitHub:
 
 ```bash
 npx @mcptoolshop/portlight
 ```
 
-## ¿Por qué Portlight?
+Kit de juego imprimible en PDF: `pip install "portlight[printandplay]"`.
 
-La mayoría de los juegos de comercio simplifican el comercio a un número que simplemente aumenta. Portlight trata el comercio como una disciplina comercial:
+## Jugar
 
-- **Los precios reaccionan a tus transacciones.** Si vendes grano en un puerto, el precio se desploma. Cada venta altera el mercado local.
-- **Los puertos tienen identidades económicas reales.** Porto Novo produce grano a bajo costo. Silk Haven exporta seda en grandes cantidades. Estas son características estructurales, no aleatorias.
-- **Los viajes implican riesgos.** Tormentas, piratas, inspecciones, peligros estacionales. Tus provisiones, el casco y la tripulación son importantes.
-- **Los contratos requieren pruebas.** Entrega los productos correctos al puerto correcto antes de la fecha límite. Se rastrea el origen de los productos.
-- **La infraestructura cambia la forma en que operas.** Los almacenes almacenan la carga. Los corredores mejoran los contratos. Las licencias desbloquean acceso premium.
-- **La reputación abre y cierra puertas.** Confianza comercial, escrutinio aduanero, posición regional y conexiones con el hampa: cuatro factores que influyen en lo que puedes hacer y dónde.
-- **El juego analiza lo que has construido.** Tu historial comercial, infraestructura, reputación y rutas forman un perfil de carrera. Hay cuatro caminos distintos hacia la victoria, basados en el tipo de comerciante en el que te has convertido.
-
-## El Mundo
-
-Cinco regiones. Veinte puertos. Cuarenta y tres rutas. Una economía dinámica.
-
-| Región | Puertos | Personaje |
-|--------|-------|-----------|
-| **Mediterranean** | Porto Novo, Al-Manar, Silva Bay, Corsair's Rest | Mercados de grano, madera y especias. Aguas de inicio seguras. |
-| **North Atlantic** | Ironhaven, Stormwall, Thornport | Hierro, armas, comercio militar. Inspecciones estrictas. |
-| **West Africa** | Sun Harbor, Palm Cove, Iron Point, Pearl Shallows | Algodón, ron, perlas. Provisiones más baratas. |
-| **East Indies** | Jade Port, Monsoon Reach, Silk Haven, Crosswind Isle, Dragon's Gate, Spice Narrows | Seda, especias, porcelana, té. Márgenes más altos. Riesgo de monzones. |
-| **South Seas** | Ember Isle, Typhoon Anchorage, Coral Throne | Perlas, medicinas. Aguas remotas para la fase final del juego. |
-
-Hay 134 personajes no jugables (PNJ) nombrados en cada puerto. Cuatro facciones piratas que controlan diferentes áreas. Clima estacional que altera el peligro y la demanda. Una capa cultural con festivales, supersticiones y moral de la tripulación.
-
-## Nueve Capitanes
-
-| Capitán | Hogar | Ventaja | Compromiso |
-|---------|------|------|-----------|
-| **Merchant** | Porto Novo | Mejores precios, la confianza crece rápidamente. | Penalizaciones por "calor" duplicadas. |
-| **Smuggler** | Corsair's Rest | Mercado negro, comercio de contrabando. | Mayor "calor", más inspecciones. |
-| **Navigator** | Monsoon Reach | Barcos más rápidos, mayor alcance. | Posición inicial más débil. |
-| **Privateer** | Ironhaven | Combate naval, ventaja en abordajes. | Mala reputación comercial. |
-| **Corsair** | Corsair's Rest | Combate equilibrado + comercio. | Maestro de nada. |
-| **Scholar** | Jade Port | Ventaja de información, mejores contratos. | Poco capital, frágil. |
-| **Merchant Prince** | Porto Novo | Alto capital inicial, acceso premium. | Tarifas más altas, objetivo de piratas. |
-| **Dockhand** | Crosswind Isle | Tripulación más barata, ingeniosa. | Capital inicial más bajo. |
-| **Bounty Hunter** | Stormwall | Dominio del combate, posición de facción. | Precios bajos, desconfianza. |
-
-Cada capitán comienza en un puerto diferente, ve contratos diferentes y tiende hacia un camino diferente hacia la victoria. El juego no te limita; observa lo que haces y te dice lo que has construido.
-
-## Ciclo Principal
-
-```
-Inspect market → Buy cargo → Sail → Sell → Reinvest → Build access → Pursue destiny
+```bash
+portlight tui
 ```
 
-## Comienzo rápido
+Si no hay un archivo de guardado, la TUI muestra las ranuras y la opción **Nuevo**. Elige un tipo de capitán. Luego:
+
+| Tecla | Función |
+|-----|----------------|
+| **D** | Panel de control (aquí se muestran la carrera y los hitos) |
+| **M / B / S** | Mercado: comprar, vender |
+| **G / A** | Selector de viajes: avanzar un día |
+| **H** | Puerto: aprovisionamiento, reparación, contratación; también trabajo, despido, caza. En el mar, H caza. |
+| **K** | Contratos. Pulsa **K de nuevo** para aceptar o abandonar. |
+| **W** | Infraestructura. Pulsa **W de nuevo** para alquilar, depositar, retirar, abrir un corredor, comprar una licencia o obtener crédito. |
+| **P** | Puerto. Pulsa **P de nuevo** para acceder al astillero (comprar casco, mejoras, dique seco). |
+| **F** | Flota. Pulsa **F de nuevo** para abordar, atracar, transferir o vender un casco capturado. |
+| **V** | Mapa del mundo |
+| **?** | Ayuda |
+
+La CLI es el mismo juego con comandos escritos:
 
 ```bash
 portlight new "Captain Hawk" --type merchant
 portlight market
 portlight buy grain 10
-portlight routes
 portlight sail al_manar
 portlight advance
 portlight sell grain 10
-portlight milestones
+portlight tui
 ```
 
-Consulte [docs/START_HERE.md](docs/START_HERE.md) para una primera sesión guiada.
+`portlight --json status` guarda un diccionario estable (capitán, puerto, carga, mercado, rutas, tripulación) sin ANSI. `portlight saves` muestra las ranuras.
+
+Sesión de inicio guiada: [docs/START_HERE.md](docs/START_HERE.md). Manual: [https://mcp-tool-shop-org.github.io/portlight/handbook/](https://mcp-tool-shop-org.github.io/portlight/handbook/).
+
+## ¿Por qué Portlight?
+
+La mayoría de los juegos de comercio simplifican el comercio en un número que aumenta. Portlight trata el comercio como una disciplina comercial:
+
+- **Los precios reaccionan a tus operaciones comerciales.** Vende grano y el precio local se desplomará.
+- **Los puertos tienen identidades económicas.** Porto Novo cultiva grano. Silk Haven exporta seda. Esa es la estructura, no el ruido.
+- **Los viajes conllevan riesgos.** Tormentas, piratas, inspecciones, estaciones. Las provisiones, el casco y la tripulación son costes reales.
+- **Los contratos requieren pruebas.** Productos correctos, puerto correcto, origen rastreado, plazos reales.
+- **La infraestructura cambia los tiempos.** Los almacenes preparan la carga. Los corredores mejoran la oferta. Las licencias abren el acceso premium. Las cinco regiones activas tienen oficinas de corredores y una carta regional.
+- **La reputación se basa en cuatro ejes.** Confianza comercial, control de aduanas, posición regional, inframundo. Estos abren y cierran puertas de forma independiente.
+- **El juego lee lo que has construido.** Los hitos y los cuatro caminos hacia la victoria evalúan las pruebas, no una opción del menú.
+
+## El mundo
+
+Cinco regiones. Veinte puertos. Cuarenta y tres rutas.
+
+| Región | Puertos | Personaje |
+|--------|-------|-----------|
+| **Mediterranean** | Porto Novo, Al-Manar, Silva Bay, Corsair's Rest | Grano, madera, especias. Aguas de inicio seguras. |
+| **North Atlantic** | Ironhaven, Stormwall, Thornport | Hierro, armas, comercio de guarnición. Inspecciones estrictas. |
+| **West Africa** | Sun Harbor, Palm Cove, Iron Point, Pearl Shallows | Algodón, ron, perlas. Provisiones baratas. |
+| **East Indies** | Jade Port, Monsoon Reach, Silk Haven, Crosswind Isle, Dragon's Gate, Spice Narrows | Seda, especias, porcelana, té. Márgenes más altos. Riesgo de monzón. |
+| **South Seas** | Ember Isle, Typhoon Anchorage, Coral Throne | Perlas, medicinas. Aguas de juego final remotas. |
+
+Dieciocho productos (incluidos cueros y contrabando). Ciento treinta y cuatro personajes no jugables con nombre. Cuatro facciones piratas con ocho capitanes con nombre activos. Clima estacional. Festivales, supersticiones, moral de la tripulación.
+
+## Nueve capitanes
+
+| Capitán | Hogar | Ventaja | Compromiso |
+|---------|------|------|-----------|
+| **Merchant** | Porto Novo | Mejores precios, la confianza crece rápidamente | Las penalizaciones de calor se duplican |
+| **Smuggler** | Palm Cove | Mercado negro, contrabando | Mayor calor, más inspecciones |
+| **Navigator** | Silva Bay | Barcos más rápidos, mayor alcance | Posición inicial más débil |
+| **Privateer** | Stormwall | Combate naval, abordaje | Mala reputación como comerciante |
+| **Corsair** | Corsair's Rest | Combate + comercio | No es un experto en nada |
+| **Scholar** | Monsoon Reach | Información, mejores contratos | Bajo capital, frágil |
+| **Merchant Prince** | Al-Manar | Alto capital inicial | Mayores tarifas, objetivo de los piratas |
+| **Dockhand** | Crosswind Isle | Tripulación barata | Menor capital inicial |
+| **Bounty Hunter** | Crosswind Isle | Combate, posición de la facción | Malos precios, desconfianza |
+
+`portlight new "Name"` sin `--type` abre la lista. Bounty Hunter no es una etiqueta de sabor: `portlight bounty accept <id>` y luego `portlight bounty hunt <id>` obliga a que el capitán tenga un nombre. Los ID fantasma han desaparecido; la lista solo muestra los `PIRATE_CAPTAINS` activos.
 
 ## Sistemas
 
-**Economía** — Precios determinados por la escasez en 20 puertos, 18 productos, 43 rutas. Las penalizaciones por inundaciones castigan el vertido. Los shocks del mercado crean oportunidades. Los modificadores regionales de demanda significan que cada puerto tiene una identidad clara de importación/exportación.
+**Economía:** Precios de escasez, penalizaciones por exceso de oferta, fluctuaciones del mercado, identidad regional de importación/exportación.
 
-**Viajes** — Viajes de varios días con clima, encuentros con piratas e inspecciones. Las provisiones se consumen diariamente. El casco sufre daños. La moral de la tripulación varía. Las zonas de peligro estacionales cambian las rutas seguras.
+**Viajes:** Viajes de varios días. Clima, piratas, inspecciones. Los duelos con piratas con nombre prefieren un objetivo activo cuando este se encuentra en las aguas.
 
-**Contratos** — Seis familias, cada una con sus propios requisitos de confianza y reputación. Adquisiciones, alivio de escasez, productos de lujo discretos, flete de retorno, rutas fijas y comisiones de facciones. Plazos reales, consecuencias reales.
+**Contratos:** Siete familias, veinticuatro plantillas. Puertas de confianza y posición. Entrega con pruebas de origen.
 
-**Reputación** — Cuatro ejes: reputación regional, confianza comercial, atención de las aduanas y conexiones con el hampa. Una alta confianza desbloquea contratos premium. Una alta atención provoca inspecciones y denegaciones de acceso a puertos. Diferentes capitanes adoptan diferentes modelos económicos.
+**Reputación:** Posición regional, confianza comercial, control de aduanas, conexiones con el inframundo.
 
-**Combate** — Combate personal completo (triángulo de postura: empuje/tajo/parada) con 7 armas de combate cuerpo a cuerpo, 7 armas de largo alcance y estilos de lucha regionales. Combate naval con abordajes y cañones. Corto, brutal y con consecuencias.
+**Combate** — Triángulo de postura personal (estocada / tajo / parada), combate cuerpo a cuerpo y a distancia, estilos de lucha (TUI **Y** activa la habilidad especial del estilo). Naval: fuego de costado, combate cercano, evasión, ataque lateral, huida. Captura de premios con el casco real de una flota.
 
-**Facciones Piratas** — Crimson Tide (Mediterráneo), Iron Wolves (Atlántico Norte), Deep Reef Brotherhood (Océano Pacífico Sur), Monsoon Syndicate (Indias Orientales). Cada una con su territorio, productos preferidos, capitanes nombrados y actitud hacia usted.
+**Infraestructura** — Tres niveles de almacenes. Oficinas de corredores: local + establecidas en las cinco regiones. Siete licencias (cinco licencias regionales, incluidas el Atlántico Norte y los Mares del Sur, más dos globales). Costos de mantenimiento reales.
 
-**Infraestructura** — Almacenes (3 niveles), oficinas de intermediarios, 5 licencias comprables. Costos reales de mantenimiento. Cada uno afecta el tiempo, la escala o el acceso al comercio.
+**Finanzas** — Seguro de casco, carga y garantía de contrato. Tres niveles de crédito con intereses y penalizaciones por impago.
 
-**Finanzas** — Seguros (casco, carga, garantía de contrato) y crédito (3 niveles con intereses). Apalancamiento con riesgos.
+**Flota** — Múltiples cascos, atraque/abordaje en el mismo puerto, transferencia de carga, dieciocho mejoras.
 
-**Compañeros** — Cinco roles de oficiales (infante de marina, navegante, cirujano, contrabandista, encargado). Compañeros con nombre, personalidad, moral y desencadenantes de partida.
+**Carrera** — Veintisiete hitos, siete etiquetas de perfil, cuatro caminos hacia la victoria. El panel muestra el libro mayor; al avanzar el día, se celebran los logros recién completados.
 
-**Carrera** — 27 hitos en 6 familias. 13 etiquetas de perfil de carrera. Cuatro caminos hacia la victoria: Casa comercial legítima, Red de sombras, Alcance oceánico, Imperio comercial.
+## Caminos hacia la victoria
 
-## Caminos hacia la Victoria
+- **Casa de Comercio Legal** — Alta confianza, contratos premium, reputación intachable, amplia infraestructura.
+- **Red de la Sombra** — Márgenes de lujo bajo presión, sobrevivió a las confiscaciones, sigue a la cabeza.
+- **Alcance Oceánico** — Posición en las Indias Orientales, infraestructura distante, dominio de las rutas de larga distancia.
+- **Imperio Comercial** — Almacenes, corredores, licencias y apalancamiento financiero en múltiples regiones.
 
-- **Casa comercial legítima** — Legitimidad disciplinada. Alta confianza, contratos premium, reputación impecable, infraestructura amplia.
-- **Red de sombras** — Comercio rentable bajo escrutinio. Márgenes de lujo, gestión de la atención, operaciones resilientes.
-- **Alcance oceánico** — Poder comercial de larga distancia. Acceso a las Indias Orientales, infraestructura distante, dominio de rutas.
-- **Imperio comercial** — Operación integrada en múltiples regiones. Infraestructura en todas partes, diversificación de ingresos, apalancamiento financiero.
-
-## Juego de mesa para imprimir y jugar
-
-Genere una adaptación completa del juego de mesa: cartas, tablero, reglamento, pistas de puntuación:
+## Para imprimir y jugar
 
 ```bash
-pip install portlight[printandplay]
+pip install "portlight[printandplay]"
 portlight print-and-play
 ```
 
-Una aventura comercial competitiva para 2-4 jugadores (aproximadamente 90 minutos) con capitanes asimétricos, carreras de contratos y tensión entre reputación y atención. Consulte [docs/PRINT_AND_PLAY_RULES.md](docs/PRINT_AND_PLAY_RULES.md) para el reglamento completo.
+PDF del tamaño de un kit (formato vertical después del tablero horizontal, escala plateada 0–100). Manual de reglas: [docs/PRINT_AND_PLAY_RULES.md](docs/PRINT_AND_PLAY_RULES.md).
 
-## Referencia de comandos
+## Grupos de comandos
 
-Ejecute `portlight guide` para obtener una referencia agrupada, o consulte [docs/COMMANDS.md](docs/COMMANDS.md).
+Ejecutar `portlight guide` en el juego, o [docs/COMMANDS.md](docs/COMMANDS.md).
 
 | Grupo | Comandos |
 |-------|----------|
+| Interfaz | `tui`, `saves`, `--json` |
 | Comercio | `market`, `buy`, `sell`, `cargo` |
-| Navegación | `routes`, `sail`, `advance`, `port`, `provision`, `repair`, `hire` |
+| Navegación | `routes`, `sail`, `advance`, `port`, `provision`, `repair`, `hire`, `fire`, `crew`, `hunt`, `work` |
+| Combate | `duel`, `fight`, `encounter`, `naval`, `capture`, `spare`, `take-all`, `bounty` (`list` / `accept` / `hunt` / `claim`) |
+| Equipo | `inventory`, `equip`, `merchant`, `sell-gear`, `armory`, `train`, `equip-style`, `maintain`, `smith`, `field-repair`, `injuries`, `learn-skill` |
+| Flota | `shipyard`, `drydock`, `fleet`, `dock`, `board`, `transfer`, `rename`, `upgrade` |
 | Contratos | `contracts`, `accept`, `obligations`, `abandon` |
+| Compañeros | `recruit`, `dismiss-companion`, `party` |
 | Infraestructura | `warehouse`, `office`, `license` |
 | Finanzas | `insure`, `credit` |
-| Carrera | `captain`, `reputation`, `milestones`, `status`, `ledger`, `shipyard` |
-| Mundo | `map`, `port` |
-| Interfaz | `tui`, `captain-select` |
+| Carrera | `captain`, `reputation`, `milestones`, `status`, `ledger` |
+| Mundo | `map` |
 | Sistema | `save`, `load`, `guide`, `print-and-play` |
 
 ## Calidad
 
-- 1832 pruebas en más de 72 archivos
-- 14 invariantes de sistema que se aplican bajo 9 escenarios de estrés compuestos
-- Sistema de equilibrio: 7 bots de políticas en 7 paquetes de escenarios
+- 1.853 pruebas
+- 14 invariantes entre sistemas bajo 9 escenarios de estrés compuestos
+- Herramienta de equilibrio: 7 bots de política, 7 paquetes de escenarios
 - Formato de guardado v12 con una cadena de migración completa
-- Código limpio, Python 3.11/3.12/3.13
+- Ruff-clean. Python 3.11 / 3.12 / 3.13
 
 ## Seguridad
 
-Juego de línea de comandos que solo funciona localmente. No requiere conexión a la red durante el juego. Guarda los datos en las carpetas `saves/` y `artifacts/` como archivos JSON en el sistema de archivos local. No contiene información confidencial, ni telemetría, ni requiere permisos elevados. Consulte el archivo [SECURITY.md](SECURITY.md).
+Juego solo local. Sin red durante el juego. Guarda en `saves/` e informa a `artifacts/` en formato JSON. Sin secretos, sin telemetría, sin permisos elevados. Consulte [SECURITY.md](SECURITY.md).
 
 ## Desarrollo
 
@@ -166,10 +190,12 @@ pytest
 ruff check src/ tests/
 ```
 
+`verify.sh` ejecuta pruebas, Ruff, la creación de un paquete y una importación de prueba del artefacto creado.
+
 ## Licencia
 
 MIT
 
 ---
 
-Desarrollado por <a href="https://mcp-tool-shop.github.io/">MCP Tool Shop</a>
+Creado por <a href="https://mcp-tool-shop.github.io/">MCP Tool Shop</a>

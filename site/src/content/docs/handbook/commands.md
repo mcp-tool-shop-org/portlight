@@ -5,7 +5,15 @@ sidebar:
   order: 3
 ---
 
-Run `portlight guide` in-game to see this reference in the terminal.
+Run `portlight guide` in-game to see this reference in the terminal. The TUI keys are in [The TUI](./tui/).
+
+## Interface
+
+| Command | What it does |
+|---------|-------------|
+| `portlight tui` | Full Textual play path (same save as CLI) |
+| `portlight saves` | List save slots (slot, captain, day) |
+| `portlight --json status` | Stable JSON dump (captain, port, cargo, market, routes, board) |
 
 ## Trading
 
@@ -43,7 +51,7 @@ Run `portlight guide` in-game to see this reference in the terminal.
 | `portlight capture` | Capture a defeated enemy ship as a prize |
 | `portlight spare` | Show mercy to a defeated pirate captain (gains respect, reduces grudge) |
 | `portlight take-all` | Take everything from a defeated captain (more silver, more grudge) |
-| `portlight bounty` | View the bounty board, accept targets, or claim rewards |
+| `portlight bounty` | Board / `accept` / `hunt` / `claim`. Hunt spawns the accepted live captain. |
 
 ## Equipment
 

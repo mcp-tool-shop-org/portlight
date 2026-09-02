@@ -5,7 +5,7 @@ sidebar:
   order: 100
 ---
 
-**Effective date:** March 23, 2026
+**Effective date:** September 2, 2026
 
 Portlight is an offline, single-player terminal game. Your privacy is straightforward because we collect nothing.
 

@@ -8,12 +8,20 @@ sidebar:
 ## Install
 
 ```bash
-pip install portlight
+pip install "portlight[tui]"
 ```
 
-Requires Python 3.11+. No Python? Use `npx @mcptoolshop/portlight` instead.
+Requires Python 3.11+. CLI-only: `pip install portlight`. No Python? `npx @mcptoolshop/portlight`.
 
 ## Start a new game
+
+TUI (recommended):
+
+```bash
+portlight tui
+```
+
+Pick **New**, then a captain type. Or CLI:
 
 ```bash
 portlight new "Your Name" --type merchant

@@ -7,7 +7,7 @@ sidebar:
 
 ## What is Portlight?
 
-Portlight is a single-player trading game that runs entirely in your terminal. You play as a ship captain buying and selling goods across a network of 20 ports spread over five ocean regions. The goal is to build a successful merchant career through smart trading, route planning, and business investments.
+Portlight is a single-player trading game that runs in your terminal. You play a ship captain across twenty ports and five ocean regions. The TUI (`portlight tui`) is a complete play path; the CLI is the same save with typed commands.
 
 Unlike most trading games where prices are random, Portlight simulates a real economy. Every port produces certain goods cheaply and needs other goods badly. When you sell a lot of grain at one port, the price drops. When you discover a port that desperately needs silk, you can profit from that structural gap. Your decisions shape prices, and your reputation follows you from port to port.
 
@@ -39,16 +39,16 @@ If you do not have Python, you can use the npm wrapper instead: `npx @mcptoolsho
 **Step 1 -- Install Portlight**
 
 ```bash
-pip install portlight
+pip install "portlight[tui]"
 ```
 
 **Step 2 -- Start a new game**
 
 ```bash
-portlight new "Your Name" --type merchant
+portlight tui
 ```
 
-Pick `merchant` for your first game. Merchants get better prices and build trust faster, which makes the early game smoother. You will see a summary of your captain and starting port (Porto Novo in the Mediterranean).
+Pick **New**, then **Merchant**. Merchants get better prices and build trust faster. You start at Porto Novo in the Mediterranean. The same run is available from the CLI with `portlight new "Your Name" --type merchant`.
 
 **Step 3 -- Check the local market**
 

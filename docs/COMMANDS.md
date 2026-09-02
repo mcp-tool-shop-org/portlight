@@ -1,6 +1,17 @@
 # Command Reference
 
-All Portlight commands, grouped by purpose. Run `portlight guide` in-game to see this reference in the terminal.
+All Portlight commands, grouped by purpose. Run `portlight guide` in-game to see this reference in the terminal. TUI keys: [handbook TUI](https://mcp-tool-shop-org.github.io/portlight/handbook/tui/).
+
+## Interface
+
+### `portlight tui`
+Full Textual play path. Save/new picker if the slot is empty. Same `saves/` as the CLI.
+
+### `portlight saves`
+List save slots (slot, captain, day). `--json` dumps `{ "saves": [...] }`.
+
+### `portlight --json status`
+Stable JSON for captain, port, voyage, cargo, market, routes, and the contract board. No ANSI.
 
 ## Trading
 

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "portlight"
-version = "2.0.1"
-description = "Trade-first maritime strategy CLI — route arbitrage, contracts, infrastructure, finance, and commercial reputation across a living regional economy"
+version = "2.1.0"
+description = "Trade-first maritime strategy game for the terminal — TUI and CLI, twenty ports, four victory paths"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -24,6 +24,13 @@ dependencies = [
     "typer>=0.9",
     "rich>=13.0",
 ]
+
+[project.urls]
+Homepage = "https://mcp-tool-shop-org.github.io/portlight/"
+Documentation = "https://mcp-tool-shop-org.github.io/portlight/handbook/"
+Repository = "https://github.com/mcp-tool-shop-org/portlight"
+Issues = "https://github.com/mcp-tool-shop-org/portlight/issues"
+Changelog = "https://github.com/mcp-tool-shop-org/portlight/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 tui = ["textual>=0.85.0"]

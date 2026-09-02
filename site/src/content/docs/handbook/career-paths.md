@@ -17,7 +17,7 @@ Your career is scored across seven dimensions, each measured from actual game ev
 | **Shadow Operator** | Profitable under scrutiny | High heat, luxury margins, survived seizures |
 | **Oceanic Carrier** | Long-haul commercial reach | East Indies standing, distant infrastructure, galleon |
 | **Contract Specialist** | Reliable deliverer | Contract completions, early bonuses |
-| **Infrastructure Builder** | Multi-region commercial presence | Warehouses, brokers, licenses across regions |
+| **Infrastructure Builder** | Multi-region commercial presence | Warehouses, brokers (all five regions), licenses |
 | **Leveraged Trader** | Disciplined credit user | Borrowed and repaid without defaulting |
 | **Risk-Managed Merchant** | Insured operations | Policies purchased, claims paid |
 
