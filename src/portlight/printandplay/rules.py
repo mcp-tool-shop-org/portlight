@@ -37,7 +37,7 @@ def _heading(pdf: FPDF, text: str) -> None:
     y = pdf.get_y()
     pdf.set_draw_color(*MEDIUM_GRAY)
     pdf.set_line_width(0.3)
-    pdf.line(MARGIN, y, PAGE_W - MARGIN, y)
+    pdf.line(MARGIN, y, pdf.w - MARGIN, y)
     pdf.ln(2)
 
 
@@ -52,22 +52,24 @@ def _subheading(pdf: FPDF, text: str) -> None:
 def _body(pdf: FPDF, text: str) -> None:
     pdf.set_font("Helvetica", "", FONT_BODY)
     pdf.set_text_color(*INK)
-    pdf.multi_cell(0, 4, text)
+    pdf.multi_cell(0, 4, text, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(1)
 
 
 def _bullet(pdf: FPDF, text: str) -> None:
     pdf.set_font("Helvetica", "", FONT_BODY)
     pdf.set_text_color(*INK)
-    pdf.get_x()
+    pdf.set_x(MARGIN)
     pdf.cell(5, 4, "-")
-    pdf.multi_cell(PAGE_W - 2 * MARGIN - 5, 4, text)
+    pdf.multi_cell(
+        pdf.w - 2 * MARGIN - 5, 4, text, new_x="LMARGIN", new_y="NEXT",
+    )
 
 
 def _check_page(pdf: FPDF, needed: float = 30) -> None:
     """Add a new page if we're running low on space."""
-    if pdf.get_y() > PAGE_H - MARGIN - needed:
-        pdf.add_page()
+    if pdf.get_y() > pdf.h - MARGIN - needed:
+        pdf.add_page(orientation="P")
 
 
 def render_cover(pdf: FPDF) -> None:
@@ -210,7 +212,7 @@ def render_rules(pdf: FPDF) -> None:
 
 def render_player_aid(pdf: FPDF) -> None:
     """Render a one-page player aid / quick reference."""
-    pdf.add_page()
+    pdf.add_page(orientation="P")
 
     pdf.set_font("Helvetica", "B", FONT_HEADING)
     pdf.set_text_color(*INK)
@@ -252,7 +254,7 @@ def render_player_aid(pdf: FPDF) -> None:
 
 def render_score_tracks(pdf: FPDF) -> None:
     """Render printable score track sheets."""
-    pdf.add_page()
+    pdf.add_page(orientation="P")
 
     pdf.set_font("Helvetica", "B", FONT_HEADING)
     pdf.set_text_color(*INK)
@@ -291,16 +293,22 @@ def _draw_track(
     pdf.cell(22, 8, label)
 
     n_boxes = len(labels) if labels else (max_val // step + 1)
-    box_w = min(8, (PAGE_W - 2 * MARGIN - 24) / n_boxes)
+    gap = 1.0
+    usable = pdf.w - 2 * MARGIN - 24
+    if n_boxes <= 1:
+        box_w = usable
+    else:
+        box_w = (usable - (n_boxes - 1) * gap) / n_boxes
     bx = x + 24
+    stride = box_w + gap
 
     if labels:
         pdf.set_font("Helvetica", "", FONT_TINY)
         for i, lbl in enumerate(labels):
             pdf.set_draw_color(*MEDIUM_GRAY)
             pdf.set_line_width(0.2)
-            pdf.rect(bx + i * (box_w + 1), y, box_w, 8, style="D")
-            pdf.set_xy(bx + i * (box_w + 1), y + 1)
+            pdf.rect(bx + i * stride, y, box_w, 8, style="D")
+            pdf.set_xy(bx + i * stride, y + 1)
             pdf.cell(box_w, 6, lbl, align="C")
     else:
         pdf.set_font("Helvetica", "", FONT_TINY)
@@ -308,6 +316,6 @@ def _draw_track(
             pdf.set_draw_color(*MEDIUM_GRAY)
             pdf.set_line_width(0.2)
             idx = i // step
-            pdf.rect(bx + idx * (box_w + 1), y, box_w, 8, style="D")
-            pdf.set_xy(bx + idx * (box_w + 1), y + 1)
+            pdf.rect(bx + idx * stride, y, box_w, 8, style="D")
+            pdf.set_xy(bx + idx * stride, y + 1)
             pdf.cell(box_w, 6, str(i), align="C")
