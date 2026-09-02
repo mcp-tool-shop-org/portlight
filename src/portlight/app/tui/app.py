@@ -123,6 +123,20 @@ class PortlightApp(App):
             from portlight.app.tui.screens.dock import execute_infra_flow
             execute_infra_flow(self, self.session)
             return
+        if tab == "port" and self._current_tab == "port":
+            from textual.screen import ModalScreen
+            if isinstance(self.screen, ModalScreen):
+                return
+            from portlight.app.tui.screens.dock import execute_shipyard_flow
+            execute_shipyard_flow(self, self.session)
+            return
+        if tab == "fleet" and self._current_tab == "fleet":
+            from textual.screen import ModalScreen
+            if isinstance(self.screen, ModalScreen):
+                return
+            from portlight.app.tui.screens.dock import execute_fleet_flow
+            execute_fleet_flow(self, self.session)
+            return
         self._current_tab = tab
         dashboard = self.query_one("DashboardScreen", expect_type=None)
         if dashboard is not None:

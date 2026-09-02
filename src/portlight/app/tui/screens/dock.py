@@ -2,7 +2,7 @@
 
 Reuses the TradeDialog/Input modal pattern from market.py and routes.py.
 HarborSelectDialog is also the numbered picker for saves, captain type,
-contract accept/abandon, and infrastructure lease/broker/license/credit.
+contract accept/abandon, infrastructure, shipyard, and fleet.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ class QtyDialog(ModalScreen[str | None]):
 
 
 class HarborSelectDialog(ModalScreen[str | None]):
-    """Numbered picker -- harbor, saves, captain type, contracts, infra."""
+    """Numbered picker -- harbor, saves, captain type, contracts, infra, shipyard, fleet."""
 
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -782,6 +782,461 @@ def _infra_credit_repay(app, session: "GameSession") -> None:
         app.refresh_views()
 
     app.push_screen(QtyDialog("Repay credit", "to repay", max_qty, 1), on_qty)
+
+
+def _require_shipyard(app, session: "GameSession"):
+    """Return current port when docked at a shipyard, else notify and return None."""
+    port = _require_docked(app, session)
+    if port is None:
+        return None
+    from portlight.engine.models import PortFeature
+    if PortFeature.SHIPYARD not in port.features:
+        app.notify(f"{port.name} has no shipyard.", severity="warning")
+        return None
+    return port
+
+
+def execute_shipyard_flow(app, session: "GameSession") -> None:
+    """P-twice on Port: buy hull, install/remove upgrade, dry-dock.
+
+    Buy/install/remove/dry-dock require a docked shipyard. Nested
+    HarborSelectDialog of SHIPS / UPGRADES, same stack as infra.
+    """
+    if not session.active:
+        app.notify("No active game.", severity="warning")
+        return
+    port = session.current_port
+    if not port:
+        app.notify("\u2693 Must be docked to visit the shipyard.", severity="warning")
+        return
+
+    options = [
+        ("buy", "Buy hull"),
+        ("install", "Install upgrade"),
+        ("remove", "Remove upgrade (no refund)"),
+        ("drydock", "Dry-dock"),
+    ]
+
+    def on_pick(choice: str | None) -> None:
+        if choice is None:
+            return
+        if choice == "buy":
+            _shipyard_buy(app, session)
+        elif choice == "install":
+            _shipyard_install(app, session)
+        elif choice == "remove":
+            _shipyard_remove(app, session)
+        elif choice == "drydock":
+            _shipyard_drydock(app, session)
+
+    app.push_screen(HarborSelectDialog(options, heading="Shipyard"), on_pick)
+
+
+def _shipyard_buy(app, session: "GameSession") -> None:
+    port = _require_shipyard(app, session)
+    if port is None:
+        return
+    from portlight.content.ships import SHIPS
+
+    cap = session.world.captain
+    current_id = cap.ship.template_id if cap.ship else ""
+    options: list[tuple[str, str]] = []
+    for tmpl in SHIPS.values():
+        if tmpl.id == current_id:
+            status = "*current"
+        elif tmpl.price <= 0:
+            status = "starting hull"
+        elif tmpl.price > cap.silver:
+            status = f"need {tmpl.price}s"
+        else:
+            status = f"{tmpl.price}s"
+        options.append((
+            tmpl.id,
+            f"{tmpl.name}  cargo {tmpl.cargo_capacity}  hull {tmpl.hull_max}  {status}",
+        ))
+    if not options:
+        app.notify("No hulls in the catalog.", severity="warning")
+        return
+
+    def on_hull(ship_id: str | None) -> None:
+        if ship_id is None:
+            return
+        err = session.buy_ship(ship_id)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        tmpl = SHIPS.get(ship_id)
+        name = tmpl.name if tmpl else ship_id
+        app.notify(
+            f"\u2713 Ship purchased: {name}",
+            severity="information",
+            timeout=5,
+        )
+        if session.last_jettison:
+            from portlight.content.goods import GOODS
+            bits = []
+            for good_id, qty in session.last_jettison:
+                good = GOODS.get(good_id)
+                gname = good.name if good else good_id
+                bits.append(f"{qty}x {gname}")
+            app.notify(
+                f"Cargo trimmed: {', '.join(bits)}",
+                severity="warning",
+                timeout=7,
+            )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Buy hull"), on_hull)
+
+
+def _shipyard_install(app, session: "GameSession") -> None:
+    port = _require_shipyard(app, session)
+    if port is None:
+        return
+    from portlight.content.upgrades import UPGRADES
+
+    ship = session.world.captain.ship if session.world else None
+    if not ship:
+        app.notify("No ship.", severity="warning")
+        return
+    slots_used = len(ship.upgrades)
+    slots_max = ship.upgrade_slots
+    if slots_used >= slots_max:
+        app.notify(
+            f"No upgrade slots remaining ({slots_max}/{slots_max} used)",
+            severity="warning",
+        )
+        return
+    installed = {inst.upgrade_id for inst in ship.upgrades}
+    silver = session.world.captain.silver
+    options: list[tuple[str, str]] = []
+    for uid, tmpl in sorted(UPGRADES.items(), key=lambda x: (x[1].category.value, x[1].price)):
+        if uid in installed:
+            continue
+        cat = tmpl.category.value.replace("_", " ")
+        if tmpl.price > silver:
+            status = f"need {tmpl.price}s"
+        else:
+            status = f"{tmpl.price}s"
+        options.append((uid, f"{tmpl.name}  {cat}  {status}"))
+    if not options:
+        app.notify("No upgrades available to install.", severity="warning")
+        return
+
+    def on_upg(upgrade_id: str | None) -> None:
+        if upgrade_id is None:
+            return
+        err = session.install_upgrade(upgrade_id)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        tmpl = UPGRADES.get(upgrade_id)
+        name = tmpl.name if tmpl else upgrade_id
+        app.notify(
+            f"\u2713 Upgrade installed: {name}",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Install upgrade"), on_upg)
+
+
+def _shipyard_remove(app, session: "GameSession") -> None:
+    port = _require_shipyard(app, session)
+    if port is None:
+        return
+    from portlight.content.upgrades import UPGRADES
+
+    ship = session.world.captain.ship if session.world else None
+    if not ship:
+        app.notify("No ship.", severity="warning")
+        return
+    if not ship.upgrades:
+        app.notify("No upgrades installed.", severity="warning")
+        return
+    options: list[tuple[str, str]] = []
+    for inst in ship.upgrades:
+        tmpl = UPGRADES.get(inst.upgrade_id)
+        name = tmpl.name if tmpl else inst.upgrade_id
+        options.append((inst.upgrade_id, f"{name}  (no refund)"))
+
+    def on_upg(upgrade_id: str | None) -> None:
+        if upgrade_id is None:
+            return
+        err = session.remove_upgrade(upgrade_id)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        tmpl = UPGRADES.get(upgrade_id)
+        name = tmpl.name if tmpl else upgrade_id
+        app.notify(f"Removed {name} (no refund).", timeout=5)
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Remove upgrade"), on_upg)
+
+
+def _shipyard_drydock(app, session: "GameSession") -> None:
+    port = _require_shipyard(app, session)
+    if port is None:
+        return
+    cap = session.world.captain
+    options: list[tuple[str, str]] = []
+    if cap.ship:
+        s = cap.ship
+        options.append((
+            "flagship",
+            f"{s.name}  *flagship  hull {s.hull}/{s.hull_max}",
+        ))
+    for owned in cap.fleet:
+        if owned.docked_port_id != port.id:
+            continue
+        s = owned.ship
+        options.append((
+            s.name,
+            f"{s.name}  hull {s.hull}/{s.hull_max}",
+        ))
+    if not options:
+        app.notify("No ship to dry-dock.", severity="warning")
+        return
+
+    def on_ship(choice: str | None) -> None:
+        if choice is None:
+            return
+        ship_name = None if choice == "flagship" else choice
+        result = session.dry_dock(ship_name)
+        if isinstance(result, str):
+            app.notify(f"\u2717 {result}", severity="error")
+            return
+        restored, cost = result
+        app.notify(
+            f"\u2713 Dry dock complete. Restored {restored} hull for {cost:,} silver",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Dry-dock"), on_ship)
+
+
+def execute_fleet_flow(app, session: "GameSession") -> None:
+    """F-twice on Fleet: board, dock current, transfer cargo, sell.
+
+    Board/dock/transfer/sell require dock. Nested HarborSelectDialog of
+    flagship + docked fleet ships; QtyDialog for transfer qty. No convoy orders.
+    """
+    if not session.active:
+        app.notify("No active game.", severity="warning")
+        return
+    port = session.current_port
+    if not port:
+        app.notify("\u2693 Must be docked.", severity="warning")
+        return
+
+    flag = session.world.captain.ship
+    flag_name = flag.name if flag else "flagship"
+    options = [
+        ("board", "Board a docked ship"),
+        ("dock", f"Dock current  {flag_name}"),
+        ("transfer", "Transfer cargo"),
+        ("sell", "Sell a docked ship"),
+    ]
+
+    def on_pick(choice: str | None) -> None:
+        if choice is None:
+            return
+        if choice == "board":
+            _fleet_board(app, session)
+        elif choice == "dock":
+            _fleet_dock(app, session)
+        elif choice == "transfer":
+            _fleet_transfer(app, session)
+        elif choice == "sell":
+            _fleet_sell(app, session)
+
+    app.push_screen(HarborSelectDialog(options, heading="Fleet"), on_pick)
+
+
+def _docked_fleet_options(session: "GameSession") -> list[tuple[str, str]]:
+    """(ship_name, label) for fleet ships docked at the current port."""
+    port = session.current_port
+    if not port or not session.world:
+        return []
+    options: list[tuple[str, str]] = []
+    for owned in session.world.captain.fleet:
+        if owned.docked_port_id != port.id:
+            continue
+        s = owned.ship
+        klass = s.template_id.replace("_", " ")
+        options.append((s.name, f"{s.name}  {klass}  hull {s.hull}/{s.hull_max}"))
+    return options
+
+
+def _ships_at_port(session: "GameSession") -> list[tuple[str, str, list]]:
+    """(name, label, cargo) for flagship + fleet ships docked at this port."""
+    if not session.world:
+        return []
+    cap = session.world.captain
+    rows: list[tuple[str, str, list]] = []
+    if cap.ship:
+        rows.append((cap.ship.name, f"{cap.ship.name}  *flagship", cap.cargo))
+    port = session.current_port
+    if port:
+        for owned in cap.fleet:
+            if owned.docked_port_id != port.id:
+                continue
+            rows.append((owned.ship.name, f"{owned.ship.name}  docked", owned.cargo))
+    return rows
+
+
+def _fleet_board(app, session: "GameSession") -> None:
+    port = _require_docked(app, session)
+    if port is None:
+        return
+    options = _docked_fleet_options(session)
+    if not options:
+        app.notify("No docked fleet ships at this port.", severity="warning")
+        return
+
+    def on_ship(name: str | None) -> None:
+        if name is None:
+            return
+        err = session.board_fleet_ship(name)
+        if err:
+            app.notify(f"\u2717 {err}", severity="error")
+            return
+        app.notify(
+            f"\u2713 Boarded {name}",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Board ship"), on_ship)
+
+
+def _fleet_dock(app, session: "GameSession") -> None:
+    port = _require_docked(app, session)
+    if port is None:
+        return
+    err = session.dock_current_ship()
+    if err:
+        app.notify(f"\u2717 {err}", severity="error")
+        return
+    app.notify("\u2713 Switched ships.", severity="information", timeout=5)
+    app.refresh_views()
+
+
+def _fleet_sell(app, session: "GameSession") -> None:
+    port = _require_shipyard(app, session)
+    if port is None:
+        return
+    options = _docked_fleet_options(session)
+    if not options:
+        app.notify("No docked fleet ships at this port.", severity="warning")
+        return
+
+    def on_ship(name: str | None) -> None:
+        if name is None:
+            return
+        result = session.sell_fleet_ship(name)
+        if isinstance(result, str):
+            app.notify(f"\u2717 {result}", severity="error")
+            return
+        silver, sold_name = result
+        app.notify(
+            f"\u2713 Sold {sold_name} for {silver:,} silver",
+            severity="information",
+            timeout=5,
+        )
+        app.refresh_views()
+
+    app.push_screen(HarborSelectDialog(options, heading="Sell ship"), on_ship)
+
+
+def _fleet_transfer(app, session: "GameSession") -> None:
+    port = _require_docked(app, session)
+    if port is None:
+        return
+    from portlight.content.goods import GOODS
+
+    ships = _ships_at_port(session)
+    if len(ships) < 2:
+        app.notify("Need another ship at this port.", severity="warning")
+        return
+    from_opts = [(name, label) for name, label, _cargo in ships]
+
+    def on_from(from_name: str | None) -> None:
+        if from_name is None:
+            return
+        to_opts = [
+            (name, label) for name, label, _c in ships
+            if name.lower() != from_name.lower()
+        ]
+        if not to_opts:
+            app.notify("Need a destination ship.", severity="warning")
+            return
+
+        def on_to(to_name: str | None) -> None:
+            if to_name is None:
+                return
+            src_cargo = next(
+                (c for n, _lab, c in ships if n.lower() == from_name.lower()),
+                [],
+            )
+            held: dict[str, int] = {}
+            for item in src_cargo:
+                if item.quantity > 0:
+                    held[item.good_id] = held.get(item.good_id, 0) + item.quantity
+            if not held:
+                app.notify("No cargo on that ship.", severity="warning")
+                return
+            good_opts: list[tuple[str, str]] = []
+            for gid, qty in held.items():
+                good = GOODS.get(gid)
+                gname = good.name if good else gid
+                good_opts.append((gid, f"{gname}  {qty}"))
+
+            def on_good(good_id: str | None) -> None:
+                if good_id is None:
+                    return
+                max_qty = held.get(good_id, 0)
+                if max_qty <= 0:
+                    app.notify("No cargo on that ship.", severity="warning")
+                    return
+                good = GOODS.get(good_id)
+                gname = good.name if good else good_id
+
+                def on_qty(qty_str: str | None) -> None:
+                    if qty_str is None:
+                        return
+                    qty = int(qty_str)
+                    err = session.transfer_fleet_cargo(
+                        good_id, qty, from_name, to_name,
+                    )
+                    if err:
+                        app.notify(f"\u2717 {err}", severity="error")
+                        return
+                    app.notify(
+                        f"\u2713 Transferred {qty} {gname}",
+                        severity="information",
+                        timeout=5,
+                    )
+                    app.refresh_views()
+
+                app.push_screen(
+                    QtyDialog(f"Transfer {gname}", "per unit", max_qty, 0),
+                    on_qty,
+                )
+
+            app.push_screen(
+                HarborSelectDialog(good_opts, heading="Transfer good"),
+                on_good,
+            )
+
+        app.push_screen(HarborSelectDialog(to_opts, heading="To ship"), on_to)
+
+    app.push_screen(HarborSelectDialog(from_opts, heading="From ship"), on_from)
 
 
 def execute_save_picker(app, session: "GameSession") -> None:

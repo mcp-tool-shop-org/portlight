@@ -240,7 +240,12 @@ class ContentArea(Widget):
         elif tab == "port":
             return self._enhanced_port()
         elif tab == "fleet":
-            return views.fleet_view(cap)
+            return Group(
+                views.fleet_view(cap),
+                Text.from_markup(
+                    "\n[dim]Press F again to board, dock, transfer cargo, or sell.[/dim]"
+                ),
+            )
         elif tab == "inventory":
             return self._inventory_view()
         elif tab == "contracts":
@@ -352,10 +357,23 @@ class ContentArea(Widget):
         lines.append("")
         lines.append("[dim]Press ? for keybinding help[/dim]")
 
-        return Panel(
+        dash = Panel(
             "\n".join(lines),
             title="[bold #e9c46a]\u2693 Dashboard[/bold #e9c46a]",
             border_style="#264653",
+        )
+        return Group(dash, self._campaign_panel())
+
+    def _campaign_panel(self):
+        """Career ledger on Dashboard -- no extra TabBar letter."""
+        from portlight.app import views
+        s = self.session
+        snap = s._build_snapshot()
+        return Group(
+            views.milestones_view(s.campaign, snap),
+            Text.from_markup(
+                "\n[dim]Press A to advance; career beats notify on unlock.[/dim]"
+            ),
         )
 
     def _enhanced_market(self):
@@ -543,7 +561,7 @@ class ContentArea(Widget):
         if hasattr(port, "features"):
             feat_vals = [f.value if hasattr(f, "value") else str(f) for f in port.features]
             if "shipyard" in feat_vals:
-                services.append("[#2a9d8f]\u2692 Shipyard[/#2a9d8f]")
+                services.append("[#2a9d8f]\u2692 Shipyard -- P again[/#2a9d8f]")
             if "black_market" in feat_vals:
                 services.append("[#e76f51]\u2620 Black Market[/#e76f51]")
             if "safe_harbor" in feat_vals:
@@ -563,7 +581,11 @@ class ContentArea(Widget):
             f"repair [yellow]{cost_repair}[/yellow]/hp  "
             f"crew [yellow]{cost_crew}[/yellow]/head"
         )
-        lines.append("  Press [bold #e9c46a]H[/bold #e9c46a] Harbor — provision, repair, hire")
+        lines.append("  Press [bold #e9c46a]H[/bold #e9c46a] Harbor -- provision, repair, hire")
+        lines.append(
+            "  Press [bold #e9c46a]P[/bold #e9c46a] again for shipyard -- "
+            "buy hull, install upgrade, dry-dock"
+        )
 
         if cap.provisions <= 0:
             lines.append("  [bold red]Provisions EMPTY![/bold red] Press H to restock  [dim](CLI: portlight provision 10)[/dim]")
@@ -725,6 +747,8 @@ class ContentArea(Widget):
             "  [bold #e9c46a]H[/bold #e9c46a] Harbor (provision / repair / hire; work / fire / hunt) -- docked",
             "  [bold #e9c46a]H[/bold #e9c46a] Hunt at sea    [bold #e9c46a]K[/bold #e9c46a] twice: accept / abandon contracts",
             "  [bold #e9c46a]W[/bold #e9c46a] twice (Infra): lease / deposit / withdraw / broker / license / credit",
+            "  [bold #e9c46a]P[/bold #e9c46a] twice (Port): buy hull / install upgrade / remove / dry-dock",
+            "  [bold #e9c46a]F[/bold #e9c46a] twice (Fleet): board / dock current / transfer cargo / sell",
             "",
             "[bold #2a9d8f]Combat[/bold #2a9d8f]",
             "  [bold #e76f51]T[/bold #e76f51] Thrust       [bold #e76f51]Z[/bold #e76f51] Slash      [bold #e76f51]X[/bold #e76f51] Parry",
@@ -737,6 +761,9 @@ class ContentArea(Widget):
             "",
             "[dim]Hunt / work / fire: press H (docked picker, or hunt at sea)[/dim]",
             "[dim]Infra actions: press W again on the Infra tab[/dim]",
+            "[dim]Shipyard: press P again on the Port tab[/dim]",
+            "[dim]Fleet: press F again on the Fleet tab[/dim]",
+            "[dim]Dashboard shows career paths; press A and beats notify[/dim]",
         ]
         cap = self.session.world.captain if self.session.active else None
         ship = cap.ship if cap else None
