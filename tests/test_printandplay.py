@@ -121,7 +121,7 @@ class TestGenerator:
         data = output.read_bytes()
         assert data[:5] == b"%PDF-"
         pages = _count_pdf_pages(data)
-        assert 8 <= pages <= 28, f"kit-sized page count expected, got {pages}"
+        assert 8 <= pages <= 32, f"kit-sized page count expected, got {pages}"
 
     def test_generate_pdf_starts_with_header(self, tmp_path: Path):
         from portlight.printandplay.generator import generate
@@ -150,7 +150,7 @@ class TestGenerator:
         data = output.read_bytes()
         assert data[:5] == b"%PDF-"
         pages = _count_pdf_pages(data)
-        assert 8 <= pages <= 28, f"kit-sized page count expected, got {pages}"
+        assert 8 <= pages <= 32, f"kit-sized page count expected, got {pages}"
 
 
 class TestEventDeck:

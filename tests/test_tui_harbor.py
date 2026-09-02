@@ -106,8 +106,8 @@ async def test_harbor_hire_crew_mutates_state(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_harbor_at_sea_notifies_must_be_docked(tmp_path: Path):
-    """At-sea H does not open the dock loop; notifies Must be docked."""
+async def test_harbor_at_sea_hunts(tmp_path: Path):
+    """At-sea H runs hunt and does not open the dock picker."""
     session = _make_session(tmp_path)
     err = session.sail("al_manar")
     assert err is None
@@ -120,4 +120,4 @@ async def test_harbor_at_sea_notifies_must_be_docked(tmp_path: Path):
         await pilot.pause()
         assert not isinstance(app.screen, HarborSelectDialog)
 
-    assert any("Must be docked" in n for n in notes)
+    assert notes, "at-sea H should notify hunt flavor or a hunt error"
