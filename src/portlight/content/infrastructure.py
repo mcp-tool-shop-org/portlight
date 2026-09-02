@@ -10,13 +10,15 @@ Design rules:
 
 Broker offices (3D-2A):
   - Region-level, 2 tiers each (local -> established).
-  - Each region has a personality: Mediterranean=lawful, West Africa=staples,
-    East Indies=long-haul premium.
+  - Each live region has a personality: Mediterranean=lawful,
+    North Atlantic=garrison/weapons (Iron Pact), West Africa=staples,
+    East Indies=long-haul premium, South Seas=tribute/pearls (Coral Crown).
   - Offices improve board quality, market legibility, and trade terms.
 
 Licenses (3D-2B):
-  - 5 licenses gated by standing, trust, heat, and broker prerequisites.
-  - Each unlocks premium contract families or formal access in a region.
+  - 7 licenses gated by standing, trust, heat, and broker prerequisites.
+  - Five regional charters (one per live PORTS region) unlock formal access;
+    two global permits cover luxury goods and elite reputation.
 """
 
 from portlight.engine.infrastructure import (
@@ -124,6 +126,28 @@ BROKER_SPECS: dict[tuple[str, BrokerTier], BrokerOfficeSpec] = {
         description="A proper merchant's office overlooking the quay. Charter work flows through here.",
     ),
 
+    # --- North Atlantic: Iron Pact garrison board, weapons, winter provision ---
+    ("North Atlantic", BrokerTier.LOCAL): BrokerOfficeSpec(
+        tier=BrokerTier.LOCAL,
+        name="North Atlantic Local Broker",
+        purchase_cost=160,
+        upkeep_per_day=2,
+        board_quality_bonus=1.3,      # garrison / weapons board
+        market_signal_bonus=0.22,     # winter-provision signals
+        trade_term_modifier=0.97,
+        description="An Iron Pact clerk at the garrison exchange. Weapons boards and winter stores.",
+    ),
+    ("North Atlantic", BrokerTier.ESTABLISHED): BrokerOfficeSpec(
+        tier=BrokerTier.ESTABLISHED,
+        name="North Atlantic Garrison House",
+        purchase_cost=420,
+        upkeep_per_day=5,
+        board_quality_bonus=1.55,
+        market_signal_bonus=0.35,     # strong winter-provision intelligence
+        trade_term_modifier=0.94,
+        description="An Iron Pact house beside the arsenal. Garrison contracts and storm-season provisioning.",
+    ),
+
     # --- West Africa: staples, return cargo, efficient regional loops ---
     ("West Africa", BrokerTier.LOCAL): BrokerOfficeSpec(
         tier=BrokerTier.LOCAL,
@@ -167,6 +191,28 @@ BROKER_SPECS: dict[tuple[str, BrokerTier], BrokerOfficeSpec] = {
         trade_term_modifier=0.93,     # 7% tighter (full house advantage)
         description="A merchant house with direct connections to silk and spice guilds. The serious money flows here.",
     ),
+
+    # --- South Seas: Coral Crown tribute, premium pearls/weapons, typhoon intel ---
+    ("South Seas", BrokerTier.LOCAL): BrokerOfficeSpec(
+        tier=BrokerTier.LOCAL,
+        name="South Seas Local Broker",
+        purchase_cost=220,
+        upkeep_per_day=4,
+        board_quality_bonus=1.35,     # tribute / premium pearls and weapons
+        market_signal_bonus=0.20,     # typhoon intelligence
+        trade_term_modifier=0.96,
+        description="A Coral Crown factor on the reef quay. Tribute first; pearls and weapons follow.",
+    ),
+    ("South Seas", BrokerTier.ESTABLISHED): BrokerOfficeSpec(
+        tier=BrokerTier.ESTABLISHED,
+        name="South Seas Tribute House",
+        purchase_cost=550,
+        upkeep_per_day=7,
+        board_quality_bonus=1.65,
+        market_signal_bonus=0.38,     # strong typhoon-season intelligence
+        trade_term_modifier=0.93,
+        description="A Coral Crown house that prices tribute, premium pearls, and steel. Typhoon windows are the specialty.",
+    ),
 }
 
 
@@ -204,6 +250,20 @@ LICENSE_CATALOG: dict[str, LicenseSpec] = {
         required_broker_tier=BrokerTier.LOCAL,
         effects={"lawful_board_mult": 1.4, "customs_mult": 0.85},
     ),
+    "na_iron_charter": LicenseSpec(
+        id="na_iron_charter",
+        name="North Atlantic Iron Charter",
+        description="Iron Pact authorization for garrison and weapons shipping in North Atlantic waters. "
+                    "Opens lawful procurement boards and eases Stormwall inspections.",
+        region_scope="North Atlantic",
+        purchase_cost=320,
+        upkeep_per_day=3,
+        required_trust_tier="credible",
+        required_standing=10,
+        required_heat_max=5,
+        required_broker_tier=BrokerTier.LOCAL,
+        effects={"lawful_board_mult": 1.35, "customs_mult": 0.85},
+    ),
     "wa_commerce_permit": LicenseSpec(
         id="wa_commerce_permit",
         name="West Africa Commerce Permit",
@@ -231,6 +291,20 @@ LICENSE_CATALOG: dict[str, LicenseSpec] = {
         required_heat_max=4,
         required_broker_tier=BrokerTier.LOCAL,
         effects={"premium_offer_mult": 1.5, "customs_mult": 0.80},
+    ),
+    "ss_reef_charter": LicenseSpec(
+        id="ss_reef_charter",
+        name="South Seas Reef Charter",
+        description="Coral Crown permission to offer tribute and trade in South Seas waters. "
+                    "Opens premium pearl and weapons boards on the reef circuits.",
+        region_scope="South Seas",
+        purchase_cost=380,
+        upkeep_per_day=4,
+        required_trust_tier="reliable",
+        required_standing=14,
+        required_heat_max=4,
+        required_broker_tier=BrokerTier.LOCAL,
+        effects={"premium_offer_mult": 1.45, "customs_mult": 0.82},
     ),
     "luxury_goods_permit": LicenseSpec(
         id="luxury_goods_permit",
