@@ -17,6 +17,10 @@ from portlight.app.tui.app import PortlightApp  # noqa: E402
 def _make_session() -> GameSession:
     s = GameSession(slot="tui_voyage_test")
     s.new("Captain Blackwood", captain_type="merchant")
+    # Voyage loops call session.advance() with no encounter UI. A pirate
+    # challenge sets pending_duel and advance_day then no-ops, so a 30-day
+    # sail never arrives. Bots/tests that cannot answer the prompt use this.
+    s.auto_resolve_duels = True
     return s
 
 
