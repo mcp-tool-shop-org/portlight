@@ -335,6 +335,20 @@ class ContentArea(Widget):
         elif s.at_sea:
             lines.append("[bold cyan]Sailing...[/bold cyan]")
             lines.append("  Press [bold]A[/bold] to advance a day")
+            if cap.provisions <= 0:
+                lines.append("  [bold red]Provisions EMPTY![/bold red] Make port, then [bold]H[/bold] to restock")
+                lines.append("  [dim]or CLI: portlight hunt / portlight work[/dim]")
+
+        if port and cap.provisions <= 0:
+            lines.append("  [bold red]Provisions EMPTY![/bold red] Press [bold]H[/bold] to provision")
+        elif port and cap.ship and cap.ship.hull < cap.ship.hull_max:
+            if cap.ship.hull_max and cap.ship.hull / cap.ship.hull_max <= 0.3:
+                lines.append("  [bold red]Hull critical![/bold red] Press [bold]H[/bold] to repair")
+        if port and cap.ship:
+            from portlight.content.upgrades import UPGRADES as _CREW_UPG
+            from portlight.engine.ship_stats import resolve_crew_max as _rcm
+            if cap.ship.crew < max(1, _rcm(cap.ship, _CREW_UPG) // 3):
+                lines.append("  [bold red]Crew thin![/bold red] Press [bold]H[/bold] to hire")
 
         lines.append("")
         lines.append("[dim]Press ? for keybinding help[/dim]")
@@ -538,6 +552,39 @@ class ContentArea(Widget):
         if services:
             lines.append(f"Services: {' '.join(services)}")
 
+        cap = self.session.world.captain
+        ship = cap.ship
+        svc_mult = self.session._service_mult()
+        cost_prov = max(1, int(port.provision_cost * svc_mult))
+        cost_repair = max(1, int(port.repair_cost * svc_mult))
+        cost_crew = port.crew_cost
+        lines.append("")
+        lines.append(
+            f"Rates: provisions [yellow]{cost_prov}[/yellow]/day  "
+            f"repair [yellow]{cost_repair}[/yellow]/hp  "
+            f"crew [yellow]{cost_crew}[/yellow]/head"
+        )
+        lines.append("  Press [bold #e9c46a]H[/bold #e9c46a] Harbor — provision, repair, hire")
+
+        if cap.provisions <= 0:
+            lines.append("  [bold red]Provisions EMPTY![/bold red] Press H to restock  [dim](CLI: portlight provision 10)[/dim]")
+        elif cap.provisions <= 10:
+            lines.append(f"  [yellow]Provisions low ({cap.provisions} days).[/yellow] Press H to restock")
+        if ship and ship.hull < ship.hull_max:
+            lines.append(
+                f"  Hull {ship.hull}/{ship.hull_max} — Press H to repair"
+                "  [dim](CLI: portlight repair)[/dim]"
+            )
+        if ship:
+            from portlight.content.upgrades import UPGRADES as _CREW_UPG
+            from portlight.engine.ship_stats import resolve_crew_max as _rcm
+            cmax = _rcm(ship, _CREW_UPG)
+            if ship.crew < cmax:
+                lines.append(
+                    f"  Crew {ship.crew}/{cmax} — Press H to hire"
+                    "  [dim](CLI: portlight hire)[/dim]"
+                )
+
         return Panel(
             "\n".join(lines),
             title=f"\u2693 {port.name}",
@@ -663,20 +710,48 @@ class ContentArea(Widget):
             "[bold #2a9d8f]Actions[/bold #2a9d8f]",
             "  [bold #e9c46a]B[/bold #e9c46a] Buy goods    [bold #e9c46a]S[/bold #e9c46a] Sell goods",
             "  [bold #e9c46a]G[/bold #e9c46a] Sail (go)    [bold #e9c46a]A[/bold #e9c46a] Advance day",
+            "  [bold #e9c46a]H[/bold #e9c46a] Harbor (provision / repair / hire) — docked only",
             "",
             "[bold #2a9d8f]Combat[/bold #2a9d8f]",
             "  [bold #e76f51]T[/bold #e76f51] Thrust       [bold #e76f51]Z[/bold #e76f51] Slash      [bold #e76f51]X[/bold #e76f51] Parry",
-            "  [bold #e76f51]O[/bold #e76f51] Shoot        [bold #e76f51]E[/bold #e76f51] Dodge/Evade",
+            "  [bold #e76f51]O[/bold #e76f51] Shoot        [bold #e76f51]E[/bold #e76f51] Dodge/Evade  [bold #e76f51]W[/bold #e76f51] Throw",
+            "  [bold #e9c46a]Y[/bold #e9c46a] Style special (when ready)",
             "",
             "[bold #2a9d8f]General[/bold #2a9d8f]",
             "  [dim]Esc[/dim]   Back / Cancel",
             "  [dim]Enter[/dim] Confirm selection",
             "",
+            "[dim]Hunt / work / fire crew remain CLI: portlight hunt | work | fire[/dim]",
+        ]
+        cap = self.session.world.captain if self.session.active else None
+        ship = cap.ship if cap else None
+        docked = bool(self.session.current_port) if self.session.active else False
+        critical: list[str] = []
+        if cap and cap.provisions <= 0:
+            if docked:
+                critical.append("[bold red]Provisions EMPTY![/bold red] Press H to restock  [dim](CLI: portlight provision 10)[/dim]")
+            else:
+                critical.append("[bold red]Provisions EMPTY![/bold red] Make port, then H  [dim](CLI: portlight hunt)[/dim]")
+        elif cap and cap.provisions <= 10:
+            critical.append(f"[yellow]Provisions low ({cap.provisions} days).[/yellow] Press H at port")
+        if ship and ship.hull_max and ship.hull / ship.hull_max <= 0.3:
+            critical.append("[bold red]Hull critical![/bold red] Press H to repair  [dim](CLI: portlight repair)[/dim]")
+        if ship:
+            from portlight.content.upgrades import UPGRADES as _CREW_UPG
+            from portlight.engine.ship_stats import resolve_crew_max as _rcm
+            if ship.crew < max(1, _rcm(ship, _CREW_UPG) // 3):
+                critical.append("[bold red]Crew thin![/bold red] Press H to hire  [dim](CLI: portlight hire)[/dim]")
+        if critical:
+            lines.append("")
+            lines.append("[bold #e76f51]Needs attention[/bold #e76f51]")
+            lines.extend(f"  {msg}" for msg in critical)
+        lines.extend([
+            "",
             "[dim]Three frontends, one engine:[/dim]",
             "[dim]  portlight         \u2192 CLI (Rich)[/dim]",
             "[dim]  portlight tui     \u2192 TUI (Textual)[/dim]",
             "[dim]  portlight-desktop \u2192 Desktop (Tauri)[/dim]",
-        ]
+        ])
         return Panel(
             "\n".join(lines),
             title="[bold #e9c46a]\u2693 Help[/bold #e9c46a]",

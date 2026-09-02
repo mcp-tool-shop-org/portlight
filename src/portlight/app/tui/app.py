@@ -36,6 +36,7 @@ class PortlightApp(App):
         Binding("s", "sell", "Sell", priority=True),
         Binding("g", "sail", "Sail", priority=True),
         Binding("a", "advance", "Advance", priority=True),
+        Binding("h", "harbor", "Harbor", priority=True),
         Binding("q", "quit", "Quit", priority=True),
         # Encounter-specific keys (only active when EncounterScreen is pushed)
         Binding("n", "encounter_dispatch('negotiate')", show=False, priority=True),
@@ -168,6 +169,18 @@ class PortlightApp(App):
             return
         from portlight.app.tui.screens.routes import execute_advance
         execute_advance(self, self.session)
+
+    def action_harbor(self) -> None:
+        """Open dock services: provision, repair, hire. No-op during an encounter."""
+        if self._encounter_screen:
+            return
+        from textual.screen import ModalScreen
+        if isinstance(self.screen, ModalScreen):
+            return
+        if not self.session.active:
+            return
+        from portlight.app.tui.screens.dock import execute_harbor_flow
+        execute_harbor_flow(self, self.session)
 
     def refresh_views(self) -> None:
         """Refresh all visible views after a state mutation."""

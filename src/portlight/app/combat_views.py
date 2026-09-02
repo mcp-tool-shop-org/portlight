@@ -155,6 +155,13 @@ def encounter_view(
 # Naval status view - ship-to-ship combat dashboard
 # ---------------------------------------------------------------------------
 
+def _default_naval_actions(player_cannons: int) -> tuple[str, ...]:
+    """Live naval verbs. Mirrors engine get_valid_actions (no engine import)."""
+    if player_cannons <= 0:
+        return ("close", "evade", "flee")
+    return ("broadside", "close", "evade", "rake", "flee")
+
+
 def naval_status_view(
     player_hull: int,
     player_hull_max: int,
@@ -167,6 +174,7 @@ def naval_status_view(
     boarding_progress: int,
     boarding_threshold: int,
     turn: int,
+    available_actions: list[str] | tuple[str, ...] | None = None,
 ) -> Panel:
     """Naval combat dashboard: two-column ship comparison with boarding progress."""
     table = Table(show_header=True, header_style="bold", expand=True)
@@ -178,11 +186,14 @@ def naval_status_view(
     table.add_row("Crew", f"[bold]{player_crew}[/bold]", f"[bold]{enemy_crew}[/bold]")
     table.add_row("Cannons", f"[bold]{player_cannons}[/bold]", f"[bold]{enemy_cannons}[/bold]")
 
+    actions = available_actions if available_actions is not None else _default_naval_actions(player_cannons)
+    actions_str = "  ".join(f"[cyan][{a}][/cyan]" for a in actions)
+
     lines: list[str] = []
     lines.append("")
     lines.append(f"  Boarding: {_boarding_bar(boarding_progress, boarding_threshold)}")
     lines.append("")
-    lines.append("[bold]Actions:[/bold]  [cyan][broadside][/cyan]  [yellow][chain shot][/yellow]  [red][board][/red]  [green][repair][/green]  [dim][disengage][/dim]")
+    lines.append(f"[bold]Actions:[/bold]  {actions_str}")
 
     return Panel(
         Group(table, Text.from_markup("\n".join(lines))),
