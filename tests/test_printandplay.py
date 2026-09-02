@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+import io
+import re
 from pathlib import Path
+
+import pytest
+
+
+def _count_pdf_pages(data: bytes) -> int:
+    """Page count via pypdf, else /Type /Page objects (not /Pages)."""
+    try:
+        from pypdf import PdfReader
+
+        return len(PdfReader(io.BytesIO(data)).pages)
+    except Exception:
+        return len(re.findall(rb"/Type\s*/Page(?!s)", data))
 
 
 
@@ -90,7 +104,11 @@ class TestContentSourcing:
 
 
 class TestGenerator:
-    """Test full PDF generation."""
+    """Test full PDF generation. Skips when fpdf2 is not installed."""
+
+    @pytest.fixture(autouse=True)
+    def _require_fpdf(self):
+        pytest.importorskip("fpdf", reason="fpdf2 not installed")
 
     def test_generate_creates_pdf(self, tmp_path: Path):
         from portlight.printandplay.generator import generate
@@ -100,7 +118,10 @@ class TestGenerator:
 
         assert result == output
         assert output.exists()
-        assert output.stat().st_size > 1000  # should be substantial
+        data = output.read_bytes()
+        assert data[:5] == b"%PDF-"
+        pages = _count_pdf_pages(data)
+        assert 8 <= pages <= 28, f"kit-sized page count expected, got {pages}"
 
     def test_generate_pdf_starts_with_header(self, tmp_path: Path):
         from portlight.printandplay.generator import generate
@@ -120,6 +141,20 @@ class TestGenerator:
 
         assert result.name == "portlight-print-and-play.pdf"
         assert result.exists()
+
+    def test_generate_pdf_page_count(self, tmp_path: Path):
+        from portlight.printandplay.generator import generate
+
+        output = tmp_path / "test.pdf"
+        generate(output)
+        data = output.read_bytes()
+        assert data[:5] == b"%PDF-"
+        pages = _count_pdf_pages(data)
+        assert 8 <= pages <= 28, f"kit-sized page count expected, got {pages}"
+
+
+class TestEventDeck:
+    """Event deck content does not require fpdf2."""
 
     def test_event_deck_size(self):
         from portlight.printandplay.generator import _build_event_deck
