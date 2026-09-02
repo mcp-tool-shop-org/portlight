@@ -1885,21 +1885,28 @@ def captain_confirm_view(
 # World map - ASCII chart of ports, routes, regions
 # ---------------------------------------------------------------------------
 
-# Region display colors (Rich markup)
+# Region display colors (Rich markup). Mediterranean uses cyan — Rich
+# `blue` is near-invisible on the TUI navy (#0a1628).
 _REGION_COLORS: dict[str, str] = {
-    "Mediterranean": "blue",
+    "Mediterranean": "cyan",
     "North Atlantic": "cyan",
     "West Africa": "yellow",
     "East Indies": "red",
     "South Seas": "green",
 }
 
-# Feature icons
+# Feature markers — single cells, no '[' (would nest inside [{style}]…[/]).
 _FEATURE_ICON: dict[str, str] = {
-    "shipyard": "[S]",
-    "black_market": "[B]",
-    "safe_harbor": "[H]",
+    "shipyard": "S",
+    "black_market": "B",
+    "safe_harbor": "H",
 }
+
+# TUI #status-sidebar is 30 cols; map must fit the pane beside it.
+_MAP_SIDEBAR_COLS = 30
+_MAP_PANEL_CHROME = 6  # Panel border + padding
+_MAP_MIN_W = 36
+_MAP_MAX_W = 100
 
 # Ship class -> route style
 _ROUTE_STYLES: dict[str, tuple[str, str]] = {
@@ -1939,36 +1946,45 @@ def world_map_view(
     player_port_id: str | None = None,
     show_routes: bool = False,
     region_filter: str | None = None,
+    width: int | None = None,
 ) -> Panel:
     """Render the full world map as ASCII art.
 
-    Grid: 100 columns x 36 rows (2x horizontal stretch for terminal aspect).
     Ports shown as colored markers with name labels.
     Routes drawn as lines between connected ports when show_routes=True.
+
+    ``width`` is the content-pane width in columns (TUI should pass this so
+    the map fits beside the 30-col sidebar). When omitted, defaults to
+    terminal columns minus the sidebar so CLI still fits a TUI-sized pane.
     """
     from portlight.content.ports import PORTS
     from portlight.content.routes import ROUTES
 
-    # --- Grid setup (adaptive to terminal width) ---
+    # --- Grid setup (content pane, not full terminal) ---
     import shutil
-    term_w = shutil.get_terminal_size((120, 36)).columns
-    MAP_W = max(60, min(100, term_w - 6))  # leave room for panel borders
+    if width is None or width <= 0:
+        term_w = shutil.get_terminal_size((80, 36)).columns
+        available = term_w - _MAP_SIDEBAR_COLS
+    else:
+        available = width
+    MAP_W = max(_MAP_MIN_W, min(_MAP_MAX_W, available - _MAP_PANEL_CHROME))
     MAP_H = 36
     GAME_W = 50
     GAME_H = 36
 
-    # Character grid: (char, style) per cell
+    # Character grid: (char, style) per cell. dim cyan (not dim blue) so
+    # ocean fill reads on TUI navy #0a1628.
     grid: list[list[tuple[str, str]]] = [
-        [(".", "dim blue")] * MAP_W for _ in range(MAP_H)
+        [(".", "dim cyan")] * MAP_W for _ in range(MAP_H)
     ]
 
     # Ocean texture - vary the fill slightly
     for y in range(MAP_H):
         for x in range(MAP_W):
             if (x + y) % 7 == 0:
-                grid[y][x] = ("~", "dim blue")
+                grid[y][x] = ("~", "dim cyan")
             elif (x + y) % 11 == 0:
-                grid[y][x] = (".", "dim blue")
+                grid[y][x] = (".", "dim cyan")
 
     def game_to_grid(gx: int, gy: int) -> tuple[int, int]:
         """Convert game coords (50x36) to grid coords (100x36)."""
@@ -2082,7 +2098,11 @@ def world_map_view(
     for row in grid:
         line_parts: list[str] = []
         for ch, style in row:
-            line_parts.append(f"[{style}]{ch}[/{style}]")
+            # One grid cell = one visible column; escape '[' so it cannot
+            # nest a Rich tag inside [{style}]…[/].
+            cell = (ch or " ")[0]
+            safe = r"\[" if cell == "[" else cell
+            line_parts.append(f"[{style}]{safe}[/{style}]")
         output_lines.append("".join(line_parts))
 
     map_text = "\n".join(output_lines)
@@ -2102,7 +2122,7 @@ def world_map_view(
         abbr = _REGION_ABBR.get(region, region[:3].upper())
         legend_parts.append(f"[{color}]o {abbr}[/{color}]  ")
     legend_parts.append("  ")
-    legend_parts.append("[S] Shipyard  [B] Black Market  [H] Safe Harbor")
+    legend_parts.append("[bold]S[/bold] Shipyard  [bold]B[/bold] Black Market  [bold]H[/bold] Safe Harbor")
     if player_port_id:
         legend_parts.append("  [bold]* You[/bold]")
 

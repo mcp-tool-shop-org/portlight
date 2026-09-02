@@ -690,9 +690,11 @@ class ContentArea(Widget):
         from portlight.app import views
         s = self.session
         player_port = s.current_port_id
+        pane_w = self.size.width if self.size.width > 0 else None
         return views.world_map_view(
             s.world, player_port_id=player_port,
             show_routes=True, region_filter=None,
+            width=pane_w,
         )
 
     def _help_view(self):
