@@ -116,6 +116,13 @@ class PortlightApp(App):
             from portlight.app.tui.screens.dock import execute_contracts_flow
             execute_contracts_flow(self, self.session)
             return
+        if tab == "infrastructure" and self._current_tab == "infrastructure":
+            from textual.screen import ModalScreen
+            if isinstance(self.screen, ModalScreen):
+                return
+            from portlight.app.tui.screens.dock import execute_infra_flow
+            execute_infra_flow(self, self.session)
+            return
         self._current_tab = tab
         dashboard = self.query_one("DashboardScreen", expect_type=None)
         if dashboard is not None:

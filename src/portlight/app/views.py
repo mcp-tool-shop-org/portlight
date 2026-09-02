@@ -1073,15 +1073,23 @@ def warehouse_view(
     infra: "InfrastructureState",
     port_id: str | None,
     port_name: str | None = None,
+    action_hint: str | None = None,
 ) -> Panel:
-    """Warehouse status: current port warehouse + all active warehouses summary."""
+    """Warehouse status: current port warehouse + all active warehouses summary.
+
+    action_hint overrides the empty-state next-step (TUI passes W-again).
+    """
     from portlight.engine.infrastructure import warehouse_summary
 
     active_warehouses = warehouse_summary(infra)
 
     if not active_warehouses:
+        if action_hint is None:
+            action_hint = (
+                "Use [bold]portlight warehouse lease <tier>[/bold] to open one."
+            )
         return Panel(
-            "[dim]No warehouses leased. Use [bold]portlight warehouse lease <tier>[/bold] to open one.[/dim]",
+            f"[dim]No warehouses leased. {action_hint}[/dim]",
             title="[bold]Warehouses[/bold]", border_style="yellow",
         )
 
@@ -1184,17 +1192,26 @@ def _warehouse_bar(used: int, capacity: int) -> str:
 # Broker offices
 # ---------------------------------------------------------------------------
 
-def offices_view(infra: "InfrastructureState") -> Panel:
-    """Show all broker offices and their status."""
+def offices_view(
+    infra: "InfrastructureState",
+    action_hint: str | None = None,
+) -> Panel:
+    """Show all broker offices and their status.
+
+    action_hint overrides the empty-state next-step (TUI passes W-again).
+    """
     from portlight.engine.infrastructure import BrokerTier
     from portlight.content.infrastructure import get_broker_spec
 
     active_brokers = [b for b in infra.brokers if b.active and b.tier != BrokerTier.NONE]
 
     if not active_brokers:
+        if action_hint is None:
+            action_hint = (
+                "Use [bold]portlight office open <region>[/bold] to open one."
+            )
         return Panel(
-            "[dim]No broker offices established.\n"
-            "Use [bold]portlight office open <region>[/bold] to open one.[/dim]",
+            f"[dim]No broker offices established.\n{action_hint}[/dim]",
             title="[bold]Broker Offices[/bold]",
             border_style="blue",
         )
