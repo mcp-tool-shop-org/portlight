@@ -7,6 +7,7 @@ and saved after mutations.
 
 from __future__ import annotations
 
+import json
 import random
 from pathlib import Path
 
@@ -394,6 +395,44 @@ def inventory_gear_data(captain) -> dict:
         "cargo_capacity": cargo_cap,
         "silver": captain.silver,
     }
+
+
+def list_save_slots(base_path: Path | None = None) -> list[dict]:
+    """Peek saves/*.json for (slot, captain, day). Skips unreadable files."""
+    from portlight.engine.save import SAVE_DIR, SAVE_FILE
+
+    base = base_path or Path(".")
+    save_dir = base / SAVE_DIR
+    if not save_dir.is_dir():
+        return []
+    default_path = save_dir / "default.json"
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for path in sorted(save_dir.glob("*.json")):
+        stem = path.stem
+        if path.name == SAVE_FILE:
+            if default_path.exists():
+                continue
+            stem = "default"
+        if stem in seen:
+            continue
+        captain = ""
+        day = 0
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        cap = data.get("captain") or {}
+        if isinstance(cap, dict):
+            captain = str(cap.get("name") or "")
+            if not day:
+                day = int(cap.get("day") or 0)
+        day = int(data.get("day") or day or 0)
+        seen.add(stem)
+        rows.append({"slot": stem, "captain": captain, "day": day})
+    return rows
 
 
 class GameSession:
@@ -1290,6 +1329,196 @@ class GameSession:
 
         self._save()
         return None
+
+    def hunt(self):
+        """Hunt/forage at port or sea. Applies yields and dangers, then saves.
+
+        Same apply/save path as CLI ``portlight hunt``. Returns HuntResult on
+        success or an error string.
+        """
+        if not self.world:
+            return "No active game"
+        from portlight.engine.hunting import hunt as do_hunt
+        from portlight.engine.models import CargoItem, VoyageStatus
+
+        location = "port"
+        if self.world.voyage and self.world.voyage.status == VoyageStatus.AT_SEA:
+            location = "sea"
+
+        if location == "sea" and self.captain.ship and self.captain.ship.morale < 20:
+            return "Crew morale too low for hunting at sea (need 20+)."
+
+        crew_count = self.captain.ship.crew if self.captain.ship else 1
+        result = do_hunt(self.captain, location, crew_count, self._rng)
+        # hunt() advances captain.day but not world.day -- keep them in sync
+        self.world.day = self.captain.day
+
+        if result.success:
+            if result.provisions_gained > 0:
+                self.captain.provisions += result.provisions_gained
+            if result.pelts_gained > 0:
+                existing = next((c for c in self.captain.cargo if c.good_id == "pelts"), None)
+                if existing:
+                    existing.quantity += result.pelts_gained
+                else:
+                    acquired_port = self.current_port.id if self.current_port else ""
+                    self.captain.cargo.append(CargoItem(
+                        good_id="pelts", quantity=result.pelts_gained,
+                        cost_basis=0, acquired_port=acquired_port,
+                        acquired_region="", acquired_day=self.captain.day,
+                    ))
+            if result.silver_gained > 0:
+                self.captain.silver += result.silver_gained
+
+        if result.crew_lost > 0 and self.captain.ship:
+            apply_crew_casualties(self.captain.ship, result.crew_lost, keep_at_least=1)
+        if result.hull_damage > 0 and self.captain.ship:
+            self.captain.ship.hull = max(1, self.captain.ship.hull - result.hull_damage)
+        if result.morale_cost > 0 and self.captain.ship:
+            self.captain.ship.morale = max(0, self.captain.ship.morale - result.morale_cost)
+
+        self._save()
+        return result
+
+    def work(self) -> int | str:
+        """Work the docks for a day. Returns silver earned or an error string.
+
+        Same apply/save path as CLI ``portlight work``.
+        """
+        if not self.world:
+            return "No active game"
+        if not self.current_port:
+            return "Must be docked to work the docks."
+        from portlight.engine.economy import work_docks
+
+        earned = work_docks(self.captain, self._rng)
+        # work_docks() advances captain.day but not world.day -- keep them in sync
+        self.world.day = self.captain.day
+        self._save()
+        return earned
+
+    def snapshot(self) -> dict:
+        """Stable JSON-safe dict for CLI --json (status/market/cargo/routes/contracts)."""
+        if not self.world or not self.captain:
+            return {
+                "slot": self.slot,
+                "day": 0,
+                "at_sea": False,
+                "captain": None,
+                "port": None,
+                "voyage": None,
+                "cargo": [],
+                "market": [],
+                "routes": [],
+                "board": {"offers": [], "active": []},
+            }
+        cap = self.captain
+        port = self.current_port
+        voyage = self.world.voyage
+        cargo = [
+            {
+                "good_id": c.good_id,
+                "quantity": c.quantity,
+                "cost_basis": c.cost_basis,
+                "acquired_port": c.acquired_port,
+                "acquired_region": c.acquired_region,
+                "acquired_day": c.acquired_day,
+            }
+            for c in (cap.cargo or [])
+        ]
+        market = []
+        if port:
+            for slot in port.market:
+                market.append({
+                    "good_id": slot.good_id,
+                    "buy_price": slot.buy_price,
+                    "sell_price": slot.sell_price,
+                    "stock_current": slot.stock_current,
+                    "stock_target": slot.stock_target,
+                    "flood_penalty": slot.flood_penalty,
+                })
+        routes = []
+        if port:
+            for route in self.world.routes:
+                dest_id = None
+                if route.port_a == port.id:
+                    dest_id = route.port_b
+                elif route.port_b == port.id:
+                    dest_id = route.port_a
+                if dest_id is None:
+                    continue
+                dest = self.world.ports.get(dest_id)
+                routes.append({
+                    "port_a": route.port_a,
+                    "port_b": route.port_b,
+                    "destination_id": dest_id,
+                    "destination_name": dest.name if dest else dest_id,
+                    "distance": route.distance,
+                    "danger": route.danger,
+                })
+        offers = []
+        for o in self.board.offers:
+            family = o.family.value if hasattr(o.family, "value") else o.family
+            offers.append({
+                "id": o.id,
+                "title": o.title,
+                "good_id": o.good_id,
+                "quantity": o.quantity,
+                "reward_silver": o.reward_silver,
+                "bonus_reward": o.bonus_reward,
+                "deadline_day": o.deadline_day,
+                "destination_port_id": o.destination_port_id,
+                "family": family,
+            })
+        active = []
+        for c in self.board.active:
+            family = c.family.value if hasattr(c.family, "value") else c.family
+            status = c.status.value if hasattr(c.status, "value") else c.status
+            active.append({
+                "offer_id": c.offer_id,
+                "title": c.title,
+                "good_id": c.good_id,
+                "required_quantity": c.required_quantity,
+                "delivered_quantity": c.delivered_quantity,
+                "reward_silver": c.reward_silver,
+                "deadline_day": c.deadline_day,
+                "destination_port_id": c.destination_port_id,
+                "status": status,
+                "family": family,
+            })
+        voyage_dict = None
+        if voyage:
+            status = voyage.status.value if hasattr(voyage.status, "value") else voyage.status
+            voyage_dict = {
+                "origin_id": voyage.origin_id,
+                "destination_id": voyage.destination_id,
+                "distance": voyage.distance,
+                "progress": voyage.progress,
+                "days_elapsed": voyage.days_elapsed,
+                "status": status,
+            }
+        port_dict = None
+        if port:
+            port_dict = {"id": port.id, "name": port.name, "region": port.region}
+        return {
+            "slot": self.slot,
+            "day": self.world.day,
+            "at_sea": self.at_sea,
+            "captain": {
+                "name": cap.name,
+                "captain_type": cap.captain_type,
+                "silver": cap.silver,
+                "provisions": cap.provisions,
+                "day": cap.day,
+                "reputation": cap.reputation,
+            },
+            "port": port_dict,
+            "voyage": voyage_dict,
+            "cargo": cargo,
+            "market": market,
+            "routes": routes,
+            "board": {"offers": offers, "active": active},
+        }
 
     def fire_crew(self, count: int = 1, role: str = "sailor") -> str | None:
         """Fire crew of a specific role. Returns error or None."""
