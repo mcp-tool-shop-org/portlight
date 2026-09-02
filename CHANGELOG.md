@@ -28,7 +28,7 @@ Dogfood swarm `swarm-1788294007-e89b` — health A–D, feature pass, Phase 9 gr
 - Voyage toasts use `message`; warehouse tab gets a port id; injuries view reads `heal_remaining`
 - Repair help no longer claims a fake 3 silver/HP
 - `dev` extra pins `pytest-asyncio==1.4.0` so TUI `run_test` cases run in CI (Release was stopping on the first `@pytest.mark.asyncio` test)
-- Release npm job no longer sets `registry-url` on setup-node (dummy `NODE_AUTH_TOKEN` masked OIDC as E404)
+- Release npm job uses Node 24 so the launcher publishes via Trusted Publishing (Node 22's npm 10.9 signs provenance then PUT E404)
 
 ### Changed
 
