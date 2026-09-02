@@ -6,7 +6,8 @@ The CLI feels like a commandable game, not a command library.
 
 from __future__ import annotations
 
-import random
+import json
+import sys
 
 import typer
 from rich.console import Console
@@ -23,16 +24,41 @@ console = Console()
 
 # Global save slot -- set by --save callback before any subcommand runs
 _active_slot: str = "default"
+_json_mode: bool = False
 
 
 @app.callback()
 def _main(
     save: str = typer.Option("default", "--save", "-s",
         help="Save slot name (isolates separate games)"),
+    json_out: bool = typer.Option(
+        False, "--json",
+        help="Dump a stable JSON dict and skip Rich panels",
+    ),
 ) -> None:
     """Portlight -- trade-first maritime strategy game."""
-    global _active_slot  # noqa: PLW0603
+    global _active_slot, _json_mode  # noqa: PLW0603
     _active_slot = save
+    _json_mode = json_out
+
+
+def _absorb_json(flag: bool) -> None:
+    """Enable JSON mode from a per-command --json flag."""
+    global _json_mode  # noqa: PLW0603
+    if flag:
+        _json_mode = True
+
+
+def _emit_json(payload: dict) -> None:
+    sys.stdout.write(json.dumps(payload, indent=2, ensure_ascii=True, default=str) + "\n")
+
+
+def _emit_snapshot(s: GameSession) -> bool:
+    """If --json is on, dump GameSession.snapshot() and return True."""
+    if not _json_mode:
+        return False
+    _emit_json(s.snapshot())
+    return True
 
 
 def _session() -> GameSession:
@@ -42,10 +68,19 @@ def _session() -> GameSession:
     try:
         loaded = s.load()
     except SaveVersionError as exc:
-        console.print(f"[red]{exc}[/red]")
+        if _json_mode:
+            _emit_json({"error": str(exc), "slot": _active_slot})
+        else:
+            console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
     if not loaded:
-        console.print("[red]No saved game found.[/red] Start a new game with: [bold]portlight new YourName --type merchant[/bold]")
+        msg = "No saved game found."
+        if _json_mode:
+            _emit_json({"error": msg, "slot": _active_slot, "captain": None,
+                        "port": None, "voyage": None, "cargo": [], "market": [],
+                        "routes": [], "board": {"offers": [], "active": []}})
+        else:
+            console.print("[red]No saved game found.[/red] Start a new game with: [bold]portlight new YourName --type merchant[/bold]")
         raise typer.Exit(1)
     return s
 
@@ -314,9 +349,14 @@ def reputation() -> None:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def status() -> None:
+def status(
+    json_out: bool = typer.Option(False, "--json", help="Dump a stable JSON dict and skip Rich panels"),
+) -> None:
     """Show captain status."""
+    _absorb_json(json_out)
     s = _session()
+    if _emit_snapshot(s):
+        return
     console.print(views.status_view(s.world, s.ledger, s.infra))
 
 
@@ -340,9 +380,14 @@ def port() -> None:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def market() -> None:
+def market(
+    json_out: bool = typer.Option(False, "--json", help="Dump a stable JSON dict and skip Rich panels"),
+) -> None:
     """Show market board for current port."""
+    _absorb_json(json_out)
     s = _session()
+    if _emit_snapshot(s):
+        return
     p = s.current_port
     if not p:
         console.print("[yellow]You're at sea — no market here.[/yellow]")
@@ -355,9 +400,14 @@ def market() -> None:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def cargo() -> None:
+def cargo(
+    json_out: bool = typer.Option(False, "--json", help="Dump a stable JSON dict and skip Rich panels"),
+) -> None:
     """Show cargo hold contents."""
+    _absorb_json(json_out)
     s = _session()
+    if _emit_snapshot(s):
+        return
     console.print(views.cargo_view(s.captain))
 
 
@@ -478,64 +528,39 @@ def hunt() -> None:
     Port hunting is safe and reliable. Sea hunting yields more but carries
     dangers: crew injuries, hull damage, predator encounters.
     """
-    from portlight.engine.hunting import hunt as do_hunt
-    from portlight.engine.models import CargoItem
     s = _session()
-    location = "sea" if s.world.voyage and s.world.voyage.status.value == "at_sea" else "port"
-
-    if location == "sea" and s.captain.ship and s.captain.ship.morale < 20:
-        console.print("[yellow]Crew morale too low for hunting at sea (need 20+).[/yellow]")
+    location = "sea" if s.at_sea else "port"
+    result = s.hunt()
+    if isinstance(result, str):
+        console.print(f"[yellow]{result}[/yellow]")
         return
-
-    crew_count = s.captain.ship.crew if s.captain.ship else 1
-    result = do_hunt(s.captain, location, crew_count, s._rng)
-    # hunt() advances captain.day but not world.day — keep them in sync
-    s.world.day = s.captain.day
 
     console.print(f"\n[bold]Hunting {'at port' if location == 'port' else 'at sea'}...[/bold]")
     console.print(f"  {result.flavor}")
 
     if result.success:
         if result.provisions_gained > 0:
-            s.captain.provisions += result.provisions_gained
             console.print(f"  [green]+{result.provisions_gained} provisions[/green]")
         if result.pelts_gained > 0:
-            # Add pelts to cargo
-            existing = next((c for c in s.captain.cargo if c.good_id == "pelts"), None)
-            if existing:
-                existing.quantity += result.pelts_gained
-            else:
-                s.captain.cargo.append(CargoItem(
-                    good_id="pelts", quantity=result.pelts_gained,
-                    cost_basis=0, acquired_port=s.current_port.id if s.current_port else "",
-                    acquired_region="", acquired_day=s.captain.day,
-                ))
-            total_pelts = existing.quantity if existing else result.pelts_gained
+            total_pelts = sum(c.quantity for c in s.captain.cargo if c.good_id == "pelts")
             console.print(f"  [green]+{result.pelts_gained} pelts[/green]  [dim](sell at any port: sell pelts {total_pelts})[/dim]")
         if result.silver_gained > 0:
-            s.captain.silver += result.silver_gained
             from portlight.app.formatting import silver
             console.print(f"  [green]+{silver(result.silver_gained)}[/green]")
     else:
         console.print("  [dim]Nothing useful found.[/dim]")
 
-    # Apply dangers
     if result.danger_text:
         console.print(f"  [red]{result.danger_text}[/red]")
-    if result.crew_lost > 0 and s.captain.ship:
-        from portlight.app.session import apply_crew_casualties
-        applied = apply_crew_casualties(s.captain.ship, result.crew_lost, keep_at_least=1)
-        console.print(f"  [red]Lost {applied} crew member{'s' if applied != 1 else ''}.[/red]")
-    if result.hull_damage > 0 and s.captain.ship:
-        s.captain.ship.hull = max(1, s.captain.ship.hull - result.hull_damage)
+    if result.crew_lost > 0:
+        lost = result.crew_lost
+        console.print(f"  [red]Lost {lost} crew member{'s' if lost != 1 else ''}.[/red]")
+    if result.hull_damage > 0:
         console.print(f"  [red]Hull damage: -{result.hull_damage} HP[/red]")
-
-    if result.morale_cost > 0 and s.captain.ship:
-        s.captain.ship.morale = max(0, s.captain.ship.morale - result.morale_cost)
+    if result.morale_cost > 0:
         console.print(f"  [yellow]Morale -{result.morale_cost}[/yellow]")
 
     console.print(f"  Day {s.captain.day}.")
-    s._save()
 
 
 # ---------------------------------------------------------------------------
@@ -545,18 +570,15 @@ def hunt() -> None:
 @app.command()
 def work() -> None:
     """Work the docks for a day to earn silver. Safety valve when stranded."""
-    from portlight.engine.economy import work_docks
     s = _session()
-    if not s.current_port:
-        console.print("[yellow]Must be docked to work the docks.[/yellow]")
+    earned = s.work()
+    if isinstance(earned, str):
+        console.print(f"[yellow]{earned}[/yellow]")
         return
-    earned = work_docks(s.captain, s._rng)
-    # work_docks() advances captain.day but not world.day — keep them in sync
-    s.world.day = s.captain.day
-    console.print(f"\n[bold]Day's work on the {s.current_port.name} docks.[/bold]")
+    port_name = s.current_port.name if s.current_port else "the"
+    console.print(f"\n[bold]Day's work on the {port_name} docks.[/bold]")
     console.print("  Hauled crates, mended rope, cleaned bilges.")
     console.print(f"  Earned [green]{earned} silver[/green]. Day {s.captain.day}.")
-    s._save()
 
 
 # ---------------------------------------------------------------------------
@@ -622,9 +644,14 @@ def crew_cmd() -> None:
 # ---------------------------------------------------------------------------
 
 @app.command()
-def routes() -> None:
+def routes(
+    json_out: bool = typer.Option(False, "--json", help="Dump a stable JSON dict and skip Rich panels"),
+) -> None:
     """List available routes from current port."""
+    _absorb_json(json_out)
     s = _session()
+    if _emit_snapshot(s):
+        return
     if s.at_sea:
         console.print("[yellow]You're at sea — check routes when you arrive.[/yellow]")
         return
@@ -1300,30 +1327,36 @@ def upgrade(
 
 
 # ---------------------------------------------------------------------------
-# Save / Load (explicit)
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
 # Contracts
 # ---------------------------------------------------------------------------
 
 @app.command()
-def contracts() -> None:
+def contracts(
+    json_out: bool = typer.Option(False, "--json", help="Dump a stable JSON dict and skip Rich panels"),
+) -> None:
     """Show the contract board at the current port."""
+    _absorb_json(json_out)
     s = _session()
+    if s.current_port:
+        s._refresh_board(s.current_port)
+        s._save()
+    if _emit_snapshot(s):
+        return
     if not s.current_port:
         console.print("[yellow]Must be docked to view the contract board.[/yellow]")
         return
-    # Lazy refresh: populate board on first view at this port
-    s._refresh_board(s.current_port)
-    s._save()
     console.print(views.contracts_view(s.board, s.world.day))
 
 
 @app.command()
-def obligations() -> None:
+def obligations(
+    json_out: bool = typer.Option(False, "--json", help="Dump a stable JSON dict and skip Rich panels"),
+) -> None:
     """Show active contract obligations."""
+    _absorb_json(json_out)
     s = _session()
+    if _emit_snapshot(s):
+        return
     console.print(views.obligations_view(s.board, s.world.day, s.world))
 
 
@@ -1786,6 +1819,8 @@ def guide() -> None:
     lines.append("[bold]System[/bold]")
     lines.append("  save            — explicitly save the game")
     lines.append("  load            — load a saved game")
+    lines.append("  saves           — list save slots (slot, captain, day)")
+    lines.append("  --json          — machine-readable dump (status/market/cargo/routes/contracts/obligations)")
     lines.append("  guide           — show this reference")
 
     console.print(Panel("\n".join(lines), title="[bold]Portlight Command Guide[/bold]", border_style="blue"))
@@ -1794,6 +1829,30 @@ def guide() -> None:
 # ---------------------------------------------------------------------------
 # Save / Load (explicit)
 # ---------------------------------------------------------------------------
+
+@app.command()
+def saves(
+    json_out: bool = typer.Option(False, "--json", help="Dump a stable JSON dict and skip Rich panels"),
+) -> None:
+    """List save slots in saves/ (slot, captain, day)."""
+    _absorb_json(json_out)
+    from portlight.app.session import list_save_slots
+    slots = list_save_slots()
+    if _json_mode:
+        _emit_json({"saves": slots})
+        return
+    if not slots:
+        console.print("[dim]No saves found.[/dim] Start with: [bold]portlight new YourName[/bold]")
+        return
+    from rich.table import Table
+    table = Table(title="Save slots")
+    table.add_column("Slot")
+    table.add_column("Captain")
+    table.add_column("Day", justify="right")
+    for info in slots:
+        table.add_row(info["slot"], info["captain"] or "?", str(info["day"]))
+    console.print(table)
+
 
 @app.command()
 def save() -> None:

@@ -216,7 +216,7 @@ class ContentArea(Widget):
         if not self.session.active:
             self._static.update(
                 SPLASH_ART + "\n" + SPLASH_TITLE
-                + "\n[dim]Start a game with: portlight new <name>[/dim]"
+                + "\n[dim]Pick a save slot or New to start.[/dim]"
             )
             return
         self._static.update(self._get_view())
@@ -336,8 +336,7 @@ class ContentArea(Widget):
             lines.append("[bold cyan]Sailing...[/bold cyan]")
             lines.append("  Press [bold]A[/bold] to advance a day")
             if cap.provisions <= 0:
-                lines.append("  [bold red]Provisions EMPTY![/bold red] Make port, then [bold]H[/bold] to restock")
-                lines.append("  [dim]or CLI: portlight hunt / portlight work[/dim]")
+                lines.append("  [bold red]Provisions EMPTY![/bold red] Press [bold]H[/bold] to hunt")
 
         if port and cap.provisions <= 0:
             lines.append("  [bold red]Provisions EMPTY![/bold red] Press [bold]H[/bold] to provision")
@@ -600,6 +599,9 @@ class ContentArea(Widget):
         parts = []
         # Available offers
         parts.append(views.contracts_view(s.board, w.day))
+        parts.append(Text.from_markup(
+            "\n[dim]Press K again to accept an offer or abandon an active contract.[/dim]"
+        ))
 
         # Active obligations with urgency
         from portlight.engine.contracts import ContractStatus
@@ -712,7 +714,8 @@ class ContentArea(Widget):
             "[bold #2a9d8f]Actions[/bold #2a9d8f]",
             "  [bold #e9c46a]B[/bold #e9c46a] Buy goods    [bold #e9c46a]S[/bold #e9c46a] Sell goods",
             "  [bold #e9c46a]G[/bold #e9c46a] Sail (go)    [bold #e9c46a]A[/bold #e9c46a] Advance day",
-            "  [bold #e9c46a]H[/bold #e9c46a] Harbor (provision / repair / hire) — docked only",
+            "  [bold #e9c46a]H[/bold #e9c46a] Harbor (provision / repair / hire; work / fire / hunt) -- docked",
+            "  [bold #e9c46a]H[/bold #e9c46a] Hunt at sea    [bold #e9c46a]K[/bold #e9c46a] twice: accept / abandon contracts",
             "",
             "[bold #2a9d8f]Combat[/bold #2a9d8f]",
             "  [bold #e76f51]T[/bold #e76f51] Thrust       [bold #e76f51]Z[/bold #e76f51] Slash      [bold #e76f51]X[/bold #e76f51] Parry",
@@ -723,7 +726,7 @@ class ContentArea(Widget):
             "  [dim]Esc[/dim]   Back / Cancel",
             "  [dim]Enter[/dim] Confirm selection",
             "",
-            "[dim]Hunt / work / fire crew remain CLI: portlight hunt | work | fire[/dim]",
+            "[dim]Hunt / work / fire: press H (docked picker, or hunt at sea)[/dim]",
         ]
         cap = self.session.world.captain if self.session.active else None
         ship = cap.ship if cap else None
@@ -733,7 +736,7 @@ class ContentArea(Widget):
             if docked:
                 critical.append("[bold red]Provisions EMPTY![/bold red] Press H to restock  [dim](CLI: portlight provision 10)[/dim]")
             else:
-                critical.append("[bold red]Provisions EMPTY![/bold red] Make port, then H  [dim](CLI: portlight hunt)[/dim]")
+                critical.append("[bold red]Provisions EMPTY![/bold red] Press H to hunt")
         elif cap and cap.provisions <= 10:
             critical.append(f"[yellow]Provisions low ({cap.provisions} days).[/yellow] Press H at port")
         if ship and ship.hull_max and ship.hull / ship.hull_max <= 0.3:

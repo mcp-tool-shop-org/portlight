@@ -66,13 +66,12 @@ class PortlightApp(App):
 
     def on_mount(self) -> None:
         if not self.session.active:
-            if not self.session.load():
-                self.notify(
-                    "No save found. Run 'portlight new <name>' first, then 'portlight tui'.",
-                    severity="error",
-                    timeout=8,
-                )
+            if self.session.load():
+                self._resume_encounter_if_pending()
                 return
+            from portlight.app.tui.screens.dock import execute_save_picker
+            execute_save_picker(self, self.session)
+            return
         self._resume_encounter_if_pending()
 
     def _resume_encounter_if_pending(self) -> None:
@@ -108,7 +107,14 @@ class PortlightApp(App):
                 enc.action_encounter_key(_remap[tab])
             return  # Block all tab switches during encounter
         if not self.session.active:
-            self.notify("No active game.", severity="warning")
+            self._prompt_save_picker()
+            return
+        if tab == "contracts" and self._current_tab == "contracts":
+            from textual.screen import ModalScreen
+            if isinstance(self.screen, ModalScreen):
+                return
+            from portlight.app.tui.screens.dock import execute_contracts_flow
+            execute_contracts_flow(self, self.session)
             return
         self._current_tab = tab
         dashboard = self.query_one("DashboardScreen", expect_type=None)
@@ -170,14 +176,23 @@ class PortlightApp(App):
         from portlight.app.tui.screens.routes import execute_advance
         execute_advance(self, self.session)
 
+    def _prompt_save_picker(self) -> None:
+        """Show save/new modal when there is no active session."""
+        from textual.screen import ModalScreen
+        if isinstance(self.screen, ModalScreen):
+            return
+        from portlight.app.tui.screens.dock import execute_save_picker
+        execute_save_picker(self, self.session)
+
     def action_harbor(self) -> None:
-        """Open dock services: provision, repair, hire. No-op during an encounter."""
+        """Open dock services: provision, repair, hire. At sea: hunt. No-op during an encounter."""
         if self._encounter_screen:
             return
         from textual.screen import ModalScreen
         if isinstance(self.screen, ModalScreen):
             return
         if not self.session.active:
+            self._prompt_save_picker()
             return
         from portlight.app.tui.screens.dock import execute_harbor_flow
         execute_harbor_flow(self, self.session)
