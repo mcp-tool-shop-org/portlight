@@ -134,6 +134,42 @@ _EVENT_ICONS = {
 }
 
 
+_PATH_NAMES = {
+    "lawful_house": "Lawful Trade House",
+    "shadow_network": "Shadow Network",
+    "oceanic_reach": "Oceanic Reach",
+    "commercial_empire": "Commercial Empire",
+}
+
+
+def _notify_campaign_beats(app, session: "GameSession") -> None:
+    """Notify milestone title + family and victory-path closes after a day tick."""
+    ids = getattr(session, "last_milestone_ids", None) or []
+    path_ids = getattr(session, "last_path_ids", None) or []
+    if not ids and not path_ids:
+        return
+    from portlight.content.campaign import MILESTONE_SPECS
+    spec_by_id = {s.id: s for s in MILESTONE_SPECS}
+    for mid in ids:
+        spec = spec_by_id.get(mid)
+        if spec:
+            family = spec.family.value.replace("_", " ").title()
+            app.notify(
+                f"{spec.name} -- {family}",
+                severity="information",
+                timeout=7,
+            )
+        else:
+            app.notify(f"Milestone: {mid}", timeout=6)
+    for pid in path_ids:
+        name = _PATH_NAMES.get(pid, pid.replace("_", " ").title())
+        app.notify(
+            f"Victory path: {name}",
+            severity="information",
+            timeout=8,
+        )
+
+
 def execute_advance(app, session: "GameSession") -> None:
     """Advance one day with atmospheric event notifications."""
     if not session.active:
@@ -181,6 +217,8 @@ def execute_advance(app, session: "GameSession") -> None:
                 f"\u2693 Day {session.world.day} — idle in port.",
                 timeout=3,
             )
+
+    _notify_campaign_beats(app, session)
 
     # NPC captain agency (ambush / challenge / gifts) — same path as CLI advance
     if session.at_sea:

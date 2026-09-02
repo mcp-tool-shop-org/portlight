@@ -452,6 +452,8 @@ class GameSession:
         self.auto_resolve_duels: bool = False
         self.last_provision_cost: int = 0
         self.last_jettison: list[tuple[str, int]] = []
+        self.last_milestone_ids: list[str] = []
+        self.last_path_ids: list[str] = []
 
     @property
     def active(self) -> bool:
@@ -1755,9 +1757,16 @@ class GameSession:
         )
 
     def _evaluate_campaign(self) -> list:
-        """Evaluate milestones and victory closure. Returns newly completed milestones."""
+        """Evaluate milestones and victory closure. Returns newly completed milestones.
+
+        Newly completed milestone/path ids are stashed on last_milestone_ids /
+        last_path_ids so TUI execute_advance can notify without changing
+        advance() return type (callers expect voyage events).
+        """
         from portlight.content.campaign import MILESTONE_SPECS
         from portlight.engine.campaign import evaluate_victory_closure
+        self.last_milestone_ids = []
+        self.last_path_ids = []
         snap = self._build_snapshot()
         newly = evaluate_milestones(MILESTONE_SPECS, snap)
         if newly:
@@ -1768,6 +1777,8 @@ class GameSession:
         victory_newly = evaluate_victory_closure(snap)
         if victory_newly:
             self.campaign.completed_paths.extend(victory_newly)
+        self.last_milestone_ids = [c.milestone_id for c in newly]
+        self.last_path_ids = [p.path_id for p in victory_newly]
         return newly
 
     # --- Narrative ---
