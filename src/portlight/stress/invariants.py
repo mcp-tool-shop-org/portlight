@@ -65,8 +65,13 @@ def _check_cargo_within_capacity(s: "GameSession") -> InvariantResult:
             passed=True,
         )
     from portlight.content.upgrades import UPGRADES
+    from portlight.engine.economy import cargo_weight
     from portlight.engine.ship_stats import resolve_cargo_capacity
-    used = sum(c.quantity for c in s.captain.cargo)
+    # Capacity is hold WEIGHT, the same rule buy() enforces -- not a count of
+    # items. Counting quantity flagged a legal hold holding opium (0.5 per
+    # unit) as over capacity, and passed an illegal one holding black powder
+    # (1.5 per unit).
+    used = cargo_weight(s.captain.cargo)
     cap = resolve_cargo_capacity(ship, UPGRADES)
     return InvariantResult(
         name="cargo_within_capacity",
