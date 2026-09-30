@@ -97,7 +97,7 @@
       "confidence": "low",
       "highWater": null,
       "name": "site",
-      "qualifyingSourceCommits": 3,
+      "qualifyingSourceCommits": 2,
       "rebaseline": null
     },
     {
@@ -113,10 +113,10 @@
       },
       "cohesion": 1,
       "cohesionDropped": false,
-      "confidence": "full",
+      "confidence": "low",
       "highWater": null,
       "name": "src",
-      "qualifyingSourceCommits": 45,
+      "qualifyingSourceCommits": 26,
       "rebaseline": null
     },
     {
@@ -148,7 +148,7 @@
       "confidence": "low",
       "highWater": null,
       "name": "tests",
-      "qualifyingSourceCommits": 28,
+      "qualifyingSourceCommits": 12,
       "rebaseline": null
     },
     {
@@ -204,8 +204,8 @@
     "definition": "commits is how many commits in the window touch the file, including merges and commits dropped from coupling. lines is added plus deleted in those commits.",
     "files": [
       {
-        "commits": 7,
-        "lines": 64,
+        "commits": 10,
+        "lines": 277,
         "path": ".github/workflows/ci.yml"
       },
       {
@@ -234,54 +234,49 @@
         "path": ".gitignore"
       },
       {
-        "commits": 7,
-        "lines": 70,
+        "commits": 5,
+        "lines": 32,
         "path": "CHANGELOG.md"
       },
       {
-        "commits": 2,
-        "lines": 388,
+        "commits": 1,
+        "lines": 196,
         "path": "README.es.md"
       },
       {
-        "commits": 2,
-        "lines": 376,
+        "commits": 1,
+        "lines": 198,
         "path": "README.fr.md"
       },
       {
-        "commits": 2,
-        "lines": 394,
+        "commits": 1,
+        "lines": 198,
         "path": "README.hi.md"
       },
       {
-        "commits": 2,
-        "lines": 376,
+        "commits": 1,
+        "lines": 198,
         "path": "README.it.md"
       },
       {
-        "commits": 2,
-        "lines": 378,
+        "commits": 1,
+        "lines": 202,
         "path": "README.ja.md"
       },
       {
-        "commits": 5,
-        "lines": 464,
+        "commits": 1,
+        "lines": 188,
         "path": "README.md"
       },
       {
-        "commits": 2,
-        "lines": 378,
+        "commits": 1,
+        "lines": 198,
         "path": "README.pt-BR.md"
       },
       {
-        "commits": 2,
-        "lines": 400,
-        "path": "README.zh.md"
-      },
-      {
         "commits": 1,
-        "lines": 48,
-        "path": "SCORECARD.md"
+        "lines": 204,
+        "path": "README.zh.md"
       },
       {
         "commits": 1,
@@ -289,14 +284,44 @@
         "path": "SECURITY.md"
       },
       {
-        "commits": 2,
-        "lines": 50,
+        "commits": 1,
+        "lines": 46,
         "path": "SHIP_GATE.md"
+      },
+      {
+        "commits": 1,
+        "lines": 89,
+        "path": "atlas/README.md"
+      },
+      {
+        "commits": 1,
+        "lines": 50,
+        "path": "atlas/boundaries.yaml"
+      },
+      {
+        "commits": 1,
+        "lines": 326,
+        "path": "atlas/page.json"
+      },
+      {
+        "commits": 1,
+        "lines": 870,
+        "path": "atlas/statistics.json"
+      },
+      {
+        "commits": 1,
+        "lines": 10461,
+        "path": "atlas/structure.json"
       },
       {
         "commits": 1,
         "lines": 13,
         "path": "bin/portlight.js"
+      },
+      {
+        "commits": 2,
+        "lines": 36,
+        "path": "codecov.yml"
       },
       {
         "commits": 1,
@@ -310,18 +335,8 @@
       },
       {
         "commits": 1,
-        "lines": 284,
-        "path": "docs/PRINT_AND_PLAY_RULES.md"
-      },
-      {
-        "commits": 1,
         "lines": 15,
         "path": "docs/START_HERE.md"
-      },
-      {
-        "commits": 1,
-        "lines": 130,
-        "path": "docs/TABLETOP_DESIGN.md"
       },
       {
         "commits": 1,
@@ -329,8 +344,8 @@
         "path": "package.json"
       },
       {
-        "commits": 8,
-        "lines": 35,
+        "commits": 5,
+        "lines": 28,
         "path": "pyproject.toml"
       },
       {
@@ -349,13 +364,13 @@
         "path": "site/package.json"
       },
       {
-        "commits": 3,
-        "lines": 63,
+        "commits": 1,
+        "lines": 6,
         "path": "site/src/content/docs/handbook/architecture.md"
       },
       {
-        "commits": 2,
-        "lines": 141,
+        "commits": 1,
+        "lines": 8,
         "path": "site/src/content/docs/handbook/beginners.md"
       },
       {
@@ -364,29 +379,24 @@
         "path": "site/src/content/docs/handbook/career-paths.md"
       },
       {
-        "commits": 3,
-        "lines": 90,
+        "commits": 1,
+        "lines": 12,
         "path": "site/src/content/docs/handbook/commands.md"
       },
       {
-        "commits": 3,
-        "lines": 58,
+        "commits": 1,
+        "lines": 12,
         "path": "site/src/content/docs/handbook/getting-started.md"
       },
       {
-        "commits": 3,
-        "lines": 82,
+        "commits": 1,
+        "lines": 55,
         "path": "site/src/content/docs/handbook/index.md"
       },
       {
-        "commits": 2,
-        "lines": 42,
-        "path": "site/src/content/docs/handbook/privacy.md"
-      },
-      {
         "commits": 1,
-        "lines": 62,
-        "path": "site/src/content/docs/handbook/trading.md"
+        "lines": 2,
+        "path": "site/src/content/docs/handbook/privacy.md"
       },
       {
         "commits": 1,
@@ -394,48 +404,33 @@
         "path": "site/src/content/docs/handbook/tui.md"
       },
       {
-        "commits": 2,
-        "lines": 64,
+        "commits": 1,
+        "lines": 38,
         "path": "site/src/site-config.ts"
       },
       {
-        "commits": 2,
-        "lines": 10,
-        "path": "src/portlight/__init__.py"
-      },
-      {
-        "commits": 23,
-        "lines": 1688,
+        "commits": 16,
+        "lines": 1314,
         "path": "src/portlight/app/cli.py"
       },
       {
-        "commits": 7,
-        "lines": 129,
+        "commits": 6,
+        "lines": 126,
         "path": "src/portlight/app/combat_views.py"
       },
       {
-        "commits": 1,
-        "lines": 11,
-        "path": "src/portlight/app/formatting.py"
-      },
-      {
-        "commits": 21,
-        "lines": 1464,
+        "commits": 15,
+        "lines": 1375,
         "path": "src/portlight/app/session.py"
       },
       {
-        "commits": 14,
-        "lines": 268,
+        "commits": 12,
+        "lines": 212,
         "path": "src/portlight/app/tui/app.py"
       },
       {
-        "commits": 1,
-        "lines": 4,
-        "path": "src/portlight/app/tui/screens/combat.py"
-      },
-      {
-        "commits": 15,
-        "lines": 440,
+        "commits": 14,
+        "lines": 422,
         "path": "src/portlight/app/tui/screens/dashboard.py"
       },
       {
@@ -444,8 +439,8 @@
         "path": "src/portlight/app/tui/screens/dock.py"
       },
       {
-        "commits": 15,
-        "lines": 1936,
+        "commits": 14,
+        "lines": 1224,
         "path": "src/portlight/app/tui/screens/encounter.py"
       },
       {
@@ -454,18 +449,13 @@
         "path": "src/portlight/app/tui/screens/market.py"
       },
       {
-        "commits": 5,
-        "lines": 149,
+        "commits": 4,
+        "lines": 126,
         "path": "src/portlight/app/tui/screens/routes.py"
       },
       {
-        "commits": 1,
-        "lines": 67,
-        "path": "src/portlight/app/tui/theme.py"
-      },
-      {
-        "commits": 8,
-        "lines": 684,
+        "commits": 5,
+        "lines": 166,
         "path": "src/portlight/app/views.py"
       },
       {
@@ -484,14 +474,9 @@
         "path": "src/portlight/balance/reporting.py"
       },
       {
-        "commits": 5,
-        "lines": 515,
+        "commits": 2,
+        "lines": 474,
         "path": "src/portlight/balance/runner.py"
-      },
-      {
-        "commits": 1,
-        "lines": 12,
-        "path": "src/portlight/content/contracts.py"
       },
       {
         "commits": 4,
@@ -499,34 +484,14 @@
         "path": "src/portlight/content/infrastructure.py"
       },
       {
-        "commits": 1,
-        "lines": 276,
-        "path": "src/portlight/content/ports.py"
-      },
-      {
         "commits": 2,
         "lines": 46,
         "path": "src/portlight/content/routes.py"
       },
       {
-        "commits": 1,
-        "lines": 33,
-        "path": "src/portlight/content/world.py"
-      },
-      {
-        "commits": 7,
-        "lines": 252,
+        "commits": 6,
+        "lines": 250,
         "path": "src/portlight/engine/bounty.py"
-      },
-      {
-        "commits": 1,
-        "lines": 44,
-        "path": "src/portlight/engine/captain_identity.py"
-      },
-      {
-        "commits": 1,
-        "lines": 2,
-        "path": "src/portlight/engine/captain_memory.py"
       },
       {
         "commits": 8,
@@ -534,18 +499,8 @@
         "path": "src/portlight/engine/combat.py"
       },
       {
-        "commits": 1,
-        "lines": 2,
-        "path": "src/portlight/engine/consequences.py"
-      },
-      {
-        "commits": 3,
-        "lines": 123,
-        "path": "src/portlight/engine/contracts.py"
-      },
-      {
-        "commits": 3,
-        "lines": 342,
+        "commits": 2,
+        "lines": 322,
         "path": "src/portlight/engine/economy.py"
       },
       {
@@ -557,11 +512,6 @@
         "commits": 2,
         "lines": 124,
         "path": "src/portlight/engine/fleet.py"
-      },
-      {
-        "commits": 2,
-        "lines": 98,
-        "path": "src/portlight/engine/hunting.py"
       },
       {
         "commits": 2,
@@ -579,18 +529,13 @@
         "path": "src/portlight/engine/models.py"
       },
       {
-        "commits": 1,
-        "lines": 9,
-        "path": "src/portlight/engine/naval.py"
-      },
-      {
-        "commits": 5,
-        "lines": 190,
+        "commits": 4,
+        "lines": 178,
         "path": "src/portlight/engine/save.py"
       },
       {
-        "commits": 4,
-        "lines": 170,
+        "commits": 2,
+        "lines": 128,
         "path": "src/portlight/engine/sea_culture_engine.py"
       },
       {
@@ -599,38 +544,18 @@
         "path": "src/portlight/engine/ship_stats.py"
       },
       {
-        "commits": 8,
-        "lines": 168,
+        "commits": 6,
+        "lines": 156,
         "path": "src/portlight/engine/voyage.py"
       },
       {
-        "commits": 1,
-        "lines": 1,
-        "path": "src/portlight/printandplay/__init__.py"
-      },
-      {
-        "commits": 1,
-        "lines": 147,
-        "path": "src/portlight/printandplay/assets.py"
-      },
-      {
-        "commits": 1,
-        "lines": 228,
-        "path": "src/portlight/printandplay/board.py"
-      },
-      {
-        "commits": 1,
-        "lines": 403,
-        "path": "src/portlight/printandplay/cards.py"
-      },
-      {
-        "commits": 3,
-        "lines": 578,
+        "commits": 2,
+        "lines": 232,
         "path": "src/portlight/printandplay/generator.py"
       },
       {
-        "commits": 5,
-        "lines": 390,
+        "commits": 4,
+        "lines": 78,
         "path": "src/portlight/printandplay/rules.py"
       },
       {
@@ -644,8 +569,8 @@
         "path": "src/portlight/receipts/models.py"
       },
       {
-        "commits": 2,
-        "lines": 70,
+        "commits": 4,
+        "lines": 84,
         "path": "src/portlight/stress/invariants.py"
       },
       {
@@ -659,9 +584,14 @@
         "path": "test/version.test.js"
       },
       {
-        "commits": 3,
-        "lines": 24,
+        "commits": 2,
+        "lines": 22,
         "path": "tests/balance/test_victory_paths.py"
+      },
+      {
+        "commits": 2,
+        "lines": 36,
+        "path": "tests/stress/test_invariants.py"
       },
       {
         "commits": 3,
@@ -669,68 +599,18 @@
         "path": "tests/test_bounty.py"
       },
       {
-        "commits": 1,
-        "lines": 1,
-        "path": "tests/test_breach.py"
-      },
-      {
         "commits": 2,
         "lines": 44,
         "path": "tests/test_brokers_licenses.py"
       },
       {
-        "commits": 4,
-        "lines": 442,
-        "path": "tests/test_bugfixes.py"
-      },
-      {
         "commits": 1,
-        "lines": 196,
-        "path": "tests/test_captain_select.py"
-      },
-      {
-        "commits": 2,
-        "lines": 16,
-        "path": "tests/test_contracts.py"
-      },
-      {
-        "commits": 1,
-        "lines": 4,
-        "path": "tests/test_crew_roles.py"
-      },
-      {
-        "commits": 3,
-        "lines": 71,
+        "lines": 10,
         "path": "tests/test_depth.py"
       },
       {
-        "commits": 1,
-        "lines": 2,
-        "path": "tests/test_economy.py"
-      },
-      {
-        "commits": 1,
-        "lines": 2,
-        "path": "tests/test_encounter_flow.py"
-      },
-      {
-        "commits": 1,
-        "lines": 28,
-        "path": "tests/test_hunting.py"
-      },
-      {
-        "commits": 1,
-        "lines": 1,
-        "path": "tests/test_insurance.py"
-      },
-      {
-        "commits": 1,
-        "lines": 17,
-        "path": "tests/test_naval_combat.py"
-      },
-      {
-        "commits": 4,
-        "lines": 216,
+        "commits": 3,
+        "lines": 82,
         "path": "tests/test_printandplay.py"
       },
       {
@@ -739,13 +619,13 @@
         "path": "tests/test_receipts.py"
       },
       {
-        "commits": 3,
-        "lines": 271,
+        "commits": 2,
+        "lines": 260,
         "path": "tests/test_save.py"
       },
       {
-        "commits": 3,
-        "lines": 50,
+        "commits": 2,
+        "lines": 46,
         "path": "tests/test_session.py"
       },
       {
@@ -759,19 +639,14 @@
         "path": "tests/test_tui_contracts.py"
       },
       {
-        "commits": 6,
-        "lines": 536,
+        "commits": 4,
+        "lines": 196,
         "path": "tests/test_tui_encounter.py"
       },
       {
         "commits": 5,
         "lines": 446,
         "path": "tests/test_tui_harbor.py"
-      },
-      {
-        "commits": 1,
-        "lines": 1,
-        "path": "tests/test_tui_integration.py"
       },
       {
         "commits": 2,
@@ -789,19 +664,9 @@
         "path": "tests/test_tui_voyage.py"
       },
       {
-        "commits": 1,
-        "lines": 40,
-        "path": "tests/test_version.py"
-      },
-      {
         "commits": 4,
         "lines": 284,
         "path": "tests/test_views.py"
-      },
-      {
-        "commits": 2,
-        "lines": 98,
-        "path": "tests/test_voyage.py"
       },
       {
         "commits": 2,
@@ -812,19 +677,40 @@
   },
   "confidence": {
     "level": "low",
-    "reason": "fewer than 20 source files reach 10 revisions in the window"
+    "reason": "fewer than 25 source files reach 10 revisions in the window"
   },
-  "generatedAt": "2026-09-25T02:27:42.163Z",
+  "generatedAt": "2026-09-30T20:11:33.462Z",
   "generatedFrom": {
-    "commit": "7c76f54ff48d66710fb03d4c827a6aab784b1fe4"
+    "commit": "26b6267d76105b20ab1b8c4ebe3c6602c1d63a01"
   },
   "pairs": [
     {
-      "a": "src/portlight/app/tui/app.py",
-      "b": "src/portlight/app/tui/screens/dashboard.py",
+      "a": "src/portlight/app/cli.py",
+      "b": "src/portlight/app/session.py",
+      "either": 10,
+      "shared": 7,
+      "strength": 0.7
+    },
+    {
+      "a": "src/portlight/app/cli.py",
+      "b": "src/portlight/app/tui/screens/encounter.py",
       "either": 10,
       "shared": 6,
       "strength": 0.6
+    },
+    {
+      "a": "src/portlight/app/session.py",
+      "b": "src/portlight/app/tui/screens/encounter.py",
+      "either": 10,
+      "shared": 5,
+      "strength": 0.5
+    },
+    {
+      "a": "src/portlight/app/tui/app.py",
+      "b": "src/portlight/app/tui/screens/dashboard.py",
+      "either": 8,
+      "shared": 5,
+      "strength": 0.625
     }
   ],
   "parameters": {
@@ -837,16 +723,16 @@
     "floor": "fallen",
     "floorHeld": false,
     "floorTrigger": "revision-depth",
-    "headDate": "2026-09-17T18:29:50-07:00",
-    "inScopeFiles": 263,
+    "headDate": "2026-09-30T08:25:35-07:00",
+    "inScopeFiles": 269,
     "pinnedStart": null,
-    "priorFloor": null,
-    "qualifyingCommits": 71,
+    "priorFloor": "fallen",
+    "qualifyingCommits": 49,
     "qualifyingMinimum": 30,
     "revisions": 5,
     "shared": 10,
     "sharedFloorUsed": 3,
-    "since": "2026-03-22T01:29:50.000Z",
+    "since": "2026-04-03T15:25:35.000Z",
     "sourceExtensions": [
       ".js",
       ".mjs",
@@ -862,7 +748,7 @@
     ],
     "sourceFileReach": 20,
     "sourceFileRise": 25,
-    "sourceFilesReachingStrongFloor": 2,
+    "sourceFilesReachingStrongFloor": 0,
     "strength": 0.5,
     "windowDays": 180
   },
