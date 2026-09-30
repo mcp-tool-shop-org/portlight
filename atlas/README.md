@@ -1,20 +1,29 @@
 # portlight: how it works
 
-Mapped at 2026-09-25 from commit 7c76f54.
+Mapped at 2026-09-30 from commit 26b6267 by Atlas 1.24.0.
 
 ## What this is
 
-12 parts, mostly Python (183 files), JavaScript (3) and TypeScript (2). Work enters through 6 doors; CI, Release and Release Binaries each reach 2 parts, and CI is followed because a pull request goes through it. It publishes to npm and PyPI. People run portlight.
+12 parts, mostly Python (183 files), JavaScript (3), CSS (2), TypeScript (2), Astro (1) and shell (1). Work enters through 6 doors; CI, Release and Release Binaries each reach 2 parts, and CI is followed because a pull request goes through it. It publishes to npm and PyPI. It deploys a site to GitHub Pages. People run portlight.
 
-## What changed since the last map
+## What changed since 2026-09-25 (7c76f54)
 
-This is the first map.
+- CI's pull request trigger now also names `codecov.yml`.
+- CI's push trigger now also names `codecov.yml`.
+- Release Binaries now also runs src/portlight/app/cli.py, src/portlight/balance/runner.py and src/portlight/stress/invariants.py.
+- And 1 more change to a door.
+- artifacts/balance/balance-report.json is now written by src/portlight/balance/reporting.py.
+- artifacts/balance/balance-report.md is now written by src/portlight/balance/reporting.py.
+- artifacts/stress/stress-report.json is now written by src/portlight/stress/reporting.py.
+- And 1 more new writer or reader of a place.
+- artifacts was authored and is now generated.
+- 1 file added and 3 changed content, across 4 parts.
 
 ## What comes in
 
-1. **CI.** On a pull request touching 8 paths; on a push to main touching 8 paths; or by hand. Runs tests/; checks src/.
-2. **Release.** When a release is published; or by hand. Runs tests/; checks src/.
-3. **Release Binaries.** When a release is published; or by hand. Runs tests/; builds src/portlight/__main__.py; checks src/.
+1. **CI.** On a pull request to main touching 9 paths; on a push to main touching 9 paths; or by hand. Runs tests/; checks src/.
+2. **Release.** When a release is published; or by hand. Runs src/portlight/app/cli.py, src/portlight/balance/runner.py, src/portlight/stress/invariants.py and 77 more; checks src/.
+3. **Release Binaries.** When a release is published; or by hand. Runs src/portlight/app/cli.py, src/portlight/balance/runner.py, src/portlight/stress/invariants.py and 77 more; builds src/portlight/__main__.py; checks src/.
 4. **Deploy Pages.** On a push to main touching 2 paths; or by hand. Runs site/astro.config.mjs and site/src/.
 5. **portlight** (a command people run, from package.json). Runs bin/portlight.js.
 6. **portlight** (a command people run, from pyproject.toml). Runs src/portlight/app/cli.py.
@@ -22,16 +31,18 @@ This is the first map.
 ## What happens through CI
 
 1. The workflow runs tests/ in tests; it checks src/ in src.
+2. It writes to artifacts/balance/balance-report.json and artifacts/balance/balance-report.md.
+3. It uploads coverage to Codecov.
 
 ## Who reads the results
 
-CI writes nothing this map can see.
+- **artifacts/balance/** is read by tools/run_balance.py.
 
 ## The other doors
 
-**Release** runs tests/, checks src/, and publishes to npm and PyPI.
+**Release** runs src/portlight/app/cli.py, src/portlight/balance/runner.py, src/portlight/stress/invariants.py and 77 more, checks src/, writes to artifacts/balance/balance-report.json and artifacts/balance/balance-report.md, and publishes to npm and PyPI.
 
-**Release Binaries** runs tests/, checks src/, and builds src/portlight/__main__.py into binaries for darwin-arm64, linux-x64 and win-x64 and uploads them to the release on a release event.
+**Release Binaries** runs src/portlight/app/cli.py, src/portlight/balance/runner.py, src/portlight/stress/invariants.py and 77 more, checks src/, writes to artifacts/balance/balance-report.json and artifacts/balance/balance-report.md, and builds src/portlight/__main__.py into binaries for darwin-arm64, linux-x64 and win-x64 and uploads them to the release, on a release event.
 
 **Deploy Pages** runs site/astro.config.mjs and site/src/, and deploys the site.
 
@@ -46,20 +57,30 @@ CI writes nothing this map can see.
 
 ## What tends to change together
 
-- **src/portlight/app/tui/app.py** and **src/portlight/app/tui/screens/dashboard.py** changed together in 6 of 10 commits, inside the src part.
+- **src/portlight/app/cli.py** and **src/portlight/app/session.py** changed together in 7 of 10 commits, inside the src part.
+- **src/portlight/app/tui/app.py** and **src/portlight/app/tui/screens/dashboard.py** changed together in 5 of 8 commits, inside the src part.
+- **src/portlight/app/cli.py** and **src/portlight/app/tui/screens/encounter.py** changed together in 6 of 10 commits, inside the src part.
+- **src/portlight/app/session.py** and **src/portlight/app/tui/screens/encounter.py** changed together in 5 of 10 commits, inside the src part.
 
-Confidence is low: fewer than 20 source files reach 10 revisions in the window.
+Confidence is low: fewer than 25 source files reach 10 revisions in the window.
 
-Window: 180 days; a pair counts from 3 shared commits, since 2 source files reach 10 revisions; the floor rises to 10 when 25 do.
+Window: 180 days; a pair counts from 3 shared commits, since 0 source files reach 10 revisions; the floor rises to 10 when 25 do.
 
 ## What no test touches
 
 - **bin** is imported by no test.
 - **tools** is imported by no test.
 
+test/version.test.js runs in no workflow.
+
+verify.sh runs in no workflow.
+
 ## Written but never read
 
-No place this map can see is written, so none goes unread.
+- **artifacts/balance/balance-report.json** is written by src/portlight/balance/reporting.py and read by nothing else in this repository.
+- **artifacts/balance/balance-report.md** is written by src/portlight/balance/reporting.py and read by nothing else in this repository.
+- **artifacts/stress/stress-report.json** is written by src/portlight/stress/reporting.py and read by nothing else in this repository.
+- **artifacts/stress/stress-report.md** is written by src/portlight/stress/reporting.py and read by nothing else in this repository.
 
 ## Helpers that look duplicated
 
@@ -67,23 +88,25 @@ No two parts export a helper that looks alike.
 
 ## Generated, never hand-edited
 
-Nothing in this repository writes to a tracked place this map can see.
+- **artifacts/** is written by src/portlight/balance/reporting.py and src/portlight/stress/reporting.py when run from the repository root, and committed.
 
 ## Hand-authored
 
-People write .github/, docs/, the repository root, site/, world-map/ and world/; 5 writes with paths built at run time may land here.
+People write .github/, docs/, the repository root, site/, world-map/ and world/. Nothing in this repository writes to them.
 
 ## Where to start
 
-src/portlight/app/cli.py
+src/portlight/app/cli.py → src/portlight/app/session.py → src/portlight/engine/ship_stats.py → src/portlight/engine/encounter.py → src/portlight/engine/models.py → src/portlight/engine/naval.py
 
-Read those in order to follow one run of portlight end to end. This path follows portlight (a command people run, from pyproject.toml) from its entry, since CI runs only tests.
+Read those in order to follow one run of portlight end to end. This path follows portlight (a command people run, from pyproject.toml) from its entry, since CI runs only tests and checks.
 
 ## What this map cannot see
 
-- 2 import sites could not be resolved.
-- 5 writes and 1 read use paths built at run time and are not named here.
-- 1 write and 4 reads go to the directory the command is run in, not to this repository.
-- Statistics confidence is low: fewer than 20 source files reach 10 revisions in the window.
+- 2 imports could not be resolved: `src/portlight/app/tui/screens/encounter.py` imports `portlight.content.weapons`, which is no module on its import path and no declared dependency, twice.
+- 1 read uses a path built at run time and is not named here.
+- 2 writes and 129 reads go to a path their caller passes, not to this repository.
+- 4 writes go to the directory the command is run in (artifacts/) or a path their caller passes, not to this repository.
+- 2 reads go to the directory the command is run in, not to this repository.
+- Statistics confidence is low: fewer than 25 source files reach 10 revisions in the window.
 
 Regenerate with `npx --yes @dogfood-lab/atlas map`.
