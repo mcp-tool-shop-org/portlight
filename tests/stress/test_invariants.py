@@ -92,6 +92,24 @@ class TestEconomyInvariants:
         names = [f.name for f in failures]
         assert "cargo_within_capacity" not in names
 
+    def test_light_goods_over_count_but_within_weight_pass(self, tmp_path):
+        # The legitimization_pivot flake: a smuggler's hold carrying opium
+        # (0.5 per unit) read as "Cargo 31 exceeds capacity 30" by count.
+        s = _fresh_session(tmp_path, captain_type="smuggler")
+        cap = s.captain.ship.cargo_capacity
+        s.captain.cargo.append(CargoItem(good_id="opium", quantity=cap * 2))
+        names = [f.name for f in check_all_invariants(s)]
+        assert "cargo_within_capacity" not in names
+
+    def test_heavy_goods_within_count_but_over_weight_detected(self, tmp_path):
+        # The hole on the other side: black powder weighs 1.5 per unit, so a
+        # count under capacity can still overload the hold.
+        s = _fresh_session(tmp_path)
+        cap = s.captain.ship.cargo_capacity
+        s.captain.cargo.append(CargoItem(good_id="black_powder", quantity=cap - 1))
+        names = [f.name for f in check_all_invariants(s)]
+        assert "cargo_within_capacity" in names
+
     def test_negative_market_stock_detected(self, tmp_path):
         s = _fresh_session(tmp_path)
         port = next(iter(s.world.ports.values()))
