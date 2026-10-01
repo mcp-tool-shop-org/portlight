@@ -204,8 +204,8 @@
     "definition": "commits is how many commits in the window touch the file, including merges and commits dropped from coupling. lines is added plus deleted in those commits.",
     "files": [
       {
-        "commits": 10,
-        "lines": 277,
+        "commits": 12,
+        "lines": 281,
         "path": ".github/workflows/ci.yml"
       },
       {
@@ -289,8 +289,8 @@
         "path": "SHIP_GATE.md"
       },
       {
-        "commits": 1,
-        "lines": 89,
+        "commits": 3,
+        "lines": 223,
         "path": "atlas/README.md"
       },
       {
@@ -299,18 +299,18 @@
         "path": "atlas/boundaries.yaml"
       },
       {
-        "commits": 1,
-        "lines": 326,
+        "commits": 3,
+        "lines": 840,
         "path": "atlas/page.json"
       },
       {
-        "commits": 1,
-        "lines": 870,
+        "commits": 3,
+        "lines": 1710,
         "path": "atlas/statistics.json"
       },
       {
-        "commits": 1,
-        "lines": 10461,
+        "commits": 3,
+        "lines": 26795,
         "path": "atlas/structure.json"
       },
       {
@@ -679,9 +679,9 @@
     "level": "low",
     "reason": "fewer than 25 source files reach 10 revisions in the window"
   },
-  "generatedAt": "2026-09-30T20:11:33.462Z",
+  "generatedAt": "2026-10-01T00:12:59.239Z",
   "generatedFrom": {
-    "commit": "26b6267d76105b20ab1b8c4ebe3c6602c1d63a01"
+    "commit": "73f9a294f974916571113578fb35d33d34965457"
   },
   "pairs": [
     {
@@ -723,16 +723,16 @@
     "floor": "fallen",
     "floorHeld": false,
     "floorTrigger": "revision-depth",
-    "headDate": "2026-09-30T08:25:35-07:00",
+    "headDate": "2026-09-30T13:57:34-07:00",
     "inScopeFiles": 269,
     "pinnedStart": null,
     "priorFloor": "fallen",
-    "qualifyingCommits": 49,
+    "qualifyingCommits": 50,
     "qualifyingMinimum": 30,
     "revisions": 5,
     "shared": 10,
     "sharedFloorUsed": 3,
-    "since": "2026-04-03T15:25:35.000Z",
+    "since": "2026-04-03T20:57:34.000Z",
     "sourceExtensions": [
       ".js",
       ".mjs",
