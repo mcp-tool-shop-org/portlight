@@ -40,14 +40,7 @@
     "items": [
       {
         "kind": "door",
-        "sentence": "CI's pull request trigger now also names `.github/workflows/**` and no longer names `.github/workflows/ci.yml`.",
-        "subjects": [
-          ".github/workflows/ci.yml"
-        ]
-      },
-      {
-        "kind": "door",
-        "sentence": "CI's push trigger now also names `.github/workflows/**` and no longer names `.github/workflows/ci.yml`.",
+        "sentence": "CI's pull request trigger no longer names `.github/workflows/**`, `atlas/**`, `codecov.yml`, `pyproject.toml`, `site/astro.config.mjs`, `site/package-lock.json`, `site/package.json`, `src/**` and `tests/**`.",
         "subjects": [
           ".github/workflows/ci.yml"
         ]
@@ -59,8 +52,8 @@
       }
     ],
     "since": {
-      "commit": "26b6267d76105b20ab1b8c4ebe3c6602c1d63a01",
-      "generatedAt": "2026-09-30T20:11:33.462Z"
+      "commit": "73f9a294f974916571113578fb35d33d34965457",
+      "generatedAt": "2026-10-01T00:12:59.239Z"
     },
     "unchanged": false
   },
@@ -131,7 +124,7 @@
     "Window: 180 days; a pair counts from 3 shared commits, since 0 source files reach 10 revisions; the floor rises to 10 when 25 do."
   ],
   "changesTogetherWithTests": 0,
-  "commit": "73f9a294f974916571113578fb35d33d34965457",
+  "commit": "4c668d5a9841b6851d8179d83fa682c9d7a6ed3a",
   "defaultBranch": "main",
   "derived": "12 parts, mostly Python (183 files), JavaScript (3), CSS (2), TypeScript (2), Astro (1) and shell (1). Work enters through 6 doors; CI, Release and Release Binaries each reach 2 parts, and CI is followed because a pull request goes through it. It publishes to npm and PyPI. It deploys a site to GitHub Pages. People run portlight.",
   "doors": [
@@ -171,7 +164,7 @@
       ],
       "stages": [],
       "triggers": [
-        "on a pull request to main touching 9 paths",
+        "on a pull request to main",
         "on a push to main touching 9 paths",
         "or by hand"
       ]
@@ -370,7 +363,7 @@
       ]
     }
   ],
-  "generatedAt": "2026-10-01T00:12:59.239Z",
+  "generatedAt": "2026-10-01T02:13:41.403Z",
   "limits": [
     "2 imports could not be resolved: `src/portlight/app/tui/screens/encounter.py` imports `portlight.content.weapons`, which is no module on its import path and no declared dependency, twice.",
     "1 read uses a path built at run time and is not named here.",

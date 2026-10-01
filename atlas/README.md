@@ -1,20 +1,19 @@
 # portlight: how it works
 
-Mapped at 2026-10-01 from commit 73f9a29 by Atlas 1.24.0.
+Mapped at 2026-10-01 from commit 4c668d5 by Atlas 1.24.0.
 
 ## What this is
 
 12 parts, mostly Python (183 files), JavaScript (3), CSS (2), TypeScript (2), Astro (1) and shell (1). Work enters through 6 doors; CI, Release and Release Binaries each reach 2 parts, and CI is followed because a pull request goes through it. It publishes to npm and PyPI. It deploys a site to GitHub Pages. People run portlight.
 
-## What changed since 2026-09-30 (26b6267)
+## What changed since 2026-10-01 (73f9a29)
 
-- CI's pull request trigger now also names `.github/workflows/**` and no longer names `.github/workflows/ci.yml`.
-- CI's push trigger now also names `.github/workflows/**` and no longer names `.github/workflows/ci.yml`.
+- CI's pull request trigger no longer names `.github/workflows/**`, `atlas/**`, `codecov.yml`, `pyproject.toml`, `site/astro.config.mjs`, `site/package-lock.json`, `site/package.json`, `src/**` and `tests/**`.
 - 1 file changed content, across 1 part.
 
 ## What comes in
 
-1. **CI.** On a pull request to main touching 9 paths; on a push to main touching 9 paths; or by hand. Runs tests/; checks src/.
+1. **CI.** On a pull request to main; on a push to main touching 9 paths; or by hand. Runs tests/; checks src/.
 2. **Release.** When a release is published; or by hand. Runs src/portlight/app/cli.py, src/portlight/balance/runner.py, src/portlight/stress/invariants.py and 77 more; checks src/.
 3. **Release Binaries.** When a release is published; or by hand. Runs src/portlight/app/cli.py, src/portlight/balance/runner.py, src/portlight/stress/invariants.py and 77 more; builds src/portlight/__main__.py; checks src/.
 4. **Deploy Pages.** On a push to main touching 2 paths; or by hand. Runs site/astro.config.mjs and site/src/.
