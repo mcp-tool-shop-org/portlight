@@ -1,0 +1,37 @@
+{
+  "name": "Portlight - a new captain's first season (local seats)",
+  "driver": {
+    "kind": "rpc",
+    "port": 7790,
+    "requestTimeoutMs": 30000
+  },
+  "seats": [
+    { "id": "gemma4", "family": "google", "model": "gemma4:31b", "provider": "ollama" },
+    { "id": "mistral-small", "family": "mistral", "model": "mistral-small:24b", "provider": "ollama" }
+  ],
+  "turns": 60,
+  "persona": "You are a new captain in the Mediterranean trade. You have a small ship, a little silver and a hold to fill, and you want to turn it into a name and a fortune in the ports along this coast. Play the way a careful merchant would: look before you commit, and notice what each port is willing to pay.",
+  "criteria": [
+    {
+      "id": "prices-move",
+      "check": "Prices at a port change after the player buys or sells goods there."
+    },
+    {
+      "id": "second-port",
+      "check": "The player can sail from the starting port and arrive at a second port."
+    },
+    {
+      "id": "choice-spends",
+      "check": "A choice the player makes visibly spends a resource shown on screen, such as silver, provisions, hull or crew."
+    },
+    {
+      "id": "goal-stated",
+      "check": "The game tells the player what they are trying to achieve."
+    },
+    {
+      "id": "never-stuck",
+      "check": "On every turn the player has at least one action that moves the game forward."
+    }
+  ],
+  "runsDir": "runs"
+}
