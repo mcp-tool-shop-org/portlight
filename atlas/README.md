@@ -1,15 +1,14 @@
 # portlight: how it works
 
-Mapped at 2026-10-01 from commit 4c668d5 by Atlas 1.24.0.
+Mapped at 2026-11-11 from commit 9a49727 by Atlas 1.26.0.
 
 ## What this is
 
 12 parts, mostly Python (183 files), JavaScript (3), CSS (2), TypeScript (2), Astro (1) and shell (1). Work enters through 6 doors; CI, Release and Release Binaries each reach 2 parts, and CI is followed because a pull request goes through it. It publishes to npm and PyPI. It deploys a site to GitHub Pages. People run portlight.
 
-## What changed since 2026-10-01 (73f9a29)
+## What changed since 2026-10-01 (4c668d5)
 
-- CI's pull request trigger no longer names `.github/workflows/**`, `atlas/**`, `codecov.yml`, `pyproject.toml`, `site/astro.config.mjs`, `site/package-lock.json`, `site/package.json`, `src/**` and `tests/**`.
-- 1 file changed content, across 1 part.
+Nothing structural changed since 2026-10-01; 3 files changed content.
 
 ## What comes in
 
@@ -88,15 +87,16 @@ People write .github/, docs/, the repository root, site/, world-map/ and world/.
 
 ## Where to start
 
-src/portlight/app/cli.py → src/portlight/app/session.py → src/portlight/engine/ship_stats.py → src/portlight/engine/encounter.py → src/portlight/engine/models.py → src/portlight/engine/naval.py
+src/portlight/app/cli.py → src/portlight/app/session.py → src/portlight/engine/encounter.py → src/portlight/content/factions.py → src/portlight/engine/models.py
 
 Read those in order to follow one run of portlight end to end. This path follows portlight (a command people run, from pyproject.toml) from its entry, since CI runs only tests and checks.
+
+Beside the path, src/portlight/app/cli.py also calls src/portlight/engine/ship_stats.py and src/portlight/engine/naval.py. Beside the path, src/portlight/app/session.py also calls src/portlight/content/armor.py, src/portlight/content/melee_weapons.py, src/portlight/content/ranged_weapons.py, src/portlight/content/fighting_styles.py and 2 more files. Beside the path, src/portlight/engine/encounter.py also calls src/portlight/engine/naval.py.
 
 ## What this map cannot see
 
 - 2 imports could not be resolved: `src/portlight/app/tui/screens/encounter.py` imports `portlight.content.weapons`, which is no module on its import path and no declared dependency, twice.
-- 1 read uses a path built at run time and is not named here.
-- 2 writes and 129 reads go to a path their caller passes, not to this repository.
+- 2 writes and 130 reads go to a path their caller passes, not to this repository.
 - 4 writes go to the directory the command is run in (artifacts/) or a path their caller passes, not to this repository.
 - 2 reads go to the directory the command is run in, not to this repository.
 - Statistics confidence is low: fewer than 25 source files reach 10 revisions in the window.

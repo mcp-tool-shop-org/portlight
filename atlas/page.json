@@ -32,30 +32,23 @@
   "changes": {
     "fileCounts": {
       "added": 0,
-      "changed": 1,
+      "changed": 3,
       "moved": 0,
-      "parts": 1,
+      "parts": 2,
       "removed": 0
     },
     "items": [
       {
-        "kind": "door",
-        "sentence": "CI's pull request trigger no longer names `.github/workflows/**`, `atlas/**`, `codecov.yml`, `pyproject.toml`, `site/astro.config.mjs`, `site/package-lock.json`, `site/package.json`, `src/**` and `tests/**`.",
-        "subjects": [
-          ".github/workflows/ci.yml"
-        ]
-      },
-      {
         "kind": "counts",
-        "sentence": "1 file changed content, across 1 part.",
+        "sentence": "Nothing structural changed since 2026-10-01; 3 files changed content.",
         "subjects": []
       }
     ],
     "since": {
-      "commit": "73f9a294f974916571113578fb35d33d34965457",
-      "generatedAt": "2026-10-01T00:12:59.239Z"
+      "commit": "4c668d5a9841b6851d8179d83fa682c9d7a6ed3a",
+      "generatedAt": "2026-10-01T02:13:41.403Z"
     },
-    "unchanged": false
+    "unchanged": true
   },
   "changesTogether": [
     {
@@ -124,7 +117,7 @@
     "Window: 180 days; a pair counts from 3 shared commits, since 0 source files reach 10 revisions; the floor rises to 10 when 25 do."
   ],
   "changesTogetherWithTests": 0,
-  "commit": "4c668d5a9841b6851d8179d83fa682c9d7a6ed3a",
+  "commit": "9a49727da1896c1e1dcd9569e0f6b47328bfdcd7",
   "defaultBranch": "main",
   "derived": "12 parts, mostly Python (183 files), JavaScript (3), CSS (2), TypeScript (2), Astro (1) and shell (1). Work enters through 6 doors; CI, Release and Release Binaries each reach 2 parts, and CI is followed because a pull request goes through it. It publishes to npm and PyPI. It deploys a site to GitHub Pages. People run portlight.",
   "doors": [
@@ -352,7 +345,7 @@
       "to": "src"
     }
   ],
-  "engine": "1.24.0",
+  "engine": "1.26.0",
   "generated": [
     {
       "fromRoot": true,
@@ -363,11 +356,10 @@
       ]
     }
   ],
-  "generatedAt": "2026-10-01T02:13:41.403Z",
+  "generatedAt": "2026-11-11T22:27:57.731Z",
   "limits": [
     "2 imports could not be resolved: `src/portlight/app/tui/screens/encounter.py` imports `portlight.content.weapons`, which is no module on its import path and no declared dependency, twice.",
-    "1 read uses a path built at run time and is not named here.",
-    "2 writes and 129 reads go to a path their caller passes, not to this repository.",
+    "2 writes and 130 reads go to a path their caller passes, not to this repository.",
     "4 writes go to the directory the command is run in (artifacts/) or a path their caller passes, not to this repository.",
     "2 reads go to the directory the command is run in, not to this repository.",
     "Statistics confidence is low: fewer than 25 source files reach 10 revisions in the window."
@@ -398,14 +390,39 @@
   ],
   "repo": "mcp-tool-shop-org/portlight",
   "sequences": [],
+  "startBeside": [
+    {
+      "files": [
+        "src/portlight/engine/ship_stats.py",
+        "src/portlight/engine/naval.py"
+      ],
+      "from": "src/portlight/app/cli.py"
+    },
+    {
+      "files": [
+        "src/portlight/content/armor.py",
+        "src/portlight/content/melee_weapons.py",
+        "src/portlight/content/ranged_weapons.py",
+        "src/portlight/content/fighting_styles.py",
+        "src/portlight/content/injuries.py",
+        "src/portlight/content/upgrades.py"
+      ],
+      "from": "src/portlight/app/session.py"
+    },
+    {
+      "files": [
+        "src/portlight/engine/naval.py"
+      ],
+      "from": "src/portlight/engine/encounter.py"
+    }
+  ],
   "startDoor": "pyproject.toml#portlight",
   "startHere": [
     "src/portlight/app/cli.py",
     "src/portlight/app/session.py",
-    "src/portlight/engine/ship_stats.py",
     "src/portlight/engine/encounter.py",
-    "src/portlight/engine/models.py",
-    "src/portlight/engine/naval.py"
+    "src/portlight/content/factions.py",
+    "src/portlight/engine/models.py"
   ],
   "startReason": "This path follows portlight (a command people run, from pyproject.toml) from its entry, since CI runs only tests and checks.",
   "summary": null,
@@ -416,6 +433,7 @@
     "src": 74,
     "tools": 0
   },
+  "testedCodeParts": 3,
   "unnamedWrites": 0,
   "unread": [
     {
